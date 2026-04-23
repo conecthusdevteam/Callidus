@@ -6,9 +6,9 @@ import { Droplets, LayoutGrid, Settings, Download } from "lucide-react";
 export function Sidebar() {
   const items = [
     { icon: LayoutGrid, label: "Dashboard", active: true },
-    { icon: Droplets, label: "Lavagens" },
+  /**  { icon: Droplets, label: "Lavagens" },*/
     { icon: Download, label: "Exportar" },
-    { icon: Settings, label: "Configurações" },
+  /**   { icon: Settings, label: "Configurações" },*/
   ];
 
   return (
