@@ -1,221 +1,90 @@
 import { useState } from "react";
 import StatusBadge from "../components/StatusBadge";
-import { mockCautelas, tiposCautela, type TipoCautela } from "../data/mockData";
+import { mockCautelas } from "../data/mockData";
+import CampoSetor from "./CampoSetor";
 
-const tipoIlustracoes: Record<TipoCautela, React.ReactNode> = {
-  comida: (
-    <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-      <rect
-        x="8"
-        y="40"
-        width="48"
-        height="14"
-        rx="4"
-        stroke="#2B8E37"
-        strokeWidth="2.5"
-      />
-      <rect
-        x="16"
-        y="28"
-        width="32"
-        height="12"
-        rx="3"
-        stroke="#2B8E37"
-        strokeWidth="2.5"
-      />
-      <circle cx="22" cy="26" r="4" stroke="#2B8E37" strokeWidth="2.5" />
-      <circle cx="32" cy="24" r="4" stroke="#2B8E37" strokeWidth="2.5" />
-      <circle cx="42" cy="26" r="4" stroke="#2B8E37" strokeWidth="2.5" />
-      <line
-        x1="22"
-        y1="22"
-        x2="22"
-        y2="16"
-        stroke="#2B8E37"
-        strokeWidth="2"
+function LineSeparator() {
+  return (
+    <svg
+      width="510"
+      height="2"
+      viewBox="0 0 530 2"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <line x1="0" y1="1" x2="530" y2="1" stroke="#404040" />
+    </svg>
+  );
+}
+
+export function IconTrash() {
+  return (
+    <svg
+      className="w-5 h-5"
+      viewBox="0 0 14 14"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      {/* Tampa */}
+      <path
+        d="M0.666626 3.33366V2.00033C0.666626 1.6467 0.807102 1.30756 1.05715 1.05752C1.3072 0.807468 1.64634 0.666992 1.99996 0.666992H4.66663C5.02025 0.666992 5.35939 0.807468 5.60943 1.05752C5.85948 1.30756 5.99996 1.6467 5.99996 2.00033V3.33366"
+        stroke="black"
+        strokeWidth="1.33333"
         strokeLinecap="round"
+        strokeLinejoin="round"
       />
-      <line
-        x1="32"
-        y1="20"
-        x2="32"
-        y2="14"
-        stroke="#2B8E37"
-        strokeWidth="2"
+      {/* Linha da tampa */}
+      <path
+        d="M0.666626 0.666992H12.6666"
+        stroke="black"
+        strokeWidth="1.33333"
         strokeLinecap="round"
+        strokeLinejoin="round"
       />
-      <line
-        x1="42"
-        y1="22"
-        x2="42"
-        y2="16"
-        stroke="#2B8E37"
-        strokeWidth="2"
+      {/* Corpo */}
+      <path
+        d="M9.99996 0.666992V10.0003C9.99996 10.3539 9.85948 10.6931 9.60944 10.9431C9.35939 11.1932 9.02025 11.3337 8.66663 11.3337H1.99996C1.64634 11.3337 1.3072 11.1932 1.05715 10.9431C0.807102 10.6931 0.666626 10.3539 0.666626 10.0003V0.666992"
+        stroke="black"
+        strokeWidth="1.33333"
         strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
-  ),
-  equipamento: (
-    <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-      <rect
-        x="8"
-        y="12"
-        width="48"
-        height="32"
-        rx="4"
-        stroke="#2B8E37"
-        strokeWidth="2.5"
-      />
-      <rect
-        x="16"
-        y="20"
-        width="32"
-        height="18"
-        rx="2"
-        stroke="#2B8E37"
-        strokeWidth="2"
-      />
-      <line
-        x1="20"
-        y1="50"
-        x2="44"
-        y2="50"
-        stroke="#2B8E37"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-      />
-      <line
-        x1="32"
-        y1="44"
-        x2="32"
-        y2="50"
-        stroke="#2B8E37"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-      />
-    </svg>
-  ),
-  smt: (
-    <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-      <rect
-        x="10"
-        y="10"
-        width="44"
-        height="44"
-        rx="4"
-        stroke="#2B8E37"
-        strokeWidth="2.5"
-      />
-      <rect
-        x="20"
-        y="20"
-        width="24"
-        height="24"
-        rx="2"
-        stroke="#2B8E37"
-        strokeWidth="2"
-      />
-      <rect x="26" y="26" width="12" height="12" rx="1" fill="#2B8E37" />
-      <line
-        x1="10"
-        y1="20"
-        x2="6"
-        y2="20"
-        stroke="#2B8E37"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-      <line
-        x1="10"
-        y1="32"
-        x2="6"
-        y2="32"
-        stroke="#2B8E37"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-      <line
-        x1="10"
-        y1="44"
-        x2="6"
-        y2="44"
-        stroke="#2B8E37"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-      <line
-        x1="54"
-        y1="20"
-        x2="58"
-        y2="20"
-        stroke="#2B8E37"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-      <line
-        x1="54"
-        y1="32"
-        x2="58"
-        y2="32"
-        stroke="#2B8E37"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-      <line
-        x1="54"
-        y1="44"
-        x2="58"
-        y2="44"
-        stroke="#2B8E37"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-      <line
-        x1="20"
-        y1="10"
-        x2="20"
-        y2="6"
-        stroke="#2B8E37"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-      <line
-        x1="32"
-        y1="10"
-        x2="32"
-        y2="6"
-        stroke="#2B8E37"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-      <line
-        x1="44"
-        y1="10"
-        x2="44"
-        y2="6"
-        stroke="#2B8E37"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </svg>
-  ),
-};
+  );
+}
 
 type Tab = "enviados" | "recebidos";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>("enviados");
 
+  const [descricao, setDescricao] = useState("");
+  const [quantidade, setQuantidade] = useState<number>(0);
+  const [items, setItems] = useState<
+    { descricao: string; quantidade: number }[]
+  >([]);
+
   return (
-    <div className="flex h-screen pt-12 pl-14 bg-[#F5F7F6] overflow-hidden">
+    <div className="flex h-screen pt-12 pl-14 bg-[#F5F7F6] overflow-hidden ">
       {/* Painel esquerdo — lista de cautelas */}
-      <div className="w-md flex-shrink-0 px-4 py-6">
+      <div className="w-2xl flex-shrink-0 px-20 py-15">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden h-full">
-          {/* Abas */}
-          <div className="flex">
+          <div className="relative">
+            <button
+              onClick={() => setActiveTab("recebidos")}
+              className={`w-[750px] h-[68px] text-[18px] font-normal leading-[100%] rounded-t-[5px] transition-all
+                ${
+                  activeTab === "recebidos"
+                    ? "bg-[#22592A] text-white"
+                    : "bg-[#C4EEC9] text-[#2B8E37]"
+                }`}
+            >
+              Recebidos
+            </button>
+
             <button
               onClick={() => setActiveTab("enviados")}
-              className={`flex-1 py-2 text-sm font-semibold rounded-t-lg transition-all
+              className={`absolute top-0 left-0 w-[260px] h-[68px] text-[18px] font-bold leading-[100%] rounded-t-[5px] transition-all
                 ${
                   activeTab === "enviados"
                     ? "bg-[#22592A] text-white"
@@ -224,104 +93,203 @@ export default function Home() {
             >
               Enviados
             </button>
-
-            <button
-              onClick={() => setActiveTab("recebidos")}
-              className={`flex-1 py-2 text-sm font-medium rounded-tr-lg transition-all
-                ${
-                  activeTab === "recebidos"
-                    ? "bg-[#22592A] text-white"
-                    : "bg-[#C4EEC9] text-[#22592A]"
-                }`}
-            >
-              Recebidos
-            </button>
           </div>
 
           {/* Lista */}
-          <div className="flex-1 overflow-y-auto px-2 pb-2">
-            {mockCautelas.map((cautela) => (
-              <div
-                key={cautela.id}
-                className="px-3 py-3 border-b border-gray-200 last:border-none hover:bg-gray-50 rounded-md"
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs text-gray-500">
-                    Id Cautela:{" "}
-                    <span className="font-medium text-gray-700">
-                      {cautela.id}
+          <div className="flex-1 overflow-y-auto pb-2">
+            {mockCautelas.map((cautela, index) => (
+              <div key={cautela.id}>
+                <div className="px-3 py-3 hover:bg-gray-100 transition-colors">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[14px] font-normal leading-[100%] text-[#404040]">
+                      Id Cautela:{" "}
+                      <span className="font-normal text-[#404040]">
+                        {cautela.id}
+                      </span>
                     </span>
-                  </span>
-                  <span className="text-xs text-gray-400">{cautela.data}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-600">
-                    Ciente:{" "}
-                    <span className="font-bold text-gray-700">
-                      {cautela.gestor.toUpperCase()}
+                    <span className="text-[14px] font-normal leading-[100%] text-[#404040]">
+                      Data: {cautela.data}
                     </span>
-                  </span>
-                  <StatusBadge status={cautela.status} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[14px] font-normal leading-[100%] text-[#404040]">
+                      Ciente:{" "}
+                      <span className="font-bold text-[14px] leading-[100%] text-[#404040]">
+                        {cautela.gestor.toUpperCase()}
+                      </span>
+                    </span>
+                    <StatusBadge status={cautela.status} />
+                  </div>
                 </div>
+
+                {/* Linha separadora abaixo do hover */}
+                {index < mockCautelas.length - 1 && <LineSeparator />}
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Painel direito — seleção de tipo */}
+      {/* Painel direito — card com formulário */}
       <div className="flex-1 overflow-y-auto px-10 py-8">
         {/* Título */}
-        <div className="text-center mb-8">
+        <div className="max-w-2xl ml-30 mb-8 text-center">
           <h1 className="text-3xl font-light text-gray-700 leading-snug">
-            Escolha a{" "}
-            <strong className="font-bold text-gray-700">cautela</strong>
-            <br />
-            que se adequa a necessidade da pessoa
+            <strong className="font-bold text-black">
+              Cautela para equipamentos externos
+            </strong>
           </h1>
-          <p className="text-sm text-gray-500 mt-2">
-            Informações que possam ajudar a pessoa a fazer
-            <br />a decisão correta.
+          <p className="text-sm text-black mt-2">
+            Esta cautela funciona para qualquer tipo de equipamento
+            <br />
+            eletroeletrônico que venha de terceiros que irão entrar e sair.
           </p>
+          <h3 className="text-xl font-light text-black leading-snug">
+            <strong className="font-semibold text-black">
+              Notebooks, Mouses, Teclados, Etc...
+            </strong>
+          </h3>
         </div>
 
-        {/* Cards */}
-        <div className="grid grid-cols-3 gap-8 max-w-4xl mx-auto">
-          {tiposCautela.map((tipo) => (
-            <div
-              key={tipo.id}
-              className="bg-[#f0f7f3] rounded-2xl border border-[#A7D3AE] p-5 flex flex-col items-center hover:shadow-md transition-shadow"
+        {/* Formulário */}
+        <div className="bg-[#F2FBF3] rounded-xl shadow-sm border border-[#22592A] p-8 max-w-2xl ml-30">
+          <form className="space-y-4">
+            <CampoSetor />
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Proprietário
+              </label>
+              <input
+                type="text"
+                className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-600 focus:outline-none"
+                placeholder="Nome"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                E-mail do proprietário
+              </label>
+              <input
+                type="email"
+                className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-600 focus:outline-none"
+                placeholder="@conecthus.org.br"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Descrição
+              </label>
+              <textarea
+                rows={3}
+                value={descricao}
+                onChange={(e) => setDescricao(e.target.value)}
+                className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-600 focus:outline-none"
+                placeholder="value"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Quantidade
+              </label>
+              <input
+                type="number"
+                value={quantidade}
+                onChange={(e) => setQuantidade(Number(e.target.value))}
+                className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-600 focus:outline-none"
+                placeholder="000"
+              />
+            </div>
+
+            {/* Botão adicionar */}
+            <button
+              type="button"
+              onClick={() => {
+                if (descricao && quantidade > 0) {
+                  setItems([...items, { descricao, quantidade }]);
+                  setDescricao("");
+                  setQuantidade(0);
+                }
+              }}
+              className="flex items-center gap-2 text-sm font-medium text-[#F9F9F9] bg-[#3BB14A] px-3 py-2 rounded-lg hover:bg-[#2B8E37]"
             >
-              <p className="text-xs text-gray-400 mb-0.5">Cautela para</p>
-              <h2 className="text-base font-bold text-gray-700 mb-4 text-center">
-                {tipo.titulo}
-              </h2>
+              + Adicionar
+            </button>
 
-              {/* Ilustração */}
-              <div className="mb-4">{tipoIlustracoes[tipo.id]}</div>
-
-              {/* Itens */}
-              <div className="w-full mb-5">
-                <p className="text-xs text-gray-500 mb-2">{tipo.descricao}</p>
-                <ul className="space-y-1">
-                  {tipo.itens.map((item) => (
-                    <li
-                      key={item}
-                      className="text-xs text-gray-700 flex items-start gap-1.5"
-                    >
-                      <span className="text-[#2B8E37] mt-0.5">•</span>
-                      {item}
-                    </li>
+            {items.length > 0 && (
+              <table className="w-full mt-4 border border-gray-300 rounded-lg table-fixed">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="px-4 py-2 text-left w-2/3">Descrição</th>
+                    <th className="px-4 py-2 text-left w-1/6">Quantidade</th>
+                    <th className="px-4 py-2 text-center w-1/6">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((item, index) => (
+                    <tr key={index} className="border-t">
+                      <td className="px-4 py-2 break-words">
+                        {item.descricao}
+                      </td>
+                      <td className="py-2 text-center">{item.quantidade}</td>
+                      <td className="py-2 text-center">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setItems(items.filter((_, i) => i !== index))
+                          }
+                          className="text-gray-600 hover:text-red-600"
+                        >
+                          <IconTrash />
+                        </button>
+                      </td>
+                    </tr>
                   ))}
-                </ul>
-              </div>
+                </tbody>
+              </table>
+            )}
 
-              {/* Botão */}
-              <button className="w-full mt-auto py-2 px-4 rounded-lg border border-gray-400 text-sm font-medium bg-white text-gray-700 hover:bg-[#2B8E37] hover:text-white hover:border-[#2B8E37] transition-all cursor-pointer">
-                Solicitar cautela
+            {/* Retorno */}
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-2">
+                O item será retornado?
+              </p>
+              <div className="flex gap-6">
+                <label className="flex items-center gap-2 text-sm text-gray-700">
+                  <input type="checkbox" className="h-4 w-4 text-green-600" />
+                  Sim
+                </label>
+                <label className="flex items-center gap-2 text-sm text-gray-700">
+                  <input type="checkbox" className="h-4 w-4 text-green-600" />
+                  Não
+                </label>
+              </div>
+            </div>
+
+            {/* Botões finais */}
+            <div className="flex justify-end gap-4 pt-4">
+              <button
+                type="button"
+                className="px-4 py-2 rounded-lg border border-gray-400 bg-white text-gray-700 text-sm font-medium hover:bg-gray-100"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                onClick={(e) => {
+                  e.preventDefault();
+                  // Aqui você pode enviar para o backend ou API
+                  console.log("Itens enviados:", items);
+                  alert("Itens enviados para o gestor!");
+                }}
+                className="px-4 py-2 rounded-lg bg-green-700 text-white text-sm font-medium hover:bg-green-800"
+              >
+                Enviar
               </button>
             </div>
-          ))}
+          </form>
         </div>
       </div>
     </div>
