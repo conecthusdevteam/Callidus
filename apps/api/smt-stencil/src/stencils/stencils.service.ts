@@ -1,9 +1,9 @@
 import { ConflictException, Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CreateStencilDto } from './dto/create-stencil.dto';
 import { UpdateStencilDto } from './dto/update-stencil.dto';
-import { InjectRepository } from '@nestjs/typeorm';
 import { Stencil } from './entities/stencil.entity';
-import { Repository } from 'typeorm';
 
 @Injectable()
 export class StencilsService {
@@ -11,7 +11,7 @@ export class StencilsService {
     @InjectRepository(Stencil)
     private readonly repository: Repository<Stencil>
   ) { }
-  
+
   async create(dto: CreateStencilDto) {
     const existingStencil = await this.findByStencilCode(dto.stencilCode);
     if (existingStencil) {
@@ -32,7 +32,7 @@ export class StencilsService {
   }
 
   findByStencilCode(stencilCode: string): Promise<Stencil | null> {
-    return this.repository.findOne({ where: { stencilCode } })
+    return this.repository.findOne({ where: { stencilCode } });
   }
 
   async update(id: string, dto: UpdateStencilDto) {
