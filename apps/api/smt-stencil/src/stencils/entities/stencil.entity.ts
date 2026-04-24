@@ -11,7 +11,7 @@ export class Stencil {
     @PrimaryColumn()
     id!: string;
 
-    @Column()
+    @Column({ unique: true })
     stencilCode!: string;
 
     @Column()
