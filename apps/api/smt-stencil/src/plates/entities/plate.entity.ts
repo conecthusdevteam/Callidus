@@ -16,25 +16,25 @@ export class Plate {
     blankId!: string;
 
     @Column()
-    totalWashes!: number;
-
-    @CreateDateColumn()
-    createdAt!: Date;
-
-    @UpdateDateColumn()
-    updatedAt!: Date;
-
-    @Column()
-    operator!: string;
-
-    @Column()
     shift!: number;
 
     @Column()
     phase!: number;
 
     @Column()
+    totalWashes!: number;
+
+    @Column()
+    operator!: string;
+
+    @Column()
     lineName!: string;
+
+    @CreateDateColumn()
+    createdAt!: Date;
+
+    @UpdateDateColumn()
+    updatedAt!: Date;
 
     @BeforeInsert()
     generateId() {
