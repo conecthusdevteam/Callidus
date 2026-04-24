@@ -26,7 +26,7 @@ Content-Type: {{json}}
 }
 
 ###
-@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFkbWluQGNhdXRlbGEubG9jYWwiLCJwYXBlbCI6IkFETUlOIiwic3ViIjoiNzhGQjQyM0UtRjM2Qi0xNDEwLTg1MDctMDA4NkUyNUM3NUVDIiwidG9rZW5WZXJzaW9uIjowLCJpYXQiOjE3NzcwMzMzNzMsImV4cCI6MTc3NzA2MjE3M30.HrNiGB5RewG7axJUhDWD01ft39EFG0gG8loemEhjah4
+@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFkbWluQGNhdXRlbGEubG9jYWwiLCJwYXBlbCI6IkFETUlOIiwic3ViIjoiNDBENzQyM0UtRjM2Qi0xNDEwLTg1MDgtMDA4NkUyNUM3NUVDIiwidG9rZW5WZXJzaW9uIjowLCJpYXQiOjE3NzcwMzgzMjcsImV4cCI6MTc3NzA2NzEyN30.K6v0BXkXvq9kFmpjYbq54b28a4Gkzd9wi8844TYosrw
 
 ###
 # 3) Criar GESTOR
@@ -58,7 +58,7 @@ GET {{baseUrl}}/users
 Authorization: Bearer {{adminToken}}
 
 ###
-@gestorId = 7BFB423E-F36B-1410-8507-0086E25C75EC
+@gestorId = 43D7423E-F36B-1410-8508-0086E25C75EC
 
 ###
 # 6) Criar setor
@@ -88,7 +88,7 @@ Content-Type: {{json}}
 }
 
 ###
-@portariaToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InBvcnRhcmlhQGNhdXRlbGEubG9jYWwiLCJwYXBlbCI6IlBPUlRBUklBIiwic3ViIjoiODFGQjQyM0UtRjM2Qi0xNDEwLTg1MDctMDA4NkUyNUM3NUVDIiwidG9rZW5WZXJzaW9uIjowLCJpYXQiOjE3NzcwMzM0NDEsImV4cCI6MTc3NzA2MjI0MX0.i5gJWHC_dPNsSH-wdzuP9VAkDeR8KlefMmmyS0LeZNc
+@portariaToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InBvcnRhcmlhQGNhdXRlbGEubG9jYWwiLCJwYXBlbCI6IlBPUlRBUklBIiwic3ViIjoiNDVENzQyM0UtRjM2Qi0xNDEwLTg1MDgtMDA4NkUyNUM3NUVDIiwidG9rZW5WZXJzaW9uIjowLCJpYXQiOjE3NzcwMzgzODUsImV4cCI6MTc3NzA2NzE4NX0.pbUw3n87iBr6JFX247uV3XVEuh5fSgS2ww5SGkm1oX8
 
 ###
 # 9) Listar setores com usuário da portaria
@@ -96,7 +96,7 @@ GET {{baseUrl}}/sectors
 Authorization: Bearer {{portariaToken}}
 
 ###
-@setorId = 83FB423E-F36B-1410-8507-0086E25C75EC
+@setorId = 4CD7423E-F36B-1410-8508-0086E25C75EC
 
 ###
 # 10) Criar cautela
@@ -162,7 +162,7 @@ Content-Type: {{json}}
 }
 
 ###
-@gestorToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Imdlc3RvckBjYXV0ZWxhLmxvY2FsIiwicGFwZWwiOiJHRVNUT1IiLCJzdWIiOiI3QkZCNDIzRS1GMzZCLTE0MTAtODUwNy0wMDg2RTI1Qzc1RUMiLCJ0b2tlblZlcnNpb24iOjEsImlhdCI6MTc3NzAzMzY0NywiZXhwIjoxNzc3MDYyNDQ3fQ.S5jR3jhtn-RchM5gjX6wxJMAqOf7Q0TMUsf0NYZcoK0
+@gestorToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Imdlc3RvckBjYXV0ZWxhLmxvY2FsIiwicGFwZWwiOiJHRVNUT1IiLCJzdWIiOiI0M0Q3NDIzRS1GMzZCLTE0MTAtODUwOC0wMDg2RTI1Qzc1RUMiLCJ0b2tlblZlcnNpb24iOjAsImlhdCI6MTc3NzAzODQ5OCwiZXhwIjoxNzc3MDY3Mjk4fQ.QIxAMvjKImhChi0_URk2T6HPkpVpkXv4ZkAUKOr91Vw
 
 ###
 # 15) Listar cautelas do gestor
@@ -170,7 +170,7 @@ GET {{baseUrl}}/cautelas
 Authorization: Bearer {{gestorToken}}
 
 ###
-@cautelaId = 85FB423E-F36B-1410-8507-0086E25C75EC
+@cautelaId = 4ED7423E-F36B-1410-8508-0086E25C75EC
 ###
 # 16) Ver detalhes da cautela
 GET {{baseUrl}}/cautelas/{{cautelaId}}
@@ -204,7 +204,7 @@ POST {{baseUrl}}/auth/refresh
 Content-Type: {{json}}
 
 {
-  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Imdlc3RvckBjYXV0ZWxhLmxvY2FsIiwicGFwZWwiOiJHRVNUT1IiLCJzdWIiOiI3QkZCNDIzRS1GMzZCLTE0MTAtODUwNy0wMDg2RTI1Qzc1RUMiLCJ0b2tlblZlcnNpb24iOjEsImp0aSI6IjJkYzgyNTUxLTE3YTgtNDQ2Ni1hMGM3LTg2Y2UzNTFjZWZlOSIsInR5cGUiOiJyZWZyZXNoIiwiaWF0IjoxNzc3MDMzNzI5LCJleHAiOjE3Nzc2Mzg1Mjl9.nx8AYkBG7tzmGEBjDOwZ2mGLIJy1jZ81i3pm4-wimeI"
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Imdlc3RvckBjYXV0ZWxhLmxvY2FsIiwicGFwZWwiOiJHRVNUT1IiLCJzdWIiOiI0M0Q3NDIzRS1GMzZCLTE0MTAtODUwOC0wMDg2RTI1Qzc1RUMiLCJ0b2tlblZlcnNpb24iOjAsImp0aSI6IjBmMjVlYjJkLTM4ZTEtNDVhZi05ODk2LTUxYjgxZTU4MjIxYiIsInR5cGUiOiJyZWZyZXNoIiwiaWF0IjoxNzc3MDM4NTg5LCJleHAiOjE3Nzc2NDMzODl9.x7OBSZdrmOGyT6mWw5Wedq048aow4nJMmYgn1SQhbk"
 }
 
 ###
