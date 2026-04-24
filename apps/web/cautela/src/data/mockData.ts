@@ -1,5 +1,6 @@
 export type StatusCautela = "Aprovado" | "Reprovado" | "Em análise";
 export type TipoCautela = "comida" | "equipamento" | "smt";
+export type DirecaoCautela = "enviado" | "recebido";
 
 export interface Equipamento {
   descricao: string;
@@ -15,6 +16,7 @@ export interface Cautela {
   empresa: string;
   tipo: TipoCautela;
   equipamentos: Equipamento[];
+  direcao: DirecaoCautela;
   aprovadoEm?: string;
   reprovadoEm?: string;
   motivoNegativa?: string;
@@ -33,6 +35,7 @@ export const mockCautelas: Cautela[] = [
     data: "12/04/2025",
     gestor: "Carlos Mendonça",
     status: "Aprovado",
+    direcao: "recebido",
     visitante: "João Silva",
     empresa: "Callidus",
     tipo: "equipamento",
@@ -47,6 +50,7 @@ export const mockCautelas: Cautela[] = [
     data: "13/04/2025",
     gestor: "Marcos Souza",
     status: "Reprovado",
+    direcao: "recebido",
     visitante: "Maria Souza",
     empresa: "Callidus",
     tipo: "equipamento",
@@ -61,6 +65,7 @@ export const mockCautelas: Cautela[] = [
     data: "15/04/2025",
     gestor: "Roberto Lima",
     status: "Em análise",
+    direcao: "enviado",
     visitante: "Pedro Alves",
     empresa: "Conecthus",
     tipo: "equipamento",
@@ -74,6 +79,7 @@ export const mockCautelas: Cautela[] = [
     data: "16/04/2025",
     gestor: "Fernanda Costa",
     status: "Aprovado",
+    direcao: "enviado",
     visitante: "Lucas Rocha",
     empresa: "Conecthus",
     tipo: "equipamento",
@@ -88,6 +94,7 @@ export const mockCautelas: Cautela[] = [
     data: "18/04/2025",
     gestor: "Marcos Vieira",
     status: "Reprovado",
+    direcao: "enviado",
     visitante: "Carla Nunes",
     empresa: "Conecthus",
     tipo: "equipamento",
@@ -102,6 +109,7 @@ export const mockCautelas: Cautela[] = [
     data: "20/04/2025",
     gestor: "José Brandão",
     status: "Em análise",
+    direcao: "enviado",
     visitante: "Bruno Freitas",
     empresa: "Transire",
     tipo: "equipamento",
