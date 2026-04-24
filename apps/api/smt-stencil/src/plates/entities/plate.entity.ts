@@ -6,7 +6,7 @@ export class Plate {
     @PrimaryColumn()
     id!: string;
 
-    @Column()
+    @Column({ unique: true })
     plateModel!: string;
 
     @Column()
