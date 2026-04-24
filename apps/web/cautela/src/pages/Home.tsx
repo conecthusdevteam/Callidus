@@ -143,7 +143,7 @@ export default function Home() {
   );
 
   return (
-    <div className="flex h-screen pt-12 pl-14 bg-[#F5F7F6] overflow-hidden relative">
+    <div className="flex h-screen pt-[60px] pl-[70px] bg-[#F5F7F6] overflow-hidden relative">
       {/* Painel esquerdo */}
       <div className="w-2xl flex-shrink-0 px-20 pt-15 pb-0">
         <div
@@ -153,17 +153,18 @@ export default function Home() {
           <div className="relative">
             <button
               onClick={() => setActiveTab("recebidos")}
-              className={`w-[750px] h-[68px] text-[18px] font-normal leading-[100%] rounded-t-[5px] transition-all ${
+              className={`w-full h-[68px] text-[18px] font-normal leading-[100%] rounded-t-[5px] transition-all ${
                 activeTab === "recebidos"
                   ? "bg-[#22592A] text-white"
                   : "bg-[#C4EEC9] text-[#2B8E37]"
               }`}
+              style={{ paddingLeft: "55%" }}
             >
               Recebidos
             </button>
             <button
               onClick={() => setActiveTab("enviados")}
-              className={`absolute top-0 left-0 w-[260px] h-[68px] text-[18px] font-bold leading-[100%] rounded-t-[5px] transition-all ${
+              className={`absolute top-0 left-0 w-[55%] h-[68px] text-[18px] font-bold leading-[100%] rounded-t-[5px] transition-all ${
                 activeTab === "enviados"
                   ? "bg-[#22592A] text-white"
                   : "bg-[#C4EEC9] text-[#22592A]"
@@ -416,7 +417,6 @@ export default function Home() {
                         type="date"
                         value={dataFim}
                         onChange={(e) => setDataFim(e.target.value)}
-                        placeholder="00/00/0000"
                         className={`mt-1 w-35 border bg-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-600 focus:outline-none ${
                           fieldErrors.dataFim
                             ? "border-red-400"
