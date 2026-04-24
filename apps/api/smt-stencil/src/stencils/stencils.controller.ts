@@ -37,6 +37,5 @@ export class StencilsController {
   remove(@Param('id') id: string) {
     const stencil = this.stencilsService.remove(id);
     if (!stencil) throw new NotFoundException;
-    return stencil;
   }
 }
