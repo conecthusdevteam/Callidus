@@ -1,0 +1,222 @@
+@baseUrl = http://localhost:3000
+@json = application/json
+
+###
+# 1) Criar o primeiro ADMIN
+# Só funciona enquanto não existir nenhum usuário na base.
+POST {{baseUrl}}/users
+Content-Type: {{json}}
+
+{
+  "nome": "Administrador Inicial",
+  "email": "admin@cautela.local",
+  "senha": "123456",
+  "papel": "ADMIN"
+}
+
+###
+# 2) Login ADMIN
+# Copie manualmente o accessToken retornado para a variável abaixo.
+POST {{baseUrl}}/auth/login
+Content-Type: {{json}}
+
+{
+  "email": "admin@cautela.local",
+  "senha": "123456"
+}
+
+###
+@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFkbWluQGNhdXRlbGEubG9jYWwiLCJwYXBlbCI6IkFETUlOIiwic3ViIjoiNDBENzQyM0UtRjM2Qi0xNDEwLTg1MDgtMDA4NkUyNUM3NUVDIiwidG9rZW5WZXJzaW9uIjowLCJpYXQiOjE3NzcwNTIyMzgsImV4cCI6MTc3NzA4MTAzOH0.a4yX_MQEw4zwqGcNGVNMXNmXwiNzrJMX_0odLnXj3EE
+
+###
+# 3) Criar GESTOR
+POST {{baseUrl}}/users
+Content-Type: {{json}}
+
+{
+  "nome": "Gestor Teste",
+  "email": "gestor@cautela.local",
+  "senha": "123456",
+  "papel": "GESTOR"
+}
+
+###
+# 4) Criar PORTARIA
+POST {{baseUrl}}/users
+Content-Type: {{json}}
+
+{
+  "nome": "Portaria Teste",
+  "email": "portaria@cautela.local",
+  "senha": "123456",
+  "papel": "PORTARIA"
+}
+
+###
+# 5) Listar usuários para pegar o id do gestor
+GET {{baseUrl}}/users
+Authorization: Bearer {{adminToken}}
+
+###
+@gestorId = 43D7423E-F36B-1410-8508-0086E25C75EC
+
+###
+# 6) Criar setor
+POST {{baseUrl}}/sectors
+Authorization: Bearer {{adminToken}}
+Content-Type: {{json}}
+
+{
+  "numeroSetor": 101,
+  "nome": "Tecnologia",
+  "gestorId": "{{gestorId}}"
+}
+
+###
+# 7) Listar setores
+GET {{baseUrl}}/sectors
+Authorization: Bearer {{adminToken}}
+
+###
+# 8) Login PORTARIA
+POST {{baseUrl}}/auth/login
+Content-Type: {{json}}
+
+{
+  "email": "portaria@cautela.local",
+  "senha": "123456"
+}
+
+###
+@portariaToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InBvcnRhcmlhQGNhdXRlbGEubG9jYWwiLCJwYXBlbCI6IlBPUlRBUklBIiwic3ViIjoiNDVENzQyM0UtRjM2Qi0xNDEwLTg1MDgtMDA4NkUyNUM3NUVDIiwidG9rZW5WZXJzaW9uIjowLCJpYXQiOjE3NzcwNTI2NDUsImV4cCI6MTc3NzA4MTQ0NX0.a3-4b618aZnx5a082htiz9EyeQCn6rEV4eqokTpjevM
+
+###
+# 9) Listar setores com usuário da portaria
+GET {{baseUrl}}/sectors
+Authorization: Bearer {{portariaToken}}
+
+###
+@setorId = 4CD7423E-F36B-1410-8508-0086E25C75EC
+
+###
+# 10) Criar cautela
+POST {{baseUrl}}/cautelas
+Authorization: Bearer {{portariaToken}}
+Content-Type: {{json}}
+
+{
+  "setorId": "{{setorId}}",
+  "proprietarioNome": "Lucas Araujo",
+  "proprietarioEmail": "lucas@teste.com",
+  "retornoItem": true,
+  "validade": "2026-04-30T18:00:00.000Z",
+  "itens": [
+    {
+      "nomeItem": "Notebook Dell",
+      "quantidade": 1
+    },
+    {
+      "nomeItem": "Mouse",
+      "quantidade": 1
+    }
+  ]
+}
+
+###
+# 11) Criar cautela sem retorno
+POST {{baseUrl}}/cautelas
+Authorization: Bearer {{portariaToken}}
+Content-Type: {{json}}
+
+{
+  "setorId": "{{setorId}}",
+  "proprietarioNome": "Visitante Sem Retorno",
+  "proprietarioEmail": "visitante@teste.com",
+  "retornoItem": false,
+  "itens": [
+    {
+      "nomeItem": "Capacete",
+      "quantidade": 1
+    }
+  ]
+}
+
+###
+# 12) Listar cautelas da portaria
+GET {{baseUrl}}/cautelas
+Authorization: Bearer {{portariaToken}}
+
+###
+# 13) Listar só cautelas em análise
+GET {{baseUrl}}/cautelas?respondidas=false
+Authorization: Bearer {{portariaToken}}
+
+###
+# 14) Login GESTOR
+POST {{baseUrl}}/auth/login
+Content-Type: {{json}}
+
+{
+  "email": "gestor@cautela.local",
+  "senha": "123456"
+}
+
+###
+@gestorToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Imdlc3RvckBjYXV0ZWxhLmxvY2FsIiwicGFwZWwiOiJHRVNUT1IiLCJzdWIiOiI0M0Q3NDIzRS1GMzZCLTE0MTAtODUwOC0wMDg2RTI1Qzc1RUMiLCJ0b2tlblZlcnNpb24iOjIsImlhdCI6MTc3NzA1MjUxOSwiZXhwIjoxNzc3MDgxMzE5fQ.QHZDVMXJUnbdL4YXNSZ3zhsFEO2fAp2L0N1yvvZ4O-E
+
+###
+# 15) Listar cautelas do gestor
+GET {{baseUrl}}/cautelas
+Authorization: Bearer {{gestorToken}}
+
+###
+@cautelaId = 4ED7423E-F36B-1410-8508-0086E25C75EC
+###
+# 16) Ver detalhes da cautela
+GET {{baseUrl}}/cautelas/{{cautelaId}}
+Authorization: Bearer {{gestorToken}}
+
+###
+# 17) Aprovar cautela
+PATCH {{baseUrl}}/cautelas/{{cautelaId}}/aprovar
+Authorization: Bearer {{gestorToken}}
+
+###
+# 18) Reprovar cautela
+# Use esta requisição em vez da aprovação quando quiser validar o fluxo de rejeição.
+PATCH {{baseUrl}}/cautelas/{{cautelaId}}/reprovar
+Authorization: Bearer {{gestorToken}}
+Content-Type: {{json}}
+
+{
+  "justificativa": "Equipamento sem autorização do setor."
+}
+
+###
+# 19) Consultar histórico da cautela após decisão
+GET {{baseUrl}}/cautelas/{{cautelaId}}
+Authorization: Bearer {{gestorToken}}
+
+###
+# 20) Testar refresh token
+# Cole manualmente o refreshToken retornado no login.
+POST {{baseUrl}}/auth/refresh
+Content-Type: {{json}}
+
+{
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Imdlc3RvckBjYXV0ZWxhLmxvY2FsIiwicGFwZWwiOiJHRVNUT1IiLCJzdWIiOiI0M0Q3NDIzRS1GMzZCLTE0MTAtODUwOC0wMDg2RTI1Qzc1RUMiLCJ0b2tlblZlcnNpb24iOjEsImp0aSI6IjY1MDAxYmI0LTcyYmYtNDgyNy1hOGUxLTk5MDdiOGFkY2JiNCIsInR5cGUiOiJyZWZyZXNoIiwiaWF0IjoxNzc3MDUyMTQ2LCJleHAiOjE3Nzc2NTY5NDZ9.b9Vgn7nNqvvtD7xoXB0V321ogTaARPsHMyIB7vS1ZB8"
+}
+
+###
+# 21) Encerrar sessão atual
+POST {{baseUrl}}/auth/logout
+Authorization: Bearer {{gestorToken}}
+Content-Type: {{json}}
+
+{}
+
+###
+# 22) Encerrar todas as sessões
+POST {{baseUrl}}/auth/logout-all
+Authorization: Bearer {{gestorToken}}
+

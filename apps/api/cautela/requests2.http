@@ -1,0 +1,663 @@
+@baseUrl = http://localhost:3000
+@json = application/json
+
+# Roteiro independente.
+# Execute a secao SETUP de cima para baixo e depois rode os cenarios.
+# Observacao: criar ADMIN so funciona em uma base vazia, por regra da API.
+
+@adminEmail = admin.requests2@cautela.local
+@gestorEmail = gestor.requests2@cautela.local
+@portariaEmail = portaria.requests2@cautela.local
+@senha = 123456
+@uuidInexistente = 00000000-0000-0000-0000-000000000000
+
+###
+# SETUP 1 - Criar ADMIN inicial
+# Esperado em base vazia: 201 Created
+# Se a base ja tiver usuarios: 403 Forbidden. Nesse caso use um ADMIN ja existente para continuar.
+# @name setupCreateAdmin
+POST {{baseUrl}}/users
+Content-Type: {{json}}
+
+{
+  "nome": "Admin Requests2",
+  "email": "{{adminEmail}}",
+  "senha": "{{senha}}",
+  "papel": "ADMIN"
+}
+
+###
+# SETUP 2 - Login ADMIN
+# Esperado: 201 Created
+# @name setupLoginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: {{json}}
+
+{
+  "email": "{{adminEmail}}",
+  "senha": "{{senha}}"
+}
+
+###
+@adminToken = {{setupLoginAdmin.response.body.$.accessToken}}
+@adminRefreshToken = {{setupLoginAdmin.response.body.$.refreshToken}}
+@adminId = {{setupLoginAdmin.response.body.$.user.id}}
+
+###
+# SETUP 3 - Criar GESTOR
+# Esperado: 201 Created
+# @name setupCreateGestor
+POST {{baseUrl}}/users
+Content-Type: {{json}}
+
+{
+  "nome": "Gestor Requests2",
+  "email": "{{gestorEmail}}",
+  "senha": "{{senha}}",
+  "papel": "GESTOR"
+}
+
+###
+@gestorId = {{setupCreateGestor.response.body.$.id}}
+
+###
+# SETUP 4 - Criar PORTARIA
+# Esperado: 201 Created
+# @name setupCreatePortaria
+POST {{baseUrl}}/users
+Content-Type: {{json}}
+
+{
+  "nome": "Portaria Requests2",
+  "email": "{{portariaEmail}}",
+  "senha": "{{senha}}",
+  "papel": "PORTARIA"
+}
+
+###
+@portariaId = {{setupCreatePortaria.response.body.$.id}}
+
+###
+# SETUP 5 - Login GESTOR
+# Esperado: 201 Created
+# @name setupLoginGestor
+POST {{baseUrl}}/auth/login
+Content-Type: {{json}}
+
+{
+  "email": "{{gestorEmail}}",
+  "senha": "{{senha}}"
+}
+
+###
+@gestorToken = {{setupLoginGestor.response.body.$.accessToken}}
+@gestorRefreshToken = {{setupLoginGestor.response.body.$.refreshToken}}
+
+###
+# SETUP 6 - Login PORTARIA
+# Esperado: 201 Created
+# @name setupLoginPortaria
+POST {{baseUrl}}/auth/login
+Content-Type: {{json}}
+
+{
+  "email": "{{portariaEmail}}",
+  "senha": "{{senha}}"
+}
+
+###
+@portariaToken = {{setupLoginPortaria.response.body.$.accessToken}}
+@portariaRefreshToken = {{setupLoginPortaria.response.body.$.refreshToken}}
+
+###
+# SETUP 7 - Criar setor principal
+# Esperado: 201 Created
+# @name setupCreateSetor
+POST {{baseUrl}}/sectors
+Authorization: Bearer {{adminToken}}
+Content-Type: {{json}}
+
+{
+  "numeroSetor": 201,
+  "nome": "Setor Requests2",
+  "gestorId": "{{gestorId}}"
+}
+
+###
+@setorId = {{setupCreateSetor.response.body.$.id}}
+
+###
+# SETUP 8 - Criar cautela que ficara em analise
+# Esperado: 201 Created
+# @name setupCreateCautelaEmAnalise
+POST {{baseUrl}}/cautelas
+Authorization: Bearer {{portariaToken}}
+Content-Type: {{json}}
+
+{
+  "setorId": "{{setorId}}",
+  "proprietarioNome": "Pessoa Em Analise",
+  "proprietarioEmail": "em.analise@teste.com",
+  "retornoItem": true,
+  "validade": "2026-05-10T18:00:00.000Z",
+  "itens": [
+    {
+      "nomeItem": "Notebook",
+      "quantidade": 1
+    }
+  ]
+}
+
+###
+@cautelaId = {{setupCreateCautelaEmAnalise.response.body.$.id}}
+
+###
+# SETUP 9 - Criar cautela que sera respondida
+# Esperado: 201 Created
+# @name setupCreateCautelaParaResponder
+POST {{baseUrl}}/cautelas
+Authorization: Bearer {{portariaToken}}
+Content-Type: {{json}}
+
+{
+  "setorId": "{{setorId}}",
+  "proprietarioNome": "Pessoa Respondida",
+  "proprietarioEmail": "respondida@teste.com",
+  "retornoItem": false,
+  "itens": [
+    {
+      "nomeItem": "Mouse",
+      "quantidade": 1
+    }
+  ]
+}
+
+###
+@cautelaParaResponderId = {{setupCreateCautelaParaResponder.response.body.$.id}}
+
+###
+# SETUP 10 - Aprovar cautela para gerar uma cautela respondida
+# Esperado: 200 OK
+# @name setupAprovarCautela
+PATCH {{baseUrl}}/cautelas/{{cautelaParaResponderId}}/aprovar
+Authorization: Bearer {{gestorToken}}
+
+###
+@cautelaRespondidaId = {{setupAprovarCautela.response.body.$.id}}
+
+###
+# AUTH - Login com senha incorreta
+# Esperado: 401 Unauthorized
+POST {{baseUrl}}/auth/login
+Content-Type: {{json}}
+
+{
+  "email": "{{adminEmail}}",
+  "senha": "senha-errada"
+}
+
+###
+# AUTH - Login com e-mail em formato invalido
+# Esperado: 400 Bad Request
+POST {{baseUrl}}/auth/login
+Content-Type: {{json}}
+
+{
+  "email": "email-invalido",
+  "senha": "{{senha}}"
+}
+
+###
+# AUTH - Refresh token valido
+# Esperado: 201 Created com novos tokens
+POST {{baseUrl}}/auth/refresh
+Content-Type: {{json}}
+
+{
+  "refreshToken": "{{portariaRefreshToken}}"
+}
+
+###
+# AUTH - Refresh token invalido
+# Esperado: 401 Unauthorized
+POST {{baseUrl}}/auth/refresh
+Content-Type: {{json}}
+
+{
+  "refreshToken": "token.invalido"
+}
+
+###
+# AUTH - Logout sem Authorization
+# Esperado: 401 Unauthorized
+POST {{baseUrl}}/auth/logout
+Content-Type: {{json}}
+
+{}
+
+###
+# USUARIOS - Buscar usuario logado como ADMIN
+# Esperado: 200 OK
+GET {{baseUrl}}/users/me
+Authorization: Bearer {{adminToken}}
+
+###
+# USUARIOS - Buscar usuario logado como PORTARIA
+# Esperado: 200 OK
+GET {{baseUrl}}/users/me
+Authorization: Bearer {{portariaToken}}
+
+###
+# USUARIOS - Listar apenas gestores ativos
+# Esperado: 200 OK
+GET {{baseUrl}}/users?papel=GESTOR&ativo=true
+Authorization: Bearer {{adminToken}}
+
+###
+# USUARIOS - Listar usuarios como PORTARIA
+# Esperado: 403 Forbidden
+GET {{baseUrl}}/users
+Authorization: Bearer {{portariaToken}}
+
+###
+# USUARIOS - Criar usuario com senha curta
+# Esperado: 400 Bad Request
+POST {{baseUrl}}/users
+Content-Type: {{json}}
+
+{
+  "nome": "Senha Curta",
+  "email": "senha.curta.requests2@cautela.local",
+  "senha": "123",
+  "papel": "PORTARIA"
+}
+
+###
+# USUARIOS - Criar usuario com papel invalido
+# Esperado: 400 Bad Request
+POST {{baseUrl}}/users
+Content-Type: {{json}}
+
+{
+  "nome": "Papel Invalido",
+  "email": "papel.invalido.requests2@cautela.local",
+  "senha": "{{senha}}",
+  "papel": "OPERADOR"
+}
+
+###
+# USUARIOS - Criar ADMIN depois do bootstrap inicial
+# Esperado: 403 Forbidden
+POST {{baseUrl}}/users
+Content-Type: {{json}}
+
+{
+  "nome": "Segundo Admin Requests2",
+  "email": "segundo.admin.requests2@cautela.local",
+  "senha": "{{senha}}",
+  "papel": "ADMIN"
+}
+
+###
+# USUARIOS - Criar usuario com e-mail duplicado
+# Esperado: 409 Conflict
+POST {{baseUrl}}/users
+Content-Type: {{json}}
+
+{
+  "nome": "Portaria Duplicada",
+  "email": "{{portariaEmail}}",
+  "senha": "{{senha}}",
+  "papel": "PORTARIA"
+}
+
+###
+# USUARIOS - Consultar usuario por ID
+# Esperado: 200 OK
+GET {{baseUrl}}/users/{{gestorId}}
+Authorization: Bearer {{adminToken}}
+
+###
+# USUARIOS - Consultar usuario inexistente
+# Esperado: 404 Not Found
+GET {{baseUrl}}/users/{{uuidInexistente}}
+Authorization: Bearer {{adminToken}}
+
+###
+# USUARIOS - Atualizar nome de usuario
+# Esperado: 200 OK
+PATCH {{baseUrl}}/users/{{portariaId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: {{json}}
+
+{
+  "nome": "Portaria Requests2 Atualizada"
+}
+
+###
+# SETORES - Criar setor como GESTOR
+# Esperado: 403 Forbidden
+POST {{baseUrl}}/sectors
+Authorization: Bearer {{gestorToken}}
+Content-Type: {{json}}
+
+{
+  "numeroSetor": 202,
+  "nome": "Financeiro Requests2",
+  "gestorId": "{{gestorId}}"
+}
+
+###
+# SETORES - Criar setor com numero duplicado
+# Esperado: 409 Conflict
+POST {{baseUrl}}/sectors
+Authorization: Bearer {{adminToken}}
+Content-Type: {{json}}
+
+{
+  "numeroSetor": 201,
+  "nome": "Setor Requests2 Duplicado",
+  "gestorId": "{{gestorId}}"
+}
+
+###
+# SETORES - Criar setor apontando para usuario que nao e GESTOR
+# Esperado: 400 Bad Request
+POST {{baseUrl}}/sectors
+Authorization: Bearer {{adminToken}}
+Content-Type: {{json}}
+
+{
+  "numeroSetor": 203,
+  "nome": "Recepcao Requests2",
+  "gestorId": "{{portariaId}}"
+}
+
+###
+# SETORES - Criar setor com numero invalido
+# Esperado: 400 Bad Request
+POST {{baseUrl}}/sectors
+Authorization: Bearer {{adminToken}}
+Content-Type: {{json}}
+
+{
+  "numeroSetor": 0,
+  "nome": "Setor Invalido",
+  "gestorId": "{{gestorId}}"
+}
+
+###
+# SETORES - Listar setores ativos
+# Esperado: 200 OK
+GET {{baseUrl}}/sectors?ativo=true
+Authorization: Bearer {{adminToken}}
+
+###
+# SETORES - Listar setores inativos
+# Esperado: 200 OK
+GET {{baseUrl}}/sectors?ativo=false
+Authorization: Bearer {{adminToken}}
+
+###
+# SETORES - Buscar setor por ID
+# Esperado: 200 OK
+GET {{baseUrl}}/sectors/{{setorId}}
+Authorization: Bearer {{gestorToken}}
+
+###
+# SETORES - Buscar setor inexistente
+# Esperado: 404 Not Found
+GET {{baseUrl}}/sectors/{{uuidInexistente}}
+Authorization: Bearer {{adminToken}}
+
+###
+# SETORES - Atualizar nome do setor
+# Esperado: 200 OK
+PATCH {{baseUrl}}/sectors/{{setorId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: {{json}}
+
+{
+  "nome": "Setor Requests2 Atualizado"
+}
+
+###
+# CAUTELAS - Criar cautela como ADMIN
+# Esperado: 403 Forbidden
+POST {{baseUrl}}/cautelas
+Authorization: Bearer {{adminToken}}
+Content-Type: {{json}}
+
+{
+  "setorId": "{{setorId}}",
+  "proprietarioNome": "Criacao Indevida",
+  "proprietarioEmail": "criacao.indevida@teste.com",
+  "retornoItem": false,
+  "itens": [
+    {
+      "nomeItem": "Tablet",
+      "quantidade": 1
+    }
+  ]
+}
+
+###
+# CAUTELAS - Criar com retornoItem=true sem validade
+# Esperado: 400 Bad Request
+POST {{baseUrl}}/cautelas
+Authorization: Bearer {{portariaToken}}
+Content-Type: {{json}}
+
+{
+  "setorId": "{{setorId}}",
+  "proprietarioNome": "Sem Validade",
+  "proprietarioEmail": "sem.validade@teste.com",
+  "retornoItem": true,
+  "itens": [
+    {
+      "nomeItem": "Projetor",
+      "quantidade": 1
+    }
+  ]
+}
+
+###
+# CAUTELAS - Criar com retornoItem=false e validade informada
+# Esperado: 400 Bad Request
+POST {{baseUrl}}/cautelas
+Authorization: Bearer {{portariaToken}}
+Content-Type: {{json}}
+
+{
+  "setorId": "{{setorId}}",
+  "proprietarioNome": "Validade Indevida",
+  "proprietarioEmail": "validade.indevida@teste.com",
+  "retornoItem": false,
+  "validade": "2026-05-10T18:00:00.000Z",
+  "itens": [
+    {
+      "nomeItem": "Cabo HDMI",
+      "quantidade": 1
+    }
+  ]
+}
+
+###
+# CAUTELAS - Criar sem itens
+# Esperado: 400 Bad Request
+POST {{baseUrl}}/cautelas
+Authorization: Bearer {{portariaToken}}
+Content-Type: {{json}}
+
+{
+  "setorId": "{{setorId}}",
+  "proprietarioNome": "Sem Itens",
+  "proprietarioEmail": "sem.itens@teste.com",
+  "retornoItem": false,
+  "itens": []
+}
+
+###
+# CAUTELAS - Criar com quantidade invalida
+# Esperado: 400 Bad Request
+POST {{baseUrl}}/cautelas
+Authorization: Bearer {{portariaToken}}
+Content-Type: {{json}}
+
+{
+  "setorId": "{{setorId}}",
+  "proprietarioNome": "Quantidade Invalida",
+  "proprietarioEmail": "quantidade.invalida@teste.com",
+  "retornoItem": false,
+  "itens": [
+    {
+      "nomeItem": "Carregador",
+      "quantidade": 0
+    }
+  ]
+}
+
+###
+# CAUTELAS - Criar com campo extra bloqueado pelo ValidationPipe
+# Esperado: 400 Bad Request
+POST {{baseUrl}}/cautelas
+Authorization: Bearer {{portariaToken}}
+Content-Type: {{json}}
+
+{
+  "setorId": "{{setorId}}",
+  "proprietarioNome": "Campo Extra",
+  "proprietarioEmail": "campo.extra@teste.com",
+  "retornoItem": false,
+  "observacao": "Este campo nao existe no DTO",
+  "itens": [
+    {
+      "nomeItem": "Adaptador",
+      "quantidade": 1
+    }
+  ]
+}
+
+###
+# CAUTELAS - Listar em analise
+# Esperado: 200 OK
+GET {{baseUrl}}/cautelas?status=EM_ANALISE
+Authorization: Bearer {{gestorToken}}
+
+###
+# CAUTELAS - Listar aprovadas
+# Esperado: 200 OK
+GET {{baseUrl}}/cautelas?status=APROVADA
+Authorization: Bearer {{gestorToken}}
+
+###
+# CAUTELAS - Listar reprovadas
+# Esperado: 200 OK
+GET {{baseUrl}}/cautelas?status=REPROVADA
+Authorization: Bearer {{gestorToken}}
+
+###
+# CAUTELAS - Listar por setor
+# Esperado: 200 OK
+GET {{baseUrl}}/cautelas?setorId={{setorId}}
+Authorization: Bearer {{gestorToken}}
+
+###
+# CAUTELAS - Listar respondidas
+# Esperado: 200 OK
+GET {{baseUrl}}/cautelas?respondidas=true
+Authorization: Bearer {{gestorToken}}
+
+###
+# CAUTELAS - Listar pendentes
+# Esperado: 200 OK
+GET {{baseUrl}}/cautelas?respondidas=false
+Authorization: Bearer {{gestorToken}}
+
+###
+# CAUTELAS - Listar com status invalido
+# Esperado: 400 Bad Request
+GET {{baseUrl}}/cautelas?status=CANCELADA
+Authorization: Bearer {{gestorToken}}
+
+###
+# CAUTELAS - Detalhar sem token
+# Esperado: 401 Unauthorized
+GET {{baseUrl}}/cautelas/{{cautelaId}}
+
+###
+# CAUTELAS - Detalhar cautela inexistente
+# Esperado: 404 Not Found
+GET {{baseUrl}}/cautelas/{{uuidInexistente}}
+Authorization: Bearer {{adminToken}}
+
+###
+# CAUTELAS - Aprovar como PORTARIA
+# Esperado: 403 Forbidden
+PATCH {{baseUrl}}/cautelas/{{cautelaId}}/aprovar
+Authorization: Bearer {{portariaToken}}
+
+###
+# CAUTELAS - Reprovar como ADMIN
+# Esperado: 403 Forbidden
+PATCH {{baseUrl}}/cautelas/{{cautelaId}}/reprovar
+Authorization: Bearer {{adminToken}}
+Content-Type: {{json}}
+
+{
+  "justificativa": "ADMIN nao deve decidir cautela."
+}
+
+###
+# CAUTELAS - Reprovar sem justificativa
+# Esperado: 400 Bad Request
+PATCH {{baseUrl}}/cautelas/{{cautelaId}}/reprovar
+Authorization: Bearer {{gestorToken}}
+Content-Type: {{json}}
+
+{
+  "justificativa": ""
+}
+
+###
+# CAUTELAS - Aprovar cautela ja respondida
+# Esperado: 409 Conflict
+PATCH {{baseUrl}}/cautelas/{{cautelaRespondidaId}}/aprovar
+Authorization: Bearer {{gestorToken}}
+
+###
+# CAUTELAS - Reprovar cautela ja respondida
+# Esperado: 409 Conflict
+PATCH {{baseUrl}}/cautelas/{{cautelaRespondidaId}}/reprovar
+Authorization: Bearer {{gestorToken}}
+Content-Type: {{json}}
+
+{
+  "justificativa": "Tentativa de decisao duplicada."
+}
+
+###
+# DESTRUTIVO - Alterar senha e invalidar sessoes da portaria
+# Execute no final, pois invalida tokens antigos da portaria.
+# Esperado: 200 OK e tokenVersion incrementado internamente
+PATCH {{baseUrl}}/users/{{portariaId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: {{json}}
+
+{
+  "senha": "1234567"
+}
+
+###
+# DESTRUTIVO - Inativar usuario portaria
+# Execute no final, pois o usuario nao conseguira mais operar normalmente.
+# Esperado: 200 OK com ativo=false
+DELETE {{baseUrl}}/users/{{portariaId}}
+Authorization: Bearer {{adminToken}}
+
+###
+# DESTRUTIVO - Inativar setor
+# Execute no final, pois novas cautelas para este setor serao bloqueadas.
+# Esperado: 200 OK com ativo=false
+DELETE {{baseUrl}}/sectors/{{setorId}}
+Authorization: Bearer {{adminToken}}
