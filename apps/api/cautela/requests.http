@@ -162,7 +162,7 @@ Content-Type: {{json}}
 }
 
 ###
-@gestorToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Imdlc3RvckBjYXV0ZWxhLmxvY2FsIiwicGFwZWwiOiJHRVNUT1IiLCJzdWIiOiI3QkZCNDIzRS1GMzZCLTE0MTAtODUwNy0wMDg2RTI1Qzc1RUMiLCJ0b2tlblZlcnNpb24iOjAsImlhdCI6MTc3Njk3MjYwNywiZXhwIjoxNzc3MDAxNDA3fQ.gwYW1dxFwoF3uXwdgEy0o-asfofr8OHX4AKg1GOd4Uo
+@gestorToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Imdlc3RvckBjYXV0ZWxhLmxvY2FsIiwicGFwZWwiOiJHRVNUT1IiLCJzdWIiOiI3QkZCNDIzRS1GMzZCLTE0MTAtODUwNy0wMDg2RTI1Qzc1RUMiLCJ0b2tlblZlcnNpb24iOjEsImlhdCI6MTc3NzAzMzY0NywiZXhwIjoxNzc3MDYyNDQ3fQ.S5jR3jhtn-RchM5gjX6wxJMAqOf7Q0TMUsf0NYZcoK0
 
 ###
 # 15) Listar cautelas do gestor
@@ -170,8 +170,7 @@ GET {{baseUrl}}/cautelas
 Authorization: Bearer {{gestorToken}}
 
 ###
-@cautelaId = 8DFB423E-F36B-1410-8507-0086E25C75EC
-
+@cautelaId = 85FB423E-F36B-1410-8507-0086E25C75EC
 ###
 # 16) Ver detalhes da cautela
 GET {{baseUrl}}/cautelas/{{cautelaId}}
@@ -205,7 +204,7 @@ POST {{baseUrl}}/auth/refresh
 Content-Type: {{json}}
 
 {
-  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InBvcnRhcmlhQGNhdXRlbGEubG9jYWwiLCJwYXBlbCI6IlBPUlRBUklBIiwic3ViIjoiODFGQjQyM0UtRjM2Qi0xNDEwLTg1MDctMDA4NkUyNUM3NUVDIiwidG9rZW5WZXJzaW9uIjowLCJqdGkiOiJmYzRkMjI4NS0wMTkyLTRhOGQtOWNhYS1kOWE2NTkxMTczZTMiLCJ0eXBlIjoicmVmcmVzaCIsImlhdCI6MTc3Njk3NjAwMCwiZXhwIjoxNzc3NTgwODAwfQ.YXI_RELtJwUb2FDLQSJ0WUgaNSmsj8slNYU21aHvpfs"
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Imdlc3RvckBjYXV0ZWxhLmxvY2FsIiwicGFwZWwiOiJHRVNUT1IiLCJzdWIiOiI3QkZCNDIzRS1GMzZCLTE0MTAtODUwNy0wMDg2RTI1Qzc1RUMiLCJ0b2tlblZlcnNpb24iOjEsImp0aSI6IjJkYzgyNTUxLTE3YTgtNDQ2Ni1hMGM3LTg2Y2UzNTFjZWZlOSIsInR5cGUiOiJyZWZyZXNoIiwiaWF0IjoxNzc3MDMzNzI5LCJleHAiOjE3Nzc2Mzg1Mjl9.nx8AYkBG7tzmGEBjDOwZ2mGLIJy1jZ81i3pm4-wimeI"
 }
 
 ###
