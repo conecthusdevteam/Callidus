@@ -215,7 +215,7 @@ function Separator() {
 export default function Sidebar() {
   return (
     <aside
-      className="fixed left-0 top-0 h-full flex flex-col items-center py-3 gap-2 z-20 bg-white border-r border-gray-300"
+      className="hidden md:flex fixed left-0 top-0 h-full flex-col items-center py-3 gap-2 z-20 bg-white border-r border-gray-300"
       style={{ width: "70px", boxShadow: "2px 0 6px rgba(0,0,0,0.08)" }}
     >
       <NavIcon active>
