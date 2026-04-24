@@ -24,7 +24,7 @@ export class Stencil {
     thickness!: number;
 
     @Column()
-    addressing!: string;
+    addressing!: number;
 
     @Column()
     totalWashes!: number;
