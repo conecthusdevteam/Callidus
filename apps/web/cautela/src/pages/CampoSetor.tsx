@@ -1,68 +1,25 @@
 import { useState, useEffect } from "react";
-
-interface Setor {
-  id: string;
-  numeroSetor: number;
-  nome: string;
-  gestorId: string;
-  ativo: boolean;
-}
+import { fetchSectors, type Sector } from "../lib/api";
 
 interface Props {
-  onSetorChange: (gestorId: string) => void;
+  onSetorChange: (setorId: string) => void;
+  value: string;
 }
 
-const mockSetores: Setor[] = [
-  {
-    id: "1",
-    numeroSetor: 1,
-    nome: "TI",
-    gestorId: "gestor-uuid-1",
-    ativo: true,
-  },
-  {
-    id: "2",
-    numeroSetor: 2,
-    nome: "RH",
-    gestorId: "gestor-uuid-2",
-    ativo: true,
-  },
-  {
-    id: "3",
-    numeroSetor: 3,
-    nome: "Financeiro",
-    gestorId: "gestor-uuid-3",
-    ativo: true,
-  },
-  {
-    id: "4",
-    numeroSetor: 4,
-    nome: "Operações",
-    gestorId: "gestor-uuid-4",
-    ativo: true,
-  },
-  {
-    id: "5",
-    numeroSetor: 5,
-    nome: "Segurança",
-    gestorId: "gestor-uuid-5",
-    ativo: true,
-  },
-];
-
-export default function CampoSetor({ onSetorChange }: Props) {
-  const [setores, setSetores] = useState<Setor[]>([]);
+export default function CampoSetor({ onSetorChange, value }: Props) {
+  const [setores, setSetores] = useState<Sector[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     async function fetchSetores() {
       try {
-        const res = await fetch("http://seu-backend.com/api/setores");
-        if (!res.ok) throw new Error("Falha na requisição");
-        const data: Setor[] = await res.json();
+        const data = await fetchSectors();
         setSetores(data.filter((s) => s.ativo));
-      } catch {
-        setSetores(mockSetores);
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Falha ao carregar setores.",
+        );
       } finally {
         setLoading(false);
       }
@@ -71,8 +28,7 @@ export default function CampoSetor({ onSetorChange }: Props) {
   }, []);
 
   function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const setor = setores.find((s) => s.id === e.target.value);
-    if (setor) onSetorChange(setor.gestorId);
+    onSetorChange(e.target.value);
   }
 
   return (
@@ -80,7 +36,7 @@ export default function CampoSetor({ onSetorChange }: Props) {
       <label className="block font-medium text-black mb-1">Setor</label>
       <div className="relative">
         <select
-          defaultValue=""
+          value={value}
           disabled={loading}
           onChange={handleChange}
           className="w-full appearance-none border-2 border-[#D4D4D4] rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-green-600 focus:outline-none pr-10 text-[#404040] cursor-pointer disabled:opacity-50"
@@ -90,7 +46,7 @@ export default function CampoSetor({ onSetorChange }: Props) {
           </option>
           {setores.map((setor) => (
             <option key={setor.id} value={setor.id}>
-              {setor.nome}
+              {setor.numeroSetor} - {setor.nome}
             </option>
           ))}
         </select>
@@ -107,6 +63,7 @@ export default function CampoSetor({ onSetorChange }: Props) {
           </svg>
         </div>
       </div>
+      {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
     </div>
   );
 }
