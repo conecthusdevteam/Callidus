@@ -13,28 +13,31 @@ interface KpiCardProps {
  * Borda lateral colorida à esquerda identifica o tipo do KPI.
  */
 export function KpiCard({ label, value, variant = "default", className }: KpiCardProps) {
-  const accent =
-    variant === "primary"
-      ? "border-l-primary"
-      : variant === "attention"
-        ? "border-l-kpi-attention-fg"
-        : variant === "neutral"
-          ? "border-l-kpi-neutral"
-          : "border-l-border";
+  // Escolhe o background conforme a variante
+  const bg =
+    variant === "primary"   ? "bg-kpi-primary-bg"
+    : variant === "attention" ? "bg-kpi-attention-bg"
+    : "bg-kpi-default-bg";
+
+  // Escolhe a cor da borda esquerda (4px colorida) conforme a variante
+  const leftBorder =
+    variant === "primary"   ? "border-l-kpi-primary-border"
+    : variant === "attention" ? "border-l-kpi-attention-border"
+    : "border-l-kpi-border";
 
   return (
     <div
       className={cn(
-        "relative rounded-xl border border-l-[6px] bg-card p-5 shadow-card transition-shadow hover:shadow-elevated",
-        accent,
-        variant === "attention" && "bg-kpi-attention-bg",
+        "rounded-lg border-[0.5px] border-kpi-border border-l-4 p-4 transition-shadow hover:shadow-card",
+        bg,
+        leftBorder,
         className,
       )}
     >
       <p className="kpi-label">{label}</p>
       <p
         className={cn(
-          "kpi-value mt-2 text-right md:text-6xl",
+          "kpi-value mt-2 text-right",
           variant === "attention" && "text-kpi-attention-fg",
         )}
       >

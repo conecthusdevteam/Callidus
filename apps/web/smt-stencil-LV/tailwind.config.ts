@@ -52,10 +52,17 @@ export default {
           active: "hsl(var(--sidebar-active))",
         },
         kpi: {
-          neutral: "hsl(var(--kpi-neutral))",
-          "attention-bg": "hsl(var(--kpi-attention-bg))",
-          "attention-fg": "hsl(var(--kpi-attention-fg))",
-        },
+  neutral: "hsl(var(--kpi-neutral))",
+  label: "hsl(var(--kpi-label))",
+  border: "hsl(var(--kpi-border))",
+  "primary-bg": "hsl(var(--kpi-primary-bg))",
+  "primary-border": "hsl(var(--kpi-primary-border))",
+  "default-bg": "hsl(var(--kpi-default-bg))",
+  "attention-bg": "hsl(var(--kpi-attention-bg))",
+  "attention-border": "hsl(var(--kpi-attention-border))",
+  "attention-fg": "hsl(var(--kpi-attention-fg))",
+},
+
         badge: {
           "ok-bg": "hsl(var(--badge-ok-bg))",
           "ok-fg": "hsl(var(--badge-ok-fg))",
@@ -115,3 +122,5 @@ export default {
   },
   plugins: [require("tailwindcss-animate")],
 } satisfies Config;
+
+

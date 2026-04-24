@@ -43,9 +43,24 @@
     --radius: 0.625rem;
 
     /* KPI / status tokens */
-    --kpi-neutral: 215 25% 22%;
-    --kpi-attention-bg: 32 100% 96%;
-    --kpi-attention-fg: 28 95% 45%;
+--kpi-neutral: 215 25% 22%;
+--kpi-label: 220 9% 34%;        /* #4B5563 */
+--kpi-border: 220 9% 34%;       /* #4B5563 */
+
+/* KPI: Lavagens do dia (verde) */
+--kpi-primary-bg: 152 50% 97%;      /* #F3FAF7 */
+--kpi-primary-border: 152 84% 34%;  /* #0E9F6E */
+
+/* KPI: Stencil / Placas (neutro) */
+--kpi-default-bg: 220 14% 96%;      /* #F3F4F6 */
+
+/* KPI: Última coleta (atenção/laranja) */
+--kpi-attention-bg: 30 100% 97%;       /* #FFF8F1 */
+--kpi-attention-border: 27 96% 77%;    /* #FDBA8C */
+--kpi-attention-fg: 28 95% 45%;
+
+
+
 
     /* Badges de status de lavagem */
     --badge-ok-bg: 142 70% 92%;
@@ -132,8 +147,9 @@
   }
 
   .kpi-label {
-    @apply text-sm font-medium uppercase tracking-wide;
-    color: hsl(var(--muted-foreground));
-    letter-spacing: 0.04em;
+    @apply text-base font-medium;       /* 16px medium — você pediu 18px no recap, mas o código aplicou text-base */
+    color: hsl(var(--kpi-label));        /* #4B5563 */
+    letter-spacing: 0;
   }
 }
+

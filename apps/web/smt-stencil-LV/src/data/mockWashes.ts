@@ -64,7 +64,7 @@ export interface DashboardData {
 const stencils: StencilWash[] = [
   {
     id: "s1", data: "21/04/2026", hora: "12:33", codigo: "G250_MAIN_V03_2P_T4T2N",
-    enderecamento: "014", motivo: "Ativo", linha: "Tetli",
+    enderecamento: "014", motivo: "Ativo", linha: "Tefé",
     product: "G250_MAIN_V03_2P_T4T2N", revisao: "12345678", pais: "Brasil",
     largura: "0.16", altura: "0.17", totalLavagens: 358,
     ultimaLavagem: "21/04/2026 12:33", proximaPrev: "98765",
@@ -73,19 +73,19 @@ const stencils: StencilWash[] = [
   { id: "s2", data: "21/04/2026", hora: "12:27", codigo: "G250_MAIN_V03_2P_T4T26/2", enderecamento: "008", motivo: "Ativo", linha: "Manaus" },
   { id: "s3", data: "21/04/2026", hora: "12:24", codigo: "G250_MAIN_V03_2P_T4T26/2", enderecamento: "005", motivo: "Ativo", linha: "Manaus" },
   { id: "s4", data: "21/04/2026", hora: "12:24", codigo: "G250_MAIN_V03_2P_T4T26/2", enderecamento: "008", motivo: "Inativo", linha: "Manaus", attention: true },
-  { id: "s5", data: "21/04/2026", hora: "12:23", codigo: "G250_MAIN_V03_2P_T4T26/2", enderecamento: "008", motivo: "Inativo", linha: "Caieli", attention: true },
+  { id: "s5", data: "21/04/2026", hora: "12:23", codigo: "G250_MAIN_V03_2P_T4T26/2", enderecamento: "008", motivo: "Inativo", linha: "Coari", attention: true },
   { id: "s6", data: "21/04/2026", hora: "12:21", codigo: "G250_MAIN_V03_2P_T4T26/2", enderecamento: "005", motivo: "Ativo", linha: "Manaus" },
   { id: "s7", data: "21/04/2026", hora: "12:18", codigo: "G250_MAIN_V03_2P_T4T26/2", enderecamento: "005", motivo: "Ativo", linha: "Manaus" },
-  { id: "s8", data: "21/04/2026", hora: "12:15", codigo: "G250_MAIN_V03_2P_T4T26/2", enderecamento: "005", motivo: "Inativo", linha: "Caieli" },
-  { id: "s9", data: "21/04/2026", hora: "12:13", codigo: "G250_MAIN_V03_2P_T4T26/2", enderecamento: "005", motivo: "Inativo", linha: "Caieli" },
-  { id: "s10", data: "21/04/2026", hora: "12:11", codigo: "G130_MAIN_V03_2P_T4T26/2", enderecamento: "008", motivo: "Inativo", linha: "Caieli" },
+  { id: "s8", data: "21/04/2026", hora: "12:15", codigo: "G250_MAIN_V03_2P_T4T26/2", enderecamento: "005", motivo: "Inativo", linha: "Coari" },
+  { id: "s9", data: "21/04/2026", hora: "12:13", codigo: "G250_MAIN_V03_2P_T4T26/2", enderecamento: "005", motivo: "Inativo", linha: "Coari" },
+  { id: "s10", data: "21/04/2026", hora: "12:11", codigo: "G130_MAIN_V03_2P_T4T26/2", enderecamento: "008", motivo: "Inativo", linha: "Coari" },
   { id: "s11", data: "21/04/2026", hora: "12:08", codigo: "G250_MAIN_V03_2P_T4T26/2", enderecamento: "005", motivo: "Ativo", linha: "Manaus" },
   { id: "s12", data: "21/04/2026", hora: "12:04", codigo: "G250_MAIN_V03_2P_T4T26/2", enderecamento: "005", motivo: "Ativo", linha: "Manaus" },
 ];
 
 // Histórico adicional de stencils (dias anteriores) para paginação.
 const statusCycle: StatusBadge[] = ["Ativo", "Inativo"];
-const linhasCycle = ["Tetli", "Manaus", "Caieli"];
+const linhasCycle = ["Tefé", "Manaus", "Coari"];
 for (let i = 0; i < 28; i++) {
   const dayOffset = Math.floor(i / 6) + 1;
   const day = String(20 - dayOffset).padStart(2, "0");
@@ -113,7 +113,7 @@ const placas: PlacaWash[] = Array.from({ length: 14 }, (_, i) => {
     turno: i % 3 === 0 ? "1°" : i % 3 === 1 ? "2°" : "3°",
     modelo: "Q2EXMAHN/30",
     face: i % 2 === 0 ? "2°" : "1°",
-    linha: i % 4 === 0 ? "Tetli" : i % 4 === 1 ? "Manaus" : "Caieli",
+    linha: i % 4 === 0 ? "Tefé" : i % 4 === 1 ? "Manaus" : "Coari",
     product: "Q2EHFB75T",
     codigoBarras: "12345678",
     serial: "44521",

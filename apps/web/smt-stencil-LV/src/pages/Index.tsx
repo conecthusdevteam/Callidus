@@ -43,10 +43,10 @@ const Index = () => {
   );
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <Header />
-      <div className="flex flex-1">
-        <Sidebar />
+    <div className="flex min-h-screen bg-background">
+      <Sidebar />
+      <div className="flex flex-1 flex-col">
+        <Header />
         <main className="flex-1 p-4 md:p-6">
           {/* KPIs RP-01 */}
           <section className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">

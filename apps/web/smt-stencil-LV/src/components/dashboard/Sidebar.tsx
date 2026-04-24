@@ -1,27 +1,30 @@
-import { Droplets, LayoutGrid, Settings, Download } from "lucide-react";
+import brandLogo from "@/assets/brand.svg";
+import dashboardIcon from "@/assets/icon-dashboard.svg";
+import uploadIcon from "@/assets/icon-upload.svg";
 
 /**
- * Sidebar lateral fina (estilo wallboard) — verde escuro com ícones de navegação.
+ * Sidebar lateral fina — fundo branco com logo da marca e ícones de navegação.
  */
 export function Sidebar() {
   const items = [
-    { icon: LayoutGrid, label: "Dashboard", active: true },
-  /**  { icon: Droplets, label: "Lavagens" },*/
-    { icon: Download, label: "Exportar" },
-  /**   { icon: Settings, label: "Configurações" },*/
+    { icon: dashboardIcon, label: "Dashboard", active: false },
+    { icon: uploadIcon, label: "Upload", active: true },
   ];
 
   return (
-    <aside className="hidden md:flex w-14 flex-col items-center gap-1 bg-sidebar py-4 text-sidebar-foreground">
+    <aside className="hidden md:flex w-16 flex-col items-center gap-3 border-r bg-card py-4">
+      <div className="flex h-11 w-11 items-center justify-center">
+        <img src={brandLogo} alt="Marca" className="h-8 w-8" />
+      </div>
       {items.map((item, i) => (
         <button
           key={i}
           aria-label={item.label}
           className={`flex h-11 w-11 items-center justify-center rounded-md transition-colors ${
-            item.active ? "bg-sidebar-active" : "hover:bg-sidebar-active/60"
+            item.active ? "bg-primary/10" : "hover:bg-muted"
           }`}
         >
-          <item.icon className="h-5 w-5" />
+          <img src={item.icon} alt={item.label} className="h-6 w-6" />
         </button>
       ))}
     </aside>

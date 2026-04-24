@@ -12,7 +12,7 @@ export function PlacaTable({ rows, selectedId, onSelect }: Props) {
     <div className="overflow-hidden rounded-lg border bg-card">
       <table className="w-full text-sm">
         <thead>
-          <tr className="bg-secondary text-secondary-foreground">
+          <tr className="bg-primary text-primary-foreground">
             {["Data", "Hora", "Turno", "Modelo", "Face", "Linha"].map((h) => (
               <th
                 key={h}
