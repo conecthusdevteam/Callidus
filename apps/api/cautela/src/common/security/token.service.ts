@@ -88,7 +88,7 @@ export class TokenService {
   }
 
   private getAccessTokenExpiration(): string {
-    return this.configService.get<string>('JWT_EXPIRES_IN') || '15m';
+    return this.configService.get<string>('JWT_EXPIRES_IN') || '8h';
   }
 
   private getRefreshTokenExpiration(): string {
