@@ -6,7 +6,7 @@ export class CreateStencilDto {
     stencilCode!: string;
 
     @IsString()
-    manufacteId!: string;
+    manufactureId!: string;
 
     @IsString()
     country!: string;

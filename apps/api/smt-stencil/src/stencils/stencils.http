@@ -1,0 +1,34 @@
+@baseUrl=http://localhost:3000
+@stencilId=paste_stencil_id_here
+
+### Create stencil
+POST {{baseUrl}}/stencils
+Content-Type: application/json
+
+{
+    "stencilCode": "D230_MAIN_V03_2F_74729",
+    "manufactureId": "43595643",
+    "country": "Brasil",
+    "thickness": 0.08,
+    "addressing": 12,
+    "totalWashes": 34,
+    "operator": "John Doe",
+    "lineName": "Manaus"
+}
+
+### List stencils
+GET {{baseUrl}}/stencils
+
+### Get Stencil
+GET {{baseUrl}}/stencils/{{stencilId}}
+
+### Update stencil status
+PATCH {{baseUrl}}/stencils/{{stencilId}}
+Content-Type: application/json
+
+{
+    "status": "inactive"
+}
+
+### Delete stencil
+DELETE {{baseUrl}}/stencils/{{stencilId}}
