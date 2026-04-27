@@ -34,8 +34,8 @@ export class PlatesController {
 
   @Delete(':id')
   @HttpCode(204)
-  remove(@Param('id') id: string) {
-    const plate = this.platesService.remove(id);
+  async remove(@Param('id') id: string) {
+    const plate = await this.platesService.remove(id);
     if (!plate) throw new NotFoundException;
   }
 }

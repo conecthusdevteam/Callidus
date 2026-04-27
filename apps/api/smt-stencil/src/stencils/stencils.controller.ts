@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, NotFoundException, Param, Patch, Post } from '@nestjs/common';
+  import { Body, Controller, Delete, Get, HttpCode, NotFoundException, Param, Patch, Post } from '@nestjs/common';
 import { CreateStencilDto } from './dto/create-stencil.dto';
 import { UpdateStencilDto } from './dto/update-stencil.dto';
 import { StencilsService } from './stencils.service';
@@ -34,8 +34,8 @@ export class StencilsController {
 
   @Delete(':id')
   @HttpCode(204)
-  remove(@Param('id') id: string) {
-    const stencil = this.stencilsService.remove(id);
+  async remove(@Param('id') id: string) {
+    const stencil = await this.stencilsService.remove(id);
     if (!stencil) throw new NotFoundException;
   }
 }
