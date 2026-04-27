@@ -1,0 +1,34 @@
+@baseUrl=http://localhost:3000
+@plateId=paste_plate_id_here
+
+### Create plate
+POST {{baseUrl}}/plates
+Content-Type: application/json
+
+{
+    "plateModel": "Q92XMAINV30",
+    "serialNumber": "54872388",
+    "blankId": "China",
+    "shift": 1,
+    "phase": 1,
+    "totalWashes": 12,
+    "operator": "Jack Doe",
+    "lineName": "Manaus"
+}
+
+### List plates
+GET {{baseUrl}}/plates
+
+### Get plate
+GET {{baseUrl}}/plates/{{plateId}}
+
+### Update plate phase
+PATCH {{baseUrl}}/plates/{{plateId}}
+Content-Type: application/json
+
+{
+    "phase": 2
+}
+
+### Delete plate
+DELETE {{baseUrl}}/plates/{{plateId}}
