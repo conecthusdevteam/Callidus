@@ -11,17 +11,18 @@ interface Props {
 export function StencilTable({ rows, selectedId, onSelect }: Props) {
   return (
     <div className="overflow-hidden rounded-lg border bg-card">
-      <table className="w-full text-sm">
+      {/* Linhas em 18px Regular (font-body) — img1 */}
+        <table className="w-full text-lg font-normal">
         <thead>
           <tr className="bg-primary text-primary-foreground">
             {["Data", "Hora", "Código", "Endereçamento", "Status", "Linha"].map((h) => (
-              <th
-                key={h}
-                className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
-              >
-                {h}
-              </th>
-            ))}
+  <th
+    key={h}
+    className="table-head-cell px-4 py-3 text-left"
+  >
+    {h}
+  </th>
+))}
           </tr>
         </thead>
         <tbody>
@@ -40,7 +41,7 @@ export function StencilTable({ rows, selectedId, onSelect }: Props) {
               >
                 <td className="px-4 py-3 tabular text-foreground">{row.data}</td>
                 <td className="px-4 py-3 tabular text-foreground">{row.hora}</td>
-                <td className="px-4 py-3 font-mono text-xs text-foreground">{row.codigo}</td>
+                <td className="px-4 py-3 text-foreground">{row.codigo}</td>
                 <td className="px-4 py-3 tabular text-foreground">{row.enderecamento}</td>
                 <td className="px-4 py-3">
                   <StatusPill status={row.motivo} />

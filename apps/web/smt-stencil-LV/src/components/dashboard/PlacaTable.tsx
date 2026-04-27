@@ -10,17 +10,18 @@ interface Props {
 export function PlacaTable({ rows, selectedId, onSelect }: Props) {
   return (
     <div className="overflow-hidden rounded-lg border bg-card">
-      <table className="w-full text-sm">
+      {/* Linhas em 18px Regular (font-body) — img1 */}
+      <table className="w-full text-lg font-normal">
         <thead>
           <tr className="bg-primary text-primary-foreground">
             {["Data", "Hora", "Turno", "Modelo", "Face", "Linha"].map((h) => (
-              <th
-                key={h}
-                className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide"
-              >
-                {h}
-              </th>
-            ))}
+  <th
+    key={h}
+    className="table-head-cell px-4 py-3 text-left"
+  >
+    {h}
+  </th>
+))}
           </tr>
         </thead>
         <tbody>
@@ -38,7 +39,7 @@ export function PlacaTable({ rows, selectedId, onSelect }: Props) {
                 <td className="px-4 py-3 tabular">{row.data}</td>
                 <td className="px-4 py-3 tabular">{row.hora}</td>
                 <td className="px-4 py-3">{row.turno}</td>
-                <td className="px-4 py-3 font-mono text-xs">{row.modelo}</td>
+                <td className="px-4 py-3">{row.modelo}</td>
                 <td className="px-4 py-3">{row.face}</td>
                 <td className="px-4 py-3">{row.linha}</td>
               </tr>

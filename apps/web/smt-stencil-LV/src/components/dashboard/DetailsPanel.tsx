@@ -7,70 +7,74 @@ interface Props {
 }
 
 /**
- * Painel lateral de detalhes de um item (stencil ou placa) selecionado.
+ * Painel lateral de detalhes — layout conforme img2.
+ *
+ * Estrutura:
+ *  • Código (Stencil ou Placa) em destaque
+ *  • Grid 2 colunas: ID Fabricante / País de Origem
+ *  • Grid 2 colunas: Espessura / Endereçamento
+ *  • Total de Lavagens Registradas
+ *  • Bloco "Dados da última lavagem" com ID Lavagem / Data / Hora / Operador
+ *  • Botão "Fechar detalhes"
  */
 export function DetailsPanel({ item, onClose }: Props) {
   if (!item) {
-    return (
-      <div className="rounded-xl border border-dashed bg-card p-6 text-center text-sm text-muted-foreground shadow-card">
-        Selecione um item da lista para ver os detalhes.
-      </div>
-    );
+    return null;
   }
 
   const isStencil = "codigo" in item;
-  const product = item.product ?? (isStencil ? item.codigo : item.modelo);
+  const codigoLabel = isStencil ? "Código Stencil" : "Código Placa";
+  const codigoValue = isStencil
+    ? (item as StencilWash).codigo
+    : (item as PlacaWash).modelo;
+
+  const idFabricante = item.idFabricante ?? "—";
+  const pais = item.pais ?? "—";
+  const espessura = item.espessura ?? "—";
+  const enderecamento = isStencil
+    ? (item as StencilWash).enderecamento
+    : ((item as PlacaWash).enderecamento ?? "—");
+  const total = item.totalLavagens ?? 0;
+  const idLavagem = item.idLavagem ?? "—";
+  const ultData = item.ultimaLavagemData ?? "—";
+  const ultHora = item.ultimaLavagemHora ?? "—";
+  const operador = item.operador ?? "—";
 
   return (
-    <div className="space-y-4 rounded-xl border bg-card p-5 shadow-card animate-fade-in">
+    <div className="space-y-5 rounded-xl border bg-card p-5 shadow-card animate-fade-in">
+      {/* Código em destaque */}
+      <Field label={codigoLabel} value={codigoValue} valueClass="text-xl font-bold" />
+
+      {/* ID Fabricante / País */}
+      <div className="grid grid-cols-2 gap-4">
+        <Field label="ID Fabricante" value={idFabricante} valueClass="text-lg font-bold" />
+        <Field label="País de Origem" value={pais} valueClass="text-lg font-bold" />
+      </div>
+
+      {/* Espessura / Endereçamento */}
+      <div className="grid grid-cols-2 gap-4">
+        <Field label="Espessura" value={espessura} valueClass="text-lg font-bold" />
+        <Field label="Endereçamento" value={enderecamento} valueClass="text-lg font-bold" />
+      </div>
+
+      {/* Total de lavagens */}
       <div>
-        <p className="text-xs uppercase tracking-wide text-muted-foreground">Produto</p>
-        <p className="mt-1 font-mono text-sm font-semibold text-foreground">{product}</p>
+        <p className="text-sm text-muted-foreground">Total de Lavagens Registradas</p>
+        <p className="mt-1 text-lg font-bold tabular text-foreground">
+          {String(total).padStart(3, "0")} lavagens
+        </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 text-sm">
-        {isStencil && (item as StencilWash).pais && (
-          <Field label="País" value={(item as StencilWash).pais!} />
-        )}
-        {isStencil && (item as StencilWash).revisao && (
-          <Field label="Revisão" value={(item as StencilWash).revisao!} />
-        )}
-        {!isStencil && (item as PlacaWash).codigoBarras && (
-          <Field label="Cód. barras" value={(item as PlacaWash).codigoBarras!} />
-        )}
-        {!isStencil && (item as PlacaWash).serial && (
-          <Field label="Serial" value={(item as PlacaWash).serial!} />
-        )}
-        {isStencil && (item as StencilWash).largura && (
-          <>
-            <Field label="Largura" value={(item as StencilWash).largura!} />
-            <Field label="Altura" value={(item as StencilWash).altura!} />
-          </>
-        )}
-      </div>
-
-      {item.totalLavagens !== undefined && (
-        <div className="rounded-lg bg-secondary/60 p-3">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">
-            Total de lavagens
-          </p>
-          <p className="mt-1 text-2xl font-semibold tabular text-foreground">
-            {item.totalLavagens} lavagens
-          </p>
+      {/* Bloco "Dados da última lavagem" */}
+      <div className="space-y-3 rounded-lg border bg-card p-4">
+        <p className="text-sm text-muted-foreground">Dados da última lavagem</p>
+        <div className="grid grid-cols-3 gap-3">
+          <Field label="ID Lavagem" value={idLavagem} valueClass="text-base font-bold tabular" />
+          <Field label="Data" value={ultData} valueClass="text-base font-bold tabular" />
+          <Field label="Hora" value={ultHora} valueClass="text-base font-bold tabular" />
         </div>
-      )}
-
-      <div className="grid grid-cols-2 gap-3 text-sm">
-        <Field label="Última lavagem" value={item.ultimaLavagem ?? "—"} />
-        <Field label="Próxima prev." value={item.proximaPrev ?? "—"} />
+        <Field label="Operador de Lavagem" value={operador} valueClass="text-base font-bold" />
       </div>
-
-      {item.obs && (
-        <div>
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Observação</p>
-          <p className="mt-1 text-sm text-foreground">{item.obs}</p>
-        </div>
-      )}
 
       <Button
         onClick={onClose}
@@ -82,11 +86,19 @@ export function DetailsPanel({ item, onClose }: Props) {
   );
 }
 
-function Field({ label, value }: { label: string; value: string }) {
+function Field({
+  label,
+  value,
+  valueClass = "text-base font-semibold",
+}: {
+  label: string;
+  value: string;
+  valueClass?: string;
+}) {
   return (
     <div>
-      <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="mt-0.5 tabular text-foreground">{value}</p>
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className={`mt-0.5 text-foreground ${valueClass}`}>{value}</p>
     </div>
   );
 }

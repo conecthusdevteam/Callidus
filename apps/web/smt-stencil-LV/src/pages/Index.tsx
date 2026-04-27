@@ -117,11 +117,11 @@ const Index = () => {
 
               </div>
 
-              {/* Coluna lateral: detalhes + status sistemas */}
-              <aside className="space-y-4">
-                <DetailsPanel item={selected} onClose={() => setSelected(null)} />
-                <SystemStatusCard status={data.status} />
-              </aside>
+            {/* Coluna lateral: DetailsPanel + SystemStatusCard ancorado logo abaixo (img1) */}
+            <aside className="space-y-4 lg:sticky lg:top-4 lg:self-start">
+              <DetailsPanel item={selected} onClose={() => setSelected(null)} />
+              <SystemStatusCard status={data.status} />
+            </aside>
             </div>
           </section>
         </main>

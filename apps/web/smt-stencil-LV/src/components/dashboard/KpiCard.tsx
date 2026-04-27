@@ -27,22 +27,25 @@ export function KpiCard({ label, value, variant = "default", className }: KpiCar
 
   return (
     <div
-      className={cn(
-        "rounded-lg border-[0.5px] border-kpi-border border-l-4 p-4 transition-shadow hover:shadow-card",
-        bg,
-        leftBorder,
-        className,
-      )}
-    >
-      <p className="kpi-label">{label}</p>
-      <p
-        className={cn(
-          "kpi-value mt-2 text-right",
-          variant === "attention" && "text-kpi-attention-fg",
-        )}
-      >
-        {value}
-      </p>
-    </div>
+  className={cn(
+    "rounded-lg border-[0.5px] border-kpi-border border-l-4 transition-shadow hover:shadow-card",
+    "px-4 pt-4 pb-4", // espaçamento: 16px superior, 16px inferior, 16px laterais
+    bg,
+    leftBorder,
+    className,
+  )}
+>
+  <p className="kpi-label">{label}</p>
+  {/* gap de 8px entre label e valor (mt-2 = 0.5rem = 8px) */}
+  <p
+    className={cn(
+      "kpi-value mt-2 text-right",
+      variant === "attention" && "text-kpi-attention-fg",
+    )}
+  >
+    {value}
+  </p>
+</div>
+
   );
 }
