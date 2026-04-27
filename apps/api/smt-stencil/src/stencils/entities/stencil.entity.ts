@@ -20,7 +20,7 @@ export class Stencil {
     @Column()
     country!: string;
 
-    @Column({ type: 'decimal', precision: 10, scale: 6 })
+    @Column({ type: 'real' })
     thickness!: number;
 
     @Column()
