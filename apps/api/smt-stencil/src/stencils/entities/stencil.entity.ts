@@ -1,4 +1,4 @@
-import { nanoId } from 'nano-id';
+import { nanoid } from 'nanoid';
 import { BeforeInsert, Column, CreateDateColumn, Entity, PrimaryColumn, UpdateDateColumn } from "typeorm";
 
 export enum WashStatus {
@@ -20,7 +20,7 @@ export class Stencil {
     @Column()
     country!: string;
 
-    @Column()
+    @Column({ type: 'decimal', precision: 10, scale: 6 })
     thickness!: number;
 
     @Column()
@@ -50,6 +50,6 @@ export class Stencil {
 
     @BeforeInsert()
     generateId() {
-        this.id = `stencil_${nanoId()}`
+        this.id = `stencil_${nanoid()}`
     }
 }

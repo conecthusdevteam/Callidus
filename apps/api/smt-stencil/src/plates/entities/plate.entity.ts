@@ -1,4 +1,4 @@
-import { nanoId } from 'nano-id';
+import { nanoid } from 'nanoid';
 import { BeforeInsert, Column, CreateDateColumn, Entity, PrimaryColumn, UpdateDateColumn } from "typeorm";
 
 @Entity('plates')
@@ -38,6 +38,6 @@ export class Plate {
 
     @BeforeInsert()
     generateId() {
-        this.id = `plate_${nanoId()}`
+        this.id = `plate_${nanoid()}`
     }
 }
