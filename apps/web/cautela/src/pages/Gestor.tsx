@@ -186,17 +186,7 @@ function ModalDescartar({
 }
 
 // ── Painel de detalhes da cautela ──
-function DetalhesCautela({
-  cautela,
-  onAprovar,
-  onDescartar,
-  somenteLeitura = false,
-}: {
-  cautela: CautelaComDecisao;
-  onAprovar: () => void;
-  onDescartar: () => void;
-  somenteLeitura?: boolean;
-}) {
+function DetalhesConteudo({ cautela }: { cautela: CautelaComDecisao }) {
   const statusExibido =
     cautela.decisaoLocal === "aprovado"
       ? "Aprovado"
@@ -204,108 +194,81 @@ function DetalhesCautela({
         ? "Reprovado"
         : cautela.status;
 
+  const isSomenteLeitura =
+    cautela.decisaoLocal !== undefined ||
+    cautela.status === "Aprovado" ||
+    cautela.status === "Reprovado";
+
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto p-8">
-        {/* Status no topo — só no histórico */}
-        {somenteLeitura && (
-          <div className="mb-4">
-            <StatusBadge status={statusExibido as StatusCautela} fullWidth />
-            {(cautela.motivoNegativa ||
-              cautela.decisaoLocal === "reprovado") && (
-              <div className="mt-3">
-                <p className="text-sm text-gray-700">
-                  <span className="font-semibold">Justificativa:</span>{" "}
-                  {cautela.motivoNegativa ?? "—"}
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
+    <div>
+      {isSomenteLeitura && (
         <div className="mb-4">
-          <p className="text-base font-bold text-black">Id da cautela</p>
-          <p className="text-base text-black">{cautela.id}</p>
-        </div>
-        <div className="mb-4">
-          <p className="text-base font-bold text-black">Setor:</p>
-          <p className="text-base text-black">{cautela.empresa}</p>
-        </div>
-        <div className="mb-4">
-          <p className="text-base font-bold text-black">
-            Data e hora de entrada
-          </p>
-          <p className="text-base text-black">{cautela.data}</p>
-        </div>
-        <div className="mb-4">
-          <p className="text-base font-bold text-black">Propriedade</p>
-          <p className="text-base text-black">{cautela.visitante}</p>
-        </div>
-        <div className="mb-4">
-          <p className="text-base font-bold text-black">
-            E-mail do proprietário
-          </p>
-          <p className="text-base text-black">
-            {cautela.visitante.toLowerCase().replace(" ", ".")}@callidus.org.br
-          </p>
-        </div>
-        {cautela.aprovadoEm && (
-          <div className="mb-4">
-            <p className="text-sm font-bold text-black">Válido até:</p>
-            <p className="text-sm text-gray-700">{cautela.aprovadoEm}</p>
-          </div>
-        )}
-
-        <table className="w-full mt-2 overflow-hidden">
-          <thead>
-            <tr style={{ backgroundColor: "#0E9F6E" }}>
-              <th className="px-4 py-2 text-left text-white text-base font-bold">
-                Descrição
-              </th>
-              <th className="px-4 py-2 text-left text-white text-base font-bold">
-                Quantidade
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {cautela.equipamentos.map((eq, i) => (
-              <tr
-                key={i}
-                className="border-b border-gray-100 even:bg-[#F4F4F4]"
-              >
-                <td className="px-4 py-3 text-sm text-[#0A0A0A]">
-                  {eq.descricao}
-                </td>
-                <td className="px-4 py-3 text-sm text-[#0A0A0A]">
-                  {eq.quantidade ?? "—"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Botões — só quando não é somente leitura */}
-      {!somenteLeitura && (
-        <div className="flex gap-3 px-8 pb-8 pt-4 justify-center">
-          <button
-            onClick={onAprovar}
-            className="px-8 py-2.5 rounded-lg bg-[#2B8E37] text-white text-sm font-semibold hover:bg-[#22592A] transition-colors"
-          >
-            Aprovar
-          </button>
-          <button
-            onClick={onDescartar}
-            className="px-8 py-2.5 rounded-lg border border-gray-300 text-black text-sm font-medium hover:bg-gray-100 transition-colors"
-          >
-            Descartar
-          </button>
+          <StatusBadge status={statusExibido as StatusCautela} fullWidth />
+          {(cautela.motivoNegativa || cautela.decisaoLocal === "reprovado") && (
+            <div className="mt-3">
+              <p className="text-sm text-black">
+                <span className="font-semibold">Justificativa:</span>{" "}
+                {cautela.motivoNegativa ?? "—"}
+              </p>
+            </div>
+          )}
         </div>
       )}
+      <div className="mb-4">
+        <p className="text-base font-bold text-black">Id da cautela</p>
+        <p className="text-base text-black">{cautela.id}</p>
+      </div>
+      <div className="mb-4">
+        <p className="text-base font-bold text-black">Setor:</p>
+        <p className="text-base text-black">{cautela.empresa}</p>
+      </div>
+      <div className="mb-4">
+        <p className="text-base font-bold text-black">Data e hora de entrada</p>
+        <p className="text-base text-black">{cautela.data}</p>
+      </div>
+      <div className="mb-4">
+        <p className="text-base font-bold text-black">Propriedade</p>
+        <p className="text-base text-black">{cautela.visitante}</p>
+      </div>
+      <div className="mb-4">
+        <p className="text-base font-bold text-black">E-mail do proprietário</p>
+        <p className="text-base text-black">
+          {cautela.visitante.toLowerCase().replace(" ", ".")}@callidus.org.br
+        </p>
+      </div>
+      {cautela.aprovadoEm && (
+        <div className="mb-4">
+          <p className="text-sm font-bold text-black">Válido até:</p>
+          <p className="text-sm text-gray-700">{cautela.aprovadoEm}</p>
+        </div>
+      )}
+      <table className="w-full mt-16 mb-2 overflow-hidden">
+        <thead>
+          <tr style={{ backgroundColor: "#0E9F6E" }}>
+            <th className="px-4 py-2 text-left text-white text-base font-bold">
+              Descrição
+            </th>
+            <th className="px-4 py-2 text-center text-white text-base font-bold">
+              Quantidade
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {cautela.equipamentos.map((eq, i) => (
+            <tr key={i} className="border-b border-gray-100 even:bg-[#F4F4F4]">
+              <td className="px-4 py-3 text-sm text-[#0A0A0A]">
+                {eq.descricao}
+              </td>
+              <td className="px-4 py-3 text-center text-sm text-[#0A0A0A]">
+                {eq.quantidade ?? "—"}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
-
 // ── Card da lista de recebidas ──
 function CardCautela({
   cautela,
@@ -564,15 +527,28 @@ export default function Gestor() {
               </span>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-4 py-2">
-              <div className="bg-white rounded-sm border border-black">
-                <DetalhesCautela
-                  cautela={cautelaSelecionada}
-                  onAprovar={() => aprovar(cautelaSelecionada.id)}
-                  onDescartar={() => abrirDescartar(cautelaSelecionada.id)}
-                  somenteLeitura={isSomenteLeitura(cautelaSelecionada)}
-                />
+            <div className="flex-1 overflow-y-auto px-4 py-2 flex flex-col gap-3">
+              {/* Só o conteúdo tem borda */}
+              <div className="bg-white rounded-sm border border-black p-6">
+                <DetalhesConteudo cautela={cautelaSelecionada} />
               </div>
+              {/* Botões fora da borda */}
+              {!isSomenteLeitura(cautelaSelecionada) && (
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={() => aprovar(cautelaSelecionada.id)}
+                    className="w-full py-2.5 rounded-lg bg-[#3BB14A] text-white text-sm font-semibold hover:bg-[#22592A]"
+                  >
+                    Aprovar
+                  </button>
+                  <button
+                    onClick={() => abrirDescartar(cautelaSelecionada.id)}
+                    className="w-full py-2.5 rounded-lg border border-black bg-white text-black text-sm font-medium hover:bg-gray-100"
+                  >
+                    Descartar
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -616,13 +592,22 @@ export default function Gestor() {
       </div>
 
       {/* ══════════════ DESKTOP ══════════════ */}
-      <div className="hidden md:flex h-screen pt-[60px] pl-[70px] bg-[#F5F7F6] overflow-hidden">
+      <div className="hidden md:flex h-screen pt-[60px] pl-[70px] bg-white overflow-hidden">
         {/* Painel esquerdo — Respondidos */}
-        <div className="w-[460px] flex-shrink-0 flex flex-col overflow-hidden border-r border-gray-200 bg-[#F5F7F6]">
-          <div className="bg-[#22592A] px-5 py-4">
+        <div className="w-xl h-screen flex-shrink-0 flex flex-col overflow-hidden pt-[20px]">
+          {/* Header */}
+          <div
+            className="bg-[#22592A] px-5 py-4 flex-shrink-0 rounded-t-lg mx-4 mt-4"
+            style={{ boxShadow: "4px 0 8px rgba(0,0,0,0.25)" }}
+          >
             <h2 className="text-white font-bold text-base">Respondidos</h2>
           </div>
-          <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+
+          {/* Cards */}
+          <div
+            className="flex-1 overflow-y-auto mx-4 mb-4 bg-[#E5E7EB] flex flex-col gap-3 p-6 rounded-b-lg border border-gray-200"
+            style={{ boxShadow: "4px 0 8px rgba(0,0,0,0.25)" }}
+          >
             {recebidas.length === 0 && (
               <p className="text-sm text-gray-400 text-center mt-8">
                 Nenhuma cautela pendente.
@@ -641,25 +626,52 @@ export default function Gestor() {
           </div>
         </div>
 
-        {/* Painel central — Detalhes (aparece quando clica num card) */}
-        {cautelaSelecionada && (
-          <div className="w-[420px] flex-shrink-0 border-r border-gray-200 bg-white flex flex-col overflow-hidden">
-            <DetalhesCautela
-              cautela={cautelaSelecionada}
-              onAprovar={() => aprovar(cautelaSelecionada.id)}
-              onDescartar={() => abrirDescartar(cautelaSelecionada.id)}
-            />
+        {/* Área central — vazia ou com detalhes */}
+        {cautelaSelecionada ? (
+          <div className="flex-1 flex flex-col overflow-hidden pt-14 mb-4 px-2">
+            {/* Só o conteúdo tem borda */}
+            <div className="flex-1 overflow-y-auto bg-white border border-black rounded-sm p-6">
+              <DetalhesConteudo cautela={cautelaSelecionada} />
+            </div>
+            {/* Botões fora da borda */}
+            {!isSomenteLeitura(cautelaSelecionada) && (
+              <div className="flex gap-3 justify-center pt-5 pb-32">
+                <button
+                  onClick={() => aprovar(cautelaSelecionada.id)}
+                  className="px-8 py-2.5 rounded-lg bg-[#3BB14A] text-white text-sm font-semibold hover:bg-[#0E9F6E]"
+                >
+                  Aprovar
+                </button>
+                <button
+                  onClick={() => abrirDescartar(cautelaSelecionada.id)}
+                  className="px-8 py-2.5 rounded-lg border border-black bg-white text-black text-sm font-medium hover:bg-gray-100"
+                >
+                  Descartar
+                </button>
+              </div>
+            )}
           </div>
+        ) : (
+          <div className="flex-1 bg-white" />
         )}
 
         {/* Painel direito — Histórico */}
-        <div className="flex-1 flex flex-col overflow-hidden bg-[#F5F7F6]">
-          <div className="bg-[#22592A] px-5 py-4">
+        <div className="w-lg h-screen flex-shrink-0 flex flex-col overflow-hidden pt-[20px]">
+          {/* Header */}
+          <div
+            className="bg-[#22592A] pl-5 py-4 flex-shrink-0 rounded-t-lg ml-4 mt-4"
+            style={{ boxShadow: "-4px 0 8px rgba(0,0,0,0.25)" }}
+          >
             <h2 className="text-white font-bold text-base">Histórico</h2>
           </div>
-          <div className="flex-1 overflow-y-auto bg-white">
+
+          {/* Lista */}
+          <div
+            className="flex-1 overflow-y-auto ml-4 mb-4 bg-[#E5E7EB] rounded-b-lg border border-gray-200"
+            style={{ boxShadow: "-4px 0 8px rgba(0,0,0,0.25)" }}
+          >
             {historico.length === 0 && (
-              <p className="text-sm text-gray-400 text-center mt-8">
+              <p className="text-sm  text-gray-400 text-center mt-8">
                 Nenhum histórico.
               </p>
             )}
@@ -672,7 +684,10 @@ export default function Gestor() {
                     : cautela.status;
               return (
                 <div key={cautela.id}>
-                  <div className="px-4 py-3 hover:bg-gray-50 transition-colors">
+                  <div
+                    className="px-4 py-3 bg-[#F3F4F6] hover:bg-gray-50 transition-colors cursor-pointer"
+                    onClick={() => setCautelaSelecionada(cautela)}
+                  >
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-[13px] text-[#404040]">
                         Id Cautela:{" "}
@@ -693,14 +708,7 @@ export default function Gestor() {
                     </div>
                   </div>
                   {index < historico.length - 1 && (
-                    <svg
-                      width="100%"
-                      height="2"
-                      viewBox="0 0 530 2"
-                      fill="none"
-                    >
-                      <line x1="0" y1="1" x2="530" y2="1" stroke="#E5E7EB" />
-                    </svg>
+                    <div className="w-full h-px bg-[#E5E7EB]" />
                   )}
                 </div>
               );
