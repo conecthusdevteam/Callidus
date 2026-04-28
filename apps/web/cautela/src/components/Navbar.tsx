@@ -60,7 +60,7 @@ export default function Navbar({ user, onLogout }: Props) {
           boxShadow: "0px 4px 4px rgba(0,0,0,0.25)",
         }}
       >
-        <span className="text-black font-bold text-xl tracking-wide">
+        <span className="font-bold text-[24px] leading-[26px] tracking-[-0.25px] text-center">
           Controle de Cautelas
         </span>
       </header>
