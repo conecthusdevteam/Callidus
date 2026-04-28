@@ -1,6 +1,14 @@
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import StatusBadge from "../components/StatusBadge";
-import { mockCautelas } from "../data/mockData";
+import {
+  approveCautela,
+  createCautela,
+  fetchCautelas,
+  rejectCautela,
+  type CautelaApi,
+  type CautelaStatusApi,
+  type User,
+} from "../lib/api";
 import CampoSetor from "./CampoSetor";
 
 function LineSeparator() {
@@ -64,8 +72,25 @@ interface FieldErrors {
 }
 
 type Tab = "enviados" | "recebidos";
+type StatusCautela = "Aprovado" | "Reprovado" | "Em análise";
 
-export default function Home() {
+interface Props {
+  user: User;
+}
+
+const statusLabels: Record<CautelaStatusApi, StatusCautela> = {
+  APROVADA: "Aprovado",
+  EM_ANALISE: "Em análise",
+  REPROVADA: "Reprovado",
+};
+
+function formatDate(date: string | null) {
+  if (!date) return "-";
+
+  return new Intl.DateTimeFormat("pt-BR").format(new Date(date));
+}
+
+export default function Home({ user }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("enviados");
   const [descricao, setDescricao] = useState("");
   const [quantidade, setQuantidade] = useState<string>("");
@@ -77,20 +102,47 @@ export default function Home() {
   const [dataFim, setDataFim] = useState<string>("");
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
-  const [gestorId, setGestorId] = useState<string>("");
+  const [setorId, setSetorId] = useState<string>("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [cautelas, setCautelas] = useState<CautelaApi[]>([]);
+  const [loadingCautelas, setLoadingCautelas] = useState(true);
+  const [listError, setListError] = useState("");
+  const [submitError, setSubmitError] = useState("");
+  const [decisionError, setDecisionError] = useState("");
+  const [decidingId, setDecidingId] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const canCreateCautela = user.papel === "PORTARIA";
+
+  const loadCautelas = useCallback(async () => {
+    setListError("");
+    setLoadingCautelas(true);
+
+    try {
+      setCautelas(await fetchCautelas());
+    } catch (err) {
+      setListError(
+        err instanceof Error ? err.message : "Falha ao carregar cautelas.",
+      );
+    } finally {
+      setLoadingCautelas(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadCautelas();
+  }, [loadCautelas]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: FieldErrors = {};
 
-    if (!gestorId) newErrors.setor = "Selecione um setor.";
+    if (!setorId) newErrors.setor = "Selecione um setor.";
     if (!nome.trim()) newErrors.nome = "O campo Proprietário é obrigatório.";
 
-    const emailRegex = /^[A-Za-z0-9._%+-]+@callidus\.org\.br$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email))
-      newErrors.email = "Use apenas e-mail institucional (@callidus.org.br).";
+      newErrors.email = "Informe um e-mail válido.";
 
     if (items.length === 0)
       newErrors.items = "Adicione pelo menos um item antes de enviar.";
@@ -103,44 +155,89 @@ export default function Home() {
     setFieldErrors(newErrors);
 
     if (Object.keys(newErrors).length === 0) {
+      setSubmitError("");
+      setSubmitting(true);
+
       try {
-        await fetch("http://seu-backend.com/api/cautelas", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            gestorId,
-            proprietario: nome,
-            email,
-            itens: items,
-            retornado,
-            dataInicio,
-            dataFim: retornado ? dataFim : null,
-          }),
+        await createCautela({
+          setorId,
+          proprietarioNome: nome.trim(),
+          proprietarioEmail: email.trim().toLowerCase(),
+          retornoItem: Boolean(retornado),
+          validade: retornado ? dataFim : undefined,
+          itens: items.map((item) => ({
+            nomeItem: item.descricao,
+            quantidade: item.quantidade,
+          })),
         });
-      } catch {
-        console.log("Backend indisponível, simulando envio.");
+
+        await loadCautelas();
+        setShowModal(true);
+        setTimeout(() => setShowModal(false), 3000);
+
+        setSetorId("");
+        setNome("");
+        setEmail("");
+        setDescricao("");
+        setQuantidade("");
+        setItems([]);
+        setRetornado(null);
+        setDataFim("");
+        setFieldErrors({});
+      } catch (err) {
+        setSubmitError(
+          err instanceof Error ? err.message : "Falha ao enviar cautela.",
+        );
+      } finally {
+        setSubmitting(false);
       }
-
-      setShowModal(true);
-      setTimeout(() => setShowModal(false), 3000);
-
-      setGestorId("");
-      setNome("");
-      setEmail("");
-      setDescricao("");
-      setQuantidade("");
-      setItems([]);
-      setRetornado(null);
-      setDataFim("");
-      setFieldErrors({});
     }
   };
 
-  const cautelasFiltradas = mockCautelas.filter((c) =>
-    activeTab === "enviados"
-      ? c.direcao === "enviado"
-      : c.direcao === "recebido",
+  const cautelasFiltradas = useMemo(
+    () =>
+      cautelas.filter((cautela) =>
+        activeTab === "enviados"
+          ? cautela.solicitadoPorId === user.id
+          : cautela.gestorId === user.id,
+      ),
+    [activeTab, cautelas, user.id],
   );
+
+  async function handleApprove(id: string) {
+    setDecisionError("");
+    setDecidingId(id);
+
+    try {
+      await approveCautela(id);
+      await loadCautelas();
+    } catch (err) {
+      setDecisionError(
+        err instanceof Error ? err.message : "Falha ao aprovar cautela.",
+      );
+    } finally {
+      setDecidingId(null);
+    }
+  }
+
+  async function handleReject(id: string) {
+    const justificativa = window.prompt("Informe a justificativa da reprovação:");
+    if (!justificativa?.trim()) return;
+
+    setDecisionError("");
+    setDecidingId(id);
+
+    try {
+      await rejectCautela(id, justificativa.trim());
+      await loadCautelas();
+    } catch (err) {
+      setDecisionError(
+        err instanceof Error ? err.message : "Falha ao reprovar cautela.",
+      );
+    } finally {
+      setDecidingId(null);
+    }
+  }
 
   return (
     <div className="flex h-screen pt-[60px] pl-[70px] bg-[#F5F7F6] overflow-hidden relative">
@@ -175,6 +272,26 @@ export default function Home() {
           </div>
 
           <div className="flex-1 overflow-y-auto pb-2 bg-[#E5E7EB]">
+            {decisionError && (
+              <div className="px-3 py-3 text-sm text-red-600 bg-white">
+                {decisionError}
+              </div>
+            )}
+            {loadingCautelas && (
+              <div className="px-3 py-4 text-sm text-[#404040] bg-white">
+                Carregando cautelas...
+              </div>
+            )}
+            {listError && (
+              <div className="px-3 py-4 text-sm text-red-600 bg-white">
+                {listError}
+              </div>
+            )}
+            {!loadingCautelas && !listError && cautelasFiltradas.length === 0 && (
+              <div className="px-3 py-4 text-sm text-[#404040] bg-white">
+                Nenhuma cautela encontrada.
+              </div>
+            )}
             {cautelasFiltradas.map((cautela, index) => (
               <div key={cautela.id}>
                 <div className="px-3 py-3 hover:bg-gray-100 transition-colors bg-white">
@@ -186,18 +303,40 @@ export default function Home() {
                       </span>
                     </span>
                     <span className="text-[14px] font-normal leading-[100%] text-[#404040]">
-                      Data: {cautela.data}
+                      Data: {formatDate(cautela.criadoEm)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-[14px] font-normal leading-[100%] text-[#404040]">
                       Ciente:{" "}
                       <span className="font-bold text-[14px] leading-[100%] text-[#404040]">
-                        {cautela.gestor.toUpperCase()}
+                        {(cautela.gestor?.nome || "-").toUpperCase()}
                       </span>
                     </span>
-                    <StatusBadge status={cautela.status} />
+                    <StatusBadge status={statusLabels[cautela.status]} />
                   </div>
+                  {user.papel === "GESTOR" &&
+                    activeTab === "recebidos" &&
+                    cautela.status === "EM_ANALISE" && (
+                      <div className="flex justify-end gap-2 mt-3">
+                        <button
+                          type="button"
+                          disabled={decidingId === cautela.id}
+                          onClick={() => handleReject(cautela.id)}
+                          className="px-3 py-1.5 rounded-lg bg-[#FBD5D5] text-[#171717] text-xs font-medium hover:bg-[#F05252] hover:text-white disabled:opacity-60"
+                        >
+                          Reprovar
+                        </button>
+                        <button
+                          type="button"
+                          disabled={decidingId === cautela.id}
+                          onClick={() => handleApprove(cautela.id)}
+                          className="px-3 py-1.5 rounded-lg bg-[#BCF0DA] text-[#171717] text-xs font-medium hover:bg-[#31C48D] disabled:opacity-60"
+                        >
+                          Aprovar
+                        </button>
+                      </div>
+                    )}
                 </div>
                 {index < cautelasFiltradas.length - 1 && <LineSeparator />}
               </div>
@@ -228,9 +367,18 @@ export default function Home() {
 
         <div className="bg-[#F2FBF3] rounded-sm shadow-sm border border-[#22592A] p-8 max-w-2xl ml-30">
           <form className="space-y-4" onSubmit={handleSubmit}>
+            {!canCreateCautela && (
+              <p className="text-sm text-[#404040]">
+                Seu perfil visualiza cautelas, mas não cria novas solicitações.
+              </p>
+            )}
+
             {/* Setor */}
             <div>
-              <CampoSetor onSetorChange={(id) => setGestorId(id)} />
+              <CampoSetor
+                value={setorId}
+                onSetorChange={(id) => setSetorId(id)}
+              />
               {fieldErrors.setor && (
                 <p className="text-red-500 text-xs mt-1">{fieldErrors.setor}</p>
               )}
@@ -435,18 +583,34 @@ export default function Home() {
             </div>
 
             {/* Botões finais */}
+            {submitError && (
+              <p className="text-sm text-red-600 text-center">{submitError}</p>
+            )}
             <div className="flex justify-center gap-4 pt-4">
               <button
                 type="button"
+                onClick={() => {
+                  setSetorId("");
+                  setNome("");
+                  setEmail("");
+                  setDescricao("");
+                  setQuantidade("");
+                  setItems([]);
+                  setRetornado(null);
+                  setDataFim("");
+                  setFieldErrors({});
+                  setSubmitError("");
+                }}
                 className="px-4 py-2 rounded-lg bg-[#F5F5F5] text-[#171717] text-sm font-medium hover:bg-gray-300"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 rounded-lg bg-[#FAFAFA] text-[#171717] text-sm font-medium hover:bg-[#3BB14A] hover:text-white"
+                disabled={!canCreateCautela || submitting}
+                className="px-4 py-2 rounded-lg bg-[#FAFAFA] text-[#171717] text-sm font-medium hover:bg-[#3BB14A] hover:text-white disabled:opacity-60 disabled:hover:bg-[#FAFAFA] disabled:hover:text-[#171717]"
               >
-                Enviar
+                {submitting ? "Enviando..." : "Enviar"}
               </button>
             </div>
           </form>

@@ -1,9 +1,16 @@
-export default function Navbar() {
+import type { User } from "../lib/api";
+
+interface Props {
+  user: User;
+  onLogout: () => void;
+}
+
+export default function Navbar({ user, onLogout }: Props) {
   return (
     <>
       {/* DESKTOP */}
       <header
-        className="hidden md:flex fixed top-0 left-[70px] right-0 z-10 items-center px-4 border-b-[6px]"
+        className="hidden md:flex fixed top-0 left-[70px] right-0 z-10 items-center justify-between px-4 border-b-[6px]"
         style={{
           height: "60px",
           backgroundColor: "#FFFFFF",
@@ -30,6 +37,16 @@ export default function Navbar() {
           <span className="text-black font-bold text-2xl tracking-wide">
             Controle de Cautelas
           </span>
+        </div>
+        <div className="flex items-center gap-3 text-sm text-[#404040]">
+          <span>{user.nome}</span>
+          <button
+            type="button"
+            onClick={onLogout}
+            className="px-3 py-1.5 rounded-lg bg-[#F5F5F5] text-[#171717] hover:bg-gray-200"
+          >
+            Sair
+          </button>
         </div>
       </header>
 

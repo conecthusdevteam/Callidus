@@ -5,8 +5,25 @@ services:
     env_file:
       - .env
     ports:
-      - "${PORT:-3000}:3000"
+      - '${PORT:-3000}:3000'
     volumes:
       - .:/app
       - /app/node_modules
     command: npm run start:dev
+    depends_on:
+      - sqlserver
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: cautela-sqlserver
+    ports:
+      - '1433:1433'
+    environment:
+      ACCEPT_EULA: 'Y'
+      SA_PASSWORD: 'SuaSenhaForte@123'
+      MSSQL_PID: 'Developer'
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+
+volumes:
+  sqlserver_data:
