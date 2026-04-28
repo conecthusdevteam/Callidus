@@ -1,7 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
 
 /* ============================================================
    Dashboard Controle de Lavagens — Design System
@@ -44,24 +45,21 @@
     --radius: 0.625rem;
 
     /* KPI / status tokens */
---kpi-neutral: 215 25% 22%;
---kpi-label: 220 9% 34%;        /* #4B5563 */
---kpi-border: 220 9% 34%;       /* #4B5563 */
+    --kpi-neutral: 215 25% 22%;
+    --kpi-label: 220 9% 34%; /* #4B5563 */
+    --kpi-border: 220 9% 34%; /* #4B5563 */
 
-/* KPI: Lavagens do dia (verde) */
---kpi-primary-bg: 152 50% 97%;      /* #F3FAF7 */
---kpi-primary-border: 152 84% 34%;  /* #0E9F6E */
+    /* KPI: Lavagens do dia (verde) */
+    --kpi-primary-bg: 152 50% 97%; /* #F3FAF7 */
+    --kpi-primary-border: 152 84% 34%; /* #0E9F6E */
 
-/* KPI: Stencil / Placas (neutro) */
---kpi-default-bg: 220 14% 96%;      /* #F3F4F6 */
+    /* KPI: Stencil / Placas (neutro) */
+    --kpi-default-bg: 220 14% 96%; /* #F3F4F6 */
 
-/* KPI: Última coleta (atenção/laranja) */
---kpi-attention-bg: 30 100% 97%;       /* #FFF8F1 */
---kpi-attention-border: 27 96% 77%;    /* #FDBA8C */
---kpi-attention-fg: 28 95% 45%;
-
-
-
+    /* KPI: Última coleta (atenção/laranja) */
+    --kpi-attention-bg: 30 100% 97%; /* #FFF8F1 */
+    --kpi-attention-border: 27 96% 77%; /* #FDBA8C */
+    --kpi-attention-fg: 28 95% 45%;
 
     /* Badges de status de lavagem */
     --badge-ok-bg: 142 70% 92%;
@@ -78,6 +76,9 @@
 
     --badge-neutral-bg: 215 18% 92%;
     --badge-neutral-fg: 215 25% 30%;
+
+    /* Status fornecimento de dados — borda lateral roxa (img3) */
+    --status-accent: 258 90% 66%;
 
     /* Linha em destaque (item de atenção) */
     --row-attention: 0 90% 97%;
@@ -142,24 +143,23 @@
 }
 
 @layer components {
-.table-head-cell {
-  font-family: 'Geist', 'Inter', system-ui, sans-serif;
-  font-weight: 700;
-  font-size: 18px;
-  font-style: normal;
-  letter-spacing: 0;
-}
-
-
   .kpi-value {
     @apply text-5xl font-semibold tabular tracking-tight;
     color: hsl(var(--kpi-neutral));
   }
 
   .kpi-label {
-    @apply text-lg font-medium;       /* 16px medium — você pediu 18px no recap, mas o código aplicou text-base */
-    color: hsl(var(--kpi-label));        /* #4B5563 */
+    @apply text-lg font-medium;
+    color: hsl(var(--kpi-label));
+    letter-spacing: 0;
+  }
+
+  /* Cabeçalho de tabela — Geist Bold 18px (img) */
+  .table-head-cell {
+    font-family: 'Geist', 'Inter', system-ui, sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+    font-style: normal;
     letter-spacing: 0;
   }
 }
-

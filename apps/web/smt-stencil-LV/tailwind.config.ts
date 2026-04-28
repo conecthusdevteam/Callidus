@@ -81,6 +81,7 @@ export default {
           selected: "hsl(var(--row-selected))",
           stripe: "hsl(var(--row-stripe))",
         },
+        "status-accent": "hsl(var(--status-accent))",
       },
       borderRadius: {
         lg: "var(--radius)",

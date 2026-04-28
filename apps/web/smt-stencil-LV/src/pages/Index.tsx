@@ -117,11 +117,15 @@ const Index = () => {
 
               </div>
 
-            {/* Coluna lateral: DetailsPanel + SystemStatusCard ancorado logo abaixo (img1) */}
-            <aside className="space-y-4 lg:sticky lg:top-4 lg:self-start">
-              <DetailsPanel item={selected} onClose={() => setSelected(null)} />
-              <SystemStatusCard status={data.status} />
-            </aside>
+            {/* Coluna lateral: alinha com o TOPO da tabela (img2), não do bloco de tabs */}
+<aside className="lg:sticky lg:top-4 lg:self-start">
+  {/* Spacer com altura idêntica à barra de tabs+filtros (botões h-[34px] + p-1 + mb-3 = 12px) */}
+  <div aria-hidden className="hidden lg:block" style={{ height: "calc(2.125rem + 0.5rem + 0.75rem)" }} />
+  <div className="space-y-4">
+    <DetailsPanel item={selected} onClose={() => setSelected(null)} />
+    <SystemStatusCard status={data.status} />
+  </div>
+</aside>
             </div>
           </section>
         </main>
