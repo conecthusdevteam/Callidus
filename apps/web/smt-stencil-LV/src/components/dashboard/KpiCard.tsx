@@ -29,7 +29,7 @@ export function KpiCard({ label, value, variant = "default", className }: KpiCar
     <div
   className={cn(
     "rounded-lg border-[0.5px] border-kpi-border border-l-4 transition-shadow hover:shadow-card",
-    "px-4 pt-4 pb-4", // espaçamento: 16px superior, 16px inferior, 16px laterais
+    "px-4 pt-4 pb-10", // espaçamento: 16px superior, 16px inferior, 16px laterais
     bg,
     leftBorder,
     className,
