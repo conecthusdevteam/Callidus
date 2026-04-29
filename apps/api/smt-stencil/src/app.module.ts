@@ -1,12 +1,12 @@
-import { Inject, Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { PlatesModule } from './plates/plates.module';
-import { StencilsModule } from './stencils/stencils.module';
+import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Stencil } from './stencils/entities/stencil.entity';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
 import { Plate } from './plates/entities/plate.entity';
+import { PlatesModule } from './plates/plates.module';
+import { Stencil } from './stencils/entities/stencil.entity';
+import { StencilsModule } from './stencils/stencils.module';
 
 @Module({
   imports: [
@@ -19,20 +19,21 @@ import { Plate } from './plates/entities/plate.entity';
       useFactory: (configService: ConfigService) => ({
         type: 'mssql',
         host: configService.get<string>('DB_HOST'),
-        port: configService.get<number>('DB_PORT'),
+        port: Number(configService.get<string>('DB_PORT')),
         username: configService.get<string>('DB_USER'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_DATABASE'),
-        entities: [__dirname + '/**/*.entity{.ts, .js}'],
+        entities: [Stencil, Plate],
         synchronize: configService.get<string>('NODE_ENV') !== 'production',
-        logging: configService.get<string>('NODE_ENV') !== 'development',
+        logging: configService.get<string>('NODE_ENV') === 'development',
         options: {
-          encrypt: configService.get<string>('NODE_ENV') !== 'development',
+          encrypt: false,
           trustServerCertificate: true,
+          enableArithAbort: true,
         }
       })
     }),
-    StencilsModule, 
+    StencilsModule,
     PlatesModule
   ],
   controllers: [AppController],
