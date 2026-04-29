@@ -18,11 +18,26 @@ services:
     container_name: cautela-seed
     env_file:
       - .env
+    profiles:
+      - seed
     volumes:
       - .:/app
       - /app/node_modules
     command: npm run seed
-    restart: on-failure
+    depends_on:
+      - sqlserver
+
+  migrate:
+    build: .
+    container_name: cautela-migrate
+    env_file:
+      - .env
+    profiles:
+      - migrate
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: npm run migration:run
     depends_on:
       - sqlserver
 

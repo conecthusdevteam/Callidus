@@ -1,10 +1,6 @@
 import { useEffect, useState } from "react";
 import StatusBadge from "../components/StatusBadge";
-import {
-  mockCautelas,
-  type Cautela,
-  type StatusCautela,
-} from "../data/mockData";
+import { type Cautela, type StatusCautela } from "../data/cautelaTypes";
 import { approveCautela, getCautelas, rejectCautela } from "../lib/api";
 
 type Tab = "recebidas" | "historico";
@@ -348,12 +344,13 @@ function CardCautela({
 
 export default function Gestor() {
   const [activeTab, setActiveTab] = useState<Tab>("recebidas");
-  const [cautelas, setCautelas] = useState<CautelaComDecisao[]>(mockCautelas);
+  const [cautelas, setCautelas] = useState<CautelaComDecisao[]>([]);
   const [cautelaSelecionada, setCautelaSelecionada] =
     useState<CautelaComDecisao | null>(null);
   const [modalDescartar, setModalDescartar] = useState(false);
   const [modalAprovado, setModalAprovado] = useState(false);
   const [modalRecusado, setModalRecusado] = useState(false);
+  const [actionError, setActionError] = useState("");
 
   // Mobile
   const [mobileView, setMobileView] = useState<MobileView>("lista");
@@ -366,8 +363,9 @@ export default function Gestor() {
     try {
       const data = await getCautelas();
       setCautelas(data);
-    } catch {
-      setCautelas(mockCautelas);
+    } catch (error) {
+      console.error("Erro ao carregar cautelas.", error);
+      setCautelas([]);
     }
   }
 
@@ -386,19 +384,25 @@ export default function Gestor() {
 
   async function aprovar(id: string) {
     try {
+      setActionError("");
       const cautelaAtualizada = await approveCautela(id);
       setCautelas((prev) =>
         prev.map((c) => (c.id === id ? cautelaAtualizada : c)),
       );
-    } catch {
-      setCautelas((prev) =>
-        prev.map((c) => (c.id === id ? { ...c, decisaoLocal: "aprovado" } : c)),
+    } catch (error) {
+      console.error("Erro ao aprovar cautela.", error);
+      setActionError(
+        error instanceof Error
+          ? error.message
+          : "Nao foi possivel aprovar a cautela.",
       );
+      return;
     } finally {
       setCautelaSelecionada(null);
-      setModalAprovado(true);
       setMobileView("lista");
     }
+
+    setModalAprovado(true);
   }
 
   function abrirDescartar(id: string) {
@@ -409,6 +413,7 @@ export default function Gestor() {
   async function confirmarDescartar(justificativa: string) {
     if (cautelaSelecionada) {
       try {
+        setActionError("");
         const cautelaAtualizada = await rejectCautela(
           cautelaSelecionada.id,
           justificativa,
@@ -418,18 +423,15 @@ export default function Gestor() {
             c.id === cautelaSelecionada.id ? cautelaAtualizada : c,
           ),
         );
-      } catch {
-        setCautelas((prev) =>
-          prev.map((c) =>
-            c.id === cautelaSelecionada.id
-              ? {
-                  ...c,
-                  decisaoLocal: "reprovado",
-                  motivoNegativa: justificativa,
-                }
-              : c,
-          ),
+      } catch (error) {
+        console.error("Erro ao reprovar cautela.", error);
+        setActionError(
+          error instanceof Error
+            ? error.message
+            : "Nao foi possivel reprovar a cautela.",
         );
+        setModalDescartar(false);
+        return;
       }
     }
     setModalDescartar(false);
@@ -443,6 +445,11 @@ export default function Gestor() {
     <>
       {/* ══════════════ MOBILE ══════════════ */}
       <div className="md:hidden flex flex-col h-screen pt-[60px] bg-white">
+        {actionError && (
+          <div className="mx-4 mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+            {actionError}
+          </div>
+        )}
         {mobileView === "lista" && (
           <>
             {/* Abas */}
@@ -640,6 +647,11 @@ export default function Gestor() {
 
       {/* ══════════════ DESKTOP ══════════════ */}
       <div className="hidden md:flex h-screen pt-[60px] pl-[70px] bg-white overflow-hidden">
+        {actionError && (
+          <div className="fixed left-[90px] right-5 top-[76px] z-40 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+            {actionError}
+          </div>
+        )}
         {/* Painel esquerdo — Recebidas */}
         <div className="w-xl h-screen flex-shrink-0 flex flex-col overflow-hidden pt-[20px]">
           {/* Header */}

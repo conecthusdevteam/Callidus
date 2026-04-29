@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import StatusBadge from "../components/StatusBadge";
-import { Cautela } from "../data/cautelaTypes";
+import type { Cautela } from "../data/cautelaTypes";
 import { createCautela, getCautelas } from "../lib/api";
 import CampoSetor from "./CampoSetor";
 
@@ -96,6 +96,7 @@ export default function Home({ user }: Props) {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [setorId, setSetorId] = useState<string>("");
+  const [cautelas, setCautelas] = useState<Cautela[]>([]);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [cautelas, setCautelas] = useState<Cautela[]>([]);
   const [loadingCautelas, setLoadingCautelas] = useState(true);
@@ -107,6 +108,7 @@ export default function Home({ user }: Props) {
   const [showModal, setShowModal] = useState(false);
   const [itemParaExcluir, setItemParaExcluir] = useState<number | null>(null);
   const [showItemDeletedModal, setShowItemDeletedModal] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   useEffect(() => {
     carregarCautelas();
@@ -116,7 +118,8 @@ export default function Home({ user }: Props) {
     try {
       const data = await getCautelas();
       setCautelas(data);
-    } catch {
+    } catch (error) {
+      console.error("Erro ao carregar cautelas.", error);
       setCautelas([]);
     }
   }
@@ -124,13 +127,15 @@ export default function Home({ user }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: FieldErrors = {};
+    setSubmitError("");
 
     if (!setorId) newErrors.setor = "Selecione um setor.";
     if (!nome.trim()) newErrors.nome = "O campo Proprietário é obrigatório.";
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[A-Za-z0-9._%+-]+@(callidus|conecthus)\.org\.br$/i;
     if (!emailRegex.test(email))
-      newErrors.email = "Informe um e-mail válido.";
+      newErrors.email =
+        "Use apenas e-mail institucional (@callidus.org.br ou @conecthus.org.br).";
 
     if (items.length === 0)
       newErrors.items = "Adicione pelo menos um item antes de enviar.";
@@ -159,8 +164,14 @@ export default function Home({ user }: Props) {
           validade: retornado ? dataFim : undefined,
         });
         setCautelas((prev) => [created, ...prev]);
-      } catch {
-        console.log("Backend indisponível, simulando envio.");
+      } catch (error) {
+        console.error("Erro ao criar cautela.", error);
+        setSubmitError(
+          error instanceof Error
+            ? error.message
+            : "Nao foi possivel enviar a cautela.",
+        );
+        return;
       }
 
       setShowModal(true);
@@ -175,6 +186,7 @@ export default function Home({ user }: Props) {
       setRetornado(null);
       setDataFim("");
       setFieldErrors({});
+      setSubmitError("");
     }
   };
 
@@ -364,7 +376,10 @@ export default function Home({ user }: Props) {
 
             {/* Setor */}
             <div>
-              <CampoSetor onSetorChange={(id) => setSetorId(id)} />
+              <CampoSetor
+                value={setorId}
+                onSetorChange={(id) => setSetorId(id)}
+              />
               {fieldErrors.setor && (
                 <p className="text-red-500 text-xs mt-1">{fieldErrors.setor}</p>
               )}
@@ -568,7 +583,7 @@ export default function Home({ user }: Props) {
 
             {/* Botões finais */}
             {submitError && (
-              <p className="text-sm text-red-600 text-center">{submitError}</p>
+              <p className="text-red-500 text-sm text-center">{submitError}</p>
             )}
             <div className="flex justify-center gap-4 pt-4">
               <button

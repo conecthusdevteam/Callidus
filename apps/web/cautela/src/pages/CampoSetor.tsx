@@ -11,10 +11,11 @@ interface Setor {
 
 interface Props {
   onSetorChange: (setorId: string) => void;
+  value: string;
 }
 
 export default function CampoSetor({ onSetorChange, value }: Props) {
-  const [setores, setSetores] = useState<Sector[]>([]);
+  const [setores, setSetores] = useState<Setor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -23,10 +24,10 @@ export default function CampoSetor({ onSetorChange, value }: Props) {
       try {
         const data: Setor[] = await getSectors();
         setSetores(data.filter((s) => s.ativo));
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Falha ao carregar setores.",
-        );
+      } catch (error) {
+        console.error("Erro ao carregar setores.", error);
+        setError("Nao foi possivel carregar os setores.");
+        setSetores([]);
       } finally {
         setLoading(false);
       }

@@ -55,9 +55,59 @@ cp .env.example .env
 docker compose up --build
 ```
 
+## Banco, migrations e seed
+
+Os dados ficam persistidos no volume `sqlserver_data` configurado no
+`docker-compose.yml`. Ao derrubar e subir um novo container da API, os usuários,
+setores e cautelas continuam no banco enquanto esse volume não for removido.
+
+Evite usar `docker compose down -v` em ambientes onde os dados precisam ser
+mantidos, porque `-v` remove os volumes.
+
+### Migrations
+
+Use migrations para versionar a estrutura do banco:
+
+```bash
+npm run migration:run
+```
+
+Com Docker:
+
+```bash
+docker compose --profile migrate run --rm migrate
+```
+
+Para produção, mantenha:
+
+```env
+DATABASE_SYNCHRONIZE=false
+DATABASE_MIGRATIONS_RUN=false
+```
+
+Assim a API não altera schema automaticamente no boot. Rode as migrations
+explicitamente durante o deploy.
+
+### Seed manual
+
+O seed não roda no `docker compose up` normal. Para executar manualmente:
+
+```bash
+npm run seed
+```
+
+Com Docker:
+
+```bash
+docker compose --profile seed run --rm seed
+```
+
+O seed cadastra/atualiza os usuários e setores base sem apagar cautelas.
+
 ## Observações importantes
 
-- O backend usa `synchronize=true` por padrão para acelerar o MVP.
+- Use `DATABASE_SYNCHRONIZE=true` apenas em desenvolvimento rápido. Para
+  ambientes persistentes, prefira migrations.
 - A conexão com SQL Server já considera `encrypt=true` e `trustServerCertificate=true`, alinhado ao print que você enviou.
 - O nome do banco ficou como `cautela` no exemplo. Se você quiser usar outro banco, ajuste `DATABASE_NAME`.
 - No WSL desta máquina o runtime do Node não está funcional, então eu não consegui executar `npm run build` daqui para validar em tempo real.

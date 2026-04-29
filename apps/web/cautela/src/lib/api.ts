@@ -1,4 +1,4 @@
-import type { Cautela, StatusCautela } from "../data/mockData";
+import type { Cautela, StatusCautela } from "../data/cautelaTypes";
 
 export type UserRole = "ADMIN" | "GESTOR" | "PORTARIA";
 

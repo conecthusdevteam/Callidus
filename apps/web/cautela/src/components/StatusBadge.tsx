@@ -1,4 +1,4 @@
-import type { StatusCautela } from "../data/mockData";
+import type { StatusCautela } from "../data/cautelaTypes";
 
 export function IconSuccess() {
   return (
