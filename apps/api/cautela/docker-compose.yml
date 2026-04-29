@@ -13,6 +13,19 @@ services:
     depends_on:
       - sqlserver
 
+  seed:
+    build: .
+    container_name: cautela-seed
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: npm run seed
+    restart: on-failure
+    depends_on:
+      - sqlserver
+
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: cautela-sqlserver
@@ -20,7 +33,7 @@ services:
       - '1433:1433'
     environment:
       ACCEPT_EULA: 'Y'
-      SA_PASSWORD: 'SuaSenhaForte@123'
+      SA_PASSWORD: 'SecurePassword123!'
       MSSQL_PID: 'Developer'
     volumes:
       - sqlserver_data:/var/opt/mssql
