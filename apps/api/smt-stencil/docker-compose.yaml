@@ -1,0 +1,17 @@
+services:
+  sqlservice:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: smt-sqlserver
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=StrongPassword1234@
+      - MSSQL_PID=Developer
+      - MSSQL_TCP_PORT=1433
+    ports:
+      -"1433:1433"
+    volumes:
+      -sqlservice_data:/var/opt/mssql
+    restart: unless-stopped
+
+volumes:
+  sqlserver_data:
