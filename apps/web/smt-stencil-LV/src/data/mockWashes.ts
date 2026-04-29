@@ -44,12 +44,22 @@ export interface PlacaWash {
   face: string;
   linha: string;
   // Detalhes
+  codigo?: string;
   product?: string;
   codigoBarras?: string;
   serial?: string;
+  idFabricante?: string;
+  pais?: string;
+  espessura?: string;
+  enderecamento?: string;
   totalLavagens?: number;
   ultimaLavagem?: string;
   proximaPrev?: string;
+  // Bloco "Dados da última lavagem"
+  idLavagem?: string;
+  ultimaLavagemData?: string; // dd/MM/yyyy
+  ultimaLavagemHora?: string; // HH:mm
+  operador?: string;
   obs?: string;
 }
 
@@ -117,6 +127,9 @@ for (let i = 0; i < 28; i++) {
 const placas: PlacaWash[] = Array.from({ length: 14 }, (_, i) => {
   const hours = 12 - Math.floor(i / 4);
   const mins = (60 - i * 3) % 60;
+  const operadores = ["João Silva", "Maria Santos", "Pedro Oliveira", "Ana Costa"];
+  const paises = ["Brasil", "China", "Alemanha", "Tailândia"];
+  
   return {
     id: `p${i + 1}`,
     data: "21/04/2026",
@@ -125,11 +138,20 @@ const placas: PlacaWash[] = Array.from({ length: 14 }, (_, i) => {
     modelo: "Q2EXMAHN/30",
     face: i % 2 === 0 ? "2°" : "1°",
     linha: i % 4 === 0 ? "Tefé" : i % 4 === 1 ? "Manaus" : "Coari",
+    codigo: `PCB-${3000 + i * 1000}-000${String(i + 1).padStart(3, "0")}`,
     product: "Q2EHFB75T",
     codigoBarras: "12345678",
     serial: "44521",
-    totalLavagens: 358,
+    idFabricante: `FAB${String(i + 1).padStart(5, "0")}`,
+    pais: paises[i % paises.length],
+    espessura: (0.06 + (i % 5) * 0.01).toFixed(2),
+    enderecamento: String(((i + 1) * 10)).padStart(3, "0"),
+    totalLavagens: 358 - i,
     ultimaLavagem: "21/04/2026 12:33",
+    ultimaLavagemData: "21/04/2026",
+    ultimaLavagemHora: "12:33",
+    idLavagem: `LAV${String(358 - i).padStart(5, "0")}`,
+    operador: operadores[i % operadores.length],
     proximaPrev: "98765",
     obs: "Lorem ipsum dolor sit amet.",
   };

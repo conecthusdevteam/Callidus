@@ -30,6 +30,10 @@ export interface ApiPlate {
   totalWashes: number;
   operator: string;
   lineName: string;
+  plateManufacturerId?: string;
+  country?: string;
+  thickness?: number;
+  addressing?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -103,10 +107,19 @@ function mapPlateApiToWash(plate: ApiPlate): PlacaWash {
     modelo: plate.plateModel,
     face: String(plate.phase).padStart(1, '0') + '°',
     linha: plate.lineName,
+    codigo: plate.serialNumber,
     product: plate.plateModel,
     codigoBarras: plate.blankId,
     serial: plate.serialNumber,
+    operador: plate.operator,
+    idLavagem: plate.id,
+    ultimaLavagemData: formattedDate,
+    ultimaLavagemHora: formattedTime,
     totalLavagens: plate.totalWashes,
+    idFabricante: plate.plateManufacturerId ?? "—",
+    pais: plate.country ?? "—",
+    espessura: plate.thickness ? plate.thickness.toFixed(2) : "—",
+    enderecamento: plate.addressing ?? "—",
   };
 }
 

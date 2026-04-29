@@ -30,6 +30,18 @@ export class Plate {
     @Column()
     lineName!: string;
 
+    @Column({ nullable: true })
+    plateManufacturerId?: string;
+
+    @Column({ nullable: true })
+    country?: string;
+
+    @Column({ type: 'decimal', precision: 5, scale: 3, nullable: true })
+    thickness?: number;
+
+    @Column({ nullable: true })
+    addressing?: string;
+
     @CreateDateColumn()
     createdAt!: Date;
 

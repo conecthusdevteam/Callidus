@@ -80,6 +80,11 @@
     /* Status fornecimento de dados — borda lateral roxa (img3) */
     --status-accent: 258 90% 66%;
 
+    /* Tab pill (Stencil/Placas) — verde da marca #3BB14A */
+    --tab-green: 128 51% 46%;
+    --tab-bg: 0 0% 98%;       /* #F9F9F9 */
+    --tab-inactive-fg: 0 0% 25%; /* #404040 */
+
     /* Linha em destaque (item de atenção) */
     --row-attention: 0 90% 97%;
     --row-attention-border: 0 75% 60%;
@@ -161,5 +166,28 @@
     font-size: 18px;
     font-style: normal;
     letter-spacing: 0;
+  }
+
+  /* Tab pill Stencil/Placas — Geist Medium 18px, verde #3BB14A */
+  .tab-pill {
+    font-family: 'Geist', 'Inter', system-ui, sans-serif;
+    font-weight: 500;
+    font-size: 18px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 16px;
+    min-height: 36px;
+    border-radius: 0.5rem; /* rounded-lg */
+    transition: background-color 150ms ease, color 150ms ease;
+    color: hsl(var(--tab-inactive-fg));
+  }
+  .tab-pill[data-active="true"] {
+    background-color: hsl(var(--tab-green));
+    color: hsl(var(--tab-bg));
+  }
+  .tab-pill[data-active="false"]:hover {
+    color: hsl(var(--foreground));
   }
 }

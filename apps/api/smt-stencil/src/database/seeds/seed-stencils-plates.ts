@@ -78,6 +78,10 @@ function generatePlateData(index: number): Partial<Plate> {
   const totalWashes = random(0, 300);
   const operator = OPERATORS[random(0, OPERATORS.length - 1)];
   const lineName = LINE_NAMES[random(0, LINE_NAMES.length - 1)];
+  const plateManufacturerId = MANUFACTURE_IDS[random(0, MANUFACTURE_IDS.length - 1)];
+  const country = COUNTRIES[random(0, COUNTRIES.length - 1)];
+  const thickness = randomFloat(0.05, 0.15, 2);
+  const addressing = String(random(1, 100)).padStart(3, '0');
   
   const plate = new Plate();
   plate.plateModel = plateModel;
@@ -88,6 +92,10 @@ function generatePlateData(index: number): Partial<Plate> {
   plate.totalWashes = totalWashes;
   plate.operator = operator;
   plate.lineName = lineName;
+  plate.plateManufacturerId = plateManufacturerId;
+  plate.country = country;
+  plate.thickness = thickness;
+  plate.addressing = addressing;
   plate.createdAt = randomDate();
   plate.updatedAt = plate.createdAt;
   

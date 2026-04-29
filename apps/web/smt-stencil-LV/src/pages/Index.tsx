@@ -65,7 +65,7 @@ const Index = () => {
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
               <div>
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                  <div className="inline-flex rounded-lg border bg-card p-1 shadow-card">
+                  <div className="inline-flex rounded-lg ">
                     <TabButton active={tab === "stencil"} onClick={() => { setTab("stencil"); setSelected(null); }}>
                       Stencil
                     </TabButton>
@@ -76,7 +76,7 @@ const Index = () => {
 
                   <div className="flex min-h-10 items-center justify-end">
                     {tab === "stencil" && (
-                      <div className="inline-flex rounded-lg border bg-card p-1 shadow-card">
+                      <div className="inline-flex rounded-lg border ">
                         <TabButton active={!showAttention} onClick={() => setShowAttention(false)}>
                           Todos
                         </TabButton>
@@ -146,15 +146,13 @@ function TabButton({
   return (
     <button
       onClick={onClick}
-      className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
-        active
-          ? "bg-primary text-primary-foreground shadow-sm"
-          : "text-muted-foreground hover:text-foreground"
-      }`}
+      data-active={active}     // ← controla o estado visual
+      className="tab-pill"     // ← aplica todo o estilo via CSS
     >
       {children}
     </button>
   );
 }
+
 
 export default Index;

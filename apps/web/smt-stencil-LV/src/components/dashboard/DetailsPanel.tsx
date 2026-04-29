@@ -39,7 +39,7 @@ export function DetailsPanel({ item, onClose }: Props) {
   const codigoLabel = isStencil ? "Código Stencil" : "Código Placa";
   const codigoValue = isStencil
     ? (item as StencilWash).codigo
-    : (item as PlacaWash).modelo;
+    : (item as PlacaWash).codigo ?? (item as PlacaWash).modelo;
 
   const idFabricante = item.idFabricante ?? "—";
   const pais = item.pais ?? "—";
