@@ -21,6 +21,8 @@ export interface Cautela {
   aprovadoEm?: string;
   reprovadoEm?: string;
   motivoNegativa?: string;
+  proprietarioEmail?: string;
+  validade?: string;
 }
 
 export interface TipoCautelaConfig {

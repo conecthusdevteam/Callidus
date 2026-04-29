@@ -1,14 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import StatusBadge from "../components/StatusBadge";
-import {
-  approveCautela,
-  createCautela,
-  fetchCautelas,
-  rejectCautela,
-  type CautelaApi,
-  type CautelaStatusApi,
-  type User,
-} from "../lib/api";
+import { Cautela } from "../data/cautelaTypes";
+import { createCautela, getCautelas } from "../lib/api";
 import CampoSetor from "./CampoSetor";
 
 function LineSeparator() {
@@ -104,7 +97,7 @@ export default function Home({ user }: Props) {
   const [email, setEmail] = useState("");
   const [setorId, setSetorId] = useState<string>("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const [cautelas, setCautelas] = useState<CautelaApi[]>([]);
+  const [cautelas, setCautelas] = useState<Cautela[]>([]);
   const [loadingCautelas, setLoadingCautelas] = useState(true);
   const [listError, setListError] = useState("");
   const [submitError, setSubmitError] = useState("");
@@ -112,26 +105,21 @@ export default function Home({ user }: Props) {
   const [decidingId, setDecidingId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const canCreateCautela = user.papel === "PORTARIA";
-
-  const loadCautelas = useCallback(async () => {
-    setListError("");
-    setLoadingCautelas(true);
-
-    try {
-      setCautelas(await fetchCautelas());
-    } catch (err) {
-      setListError(
-        err instanceof Error ? err.message : "Falha ao carregar cautelas.",
-      );
-    } finally {
-      setLoadingCautelas(false);
-    }
-  }, []);
+  const [itemParaExcluir, setItemParaExcluir] = useState<number | null>(null);
+  const [showItemDeletedModal, setShowItemDeletedModal] = useState(false);
 
   useEffect(() => {
-    loadCautelas();
-  }, [loadCautelas]);
+    carregarCautelas();
+  }, []);
+
+  async function carregarCautelas() {
+    try {
+      const data = await getCautelas();
+      setCautelas(data);
+    } catch {
+      setCautelas([]);
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -159,49 +147,50 @@ export default function Home({ user }: Props) {
       setSubmitting(true);
 
       try {
-        await createCautela({
-          setorId,
-          proprietarioNome: nome.trim(),
-          proprietarioEmail: email.trim().toLowerCase(),
-          retornoItem: Boolean(retornado),
-          validade: retornado ? dataFim : undefined,
+        const created = await createCautela({
           itens: items.map((item) => ({
             nomeItem: item.descricao,
             quantidade: item.quantidade,
           })),
+          proprietarioEmail: email,
+          proprietarioNome: nome,
+          retornoItem: retornado === true,
+          setorId,
+          validade: retornado ? dataFim : undefined,
         });
-
-        await loadCautelas();
-        setShowModal(true);
-        setTimeout(() => setShowModal(false), 3000);
-
-        setSetorId("");
-        setNome("");
-        setEmail("");
-        setDescricao("");
-        setQuantidade("");
-        setItems([]);
-        setRetornado(null);
-        setDataFim("");
-        setFieldErrors({});
-      } catch (err) {
-        setSubmitError(
-          err instanceof Error ? err.message : "Falha ao enviar cautela.",
-        );
-      } finally {
-        setSubmitting(false);
+        setCautelas((prev) => [created, ...prev]);
+      } catch {
+        console.log("Backend indisponível, simulando envio.");
       }
+
+      setShowModal(true);
+      setTimeout(() => setShowModal(false), 3000);
+
+      setSetorId("");
+      setNome("");
+      setEmail("");
+      setDescricao("");
+      setQuantidade("");
+      setItems([]);
+      setRetornado(null);
+      setDataFim("");
+      setFieldErrors({});
     }
   };
 
-  const cautelasFiltradas = useMemo(
-    () =>
-      cautelas.filter((cautela) =>
-        activeTab === "enviados"
-          ? cautela.solicitadoPorId === user.id
-          : cautela.gestorId === user.id,
-      ),
-    [activeTab, cautelas, user.id],
+  function confirmarExclusaoItem() {
+    if (itemParaExcluir === null) return;
+
+    setItems((prev) => prev.filter((_, i) => i !== itemParaExcluir));
+    setItemParaExcluir(null);
+    setShowItemDeletedModal(true);
+    setTimeout(() => setShowItemDeletedModal(false), 3000);
+  }
+
+  const cautelasFiltradas = cautelas.filter((c) =>
+    activeTab === "enviados"
+      ? c.status === "Em análise"
+      : c.status === "Aprovado" || c.status === "Reprovado",
   );
 
   async function handleApprove(id: string) {
@@ -375,10 +364,7 @@ export default function Home({ user }: Props) {
 
             {/* Setor */}
             <div>
-              <CampoSetor
-                value={setorId}
-                onSetorChange={(id) => setSetorId(id)}
-              />
+              <CampoSetor onSetorChange={(id) => setSetorId(id)} />
               {fieldErrors.setor && (
                 <p className="text-red-500 text-xs mt-1">{fieldErrors.setor}</p>
               )}
@@ -494,9 +480,7 @@ export default function Home({ user }: Props) {
                       <td className="py-2 text-center">
                         <button
                           type="button"
-                          onClick={() =>
-                            setItems(items.filter((_, i) => i !== index))
-                          }
+                          onClick={() => setItemParaExcluir(index)}
                           className="text-black hover:text-red-600"
                         >
                           <IconTrash />
@@ -646,6 +630,75 @@ export default function Home({ user }: Props) {
             </div>
             <p className="text-base font-bold text-black text-center">
               Sua solicitação foi enviada ao gestor
+            </p>
+          </div>
+        </div>
+      )}
+      {itemParaExcluir !== null && (
+        <div
+          className="fixed flex items-center justify-center bg-black/20 backdrop-blur-sm z-30"
+          style={{ top: "60px", left: "70px", right: 0, bottom: 0 }}
+        >
+          <div className="bg-white rounded-2xl shadow-xl px-14 py-10 flex flex-col items-center gap-4 min-w-[320px]">
+            <div
+              className="w-14 h-14 rounded-2xl flex items-center justify-center"
+              style={{ backgroundColor: "#FEE2E2" }}
+            >
+              <IconTrash />
+            </div>
+            <p className="text-base font-bold text-black text-center">
+              Você deseja excluir este item?
+            </p>
+            <p className="text-xs text-[#404040] text-center">
+              Os dados serão removidos permanentemente.
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setItemParaExcluir(null)}
+                className="px-4 py-2 rounded-lg bg-[#F5F5F5] text-[#171717] text-sm font-medium hover:bg-gray-300"
+              >
+                Não
+              </button>
+              <button
+                type="button"
+                onClick={confirmarExclusaoItem}
+                className="px-4 py-2 rounded-lg bg-[#3BB14A] text-white text-sm font-medium hover:bg-[#2B8E37]"
+              >
+                Sim
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showItemDeletedModal && (
+        <div
+          className="fixed flex items-center justify-center bg-black/20 backdrop-blur-sm z-30"
+          style={{ top: "60px", left: "70px", right: 0, bottom: 0 }}
+        >
+          <div className="bg-white rounded-2xl shadow-xl px-12 py-10 flex flex-col items-center gap-4 min-w-[320px]">
+            <div
+              className="w-16 h-16 rounded-2xl flex items-center justify-center"
+              style={{ backgroundColor: "#EEF5EE" }}
+            >
+              <div className="w-9 h-9 rounded-full border-2 border-[#2B8E37] flex items-center justify-center">
+                <svg
+                  className="w-6 h-6 text-[#2B8E37]"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </div>
+            </div>
+            <p className="text-base font-bold text-black text-center">
+              O item foi EXCLUÍDO com sucesso.
             </p>
           </div>
         </div>

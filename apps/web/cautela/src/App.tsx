@@ -1,64 +1,78 @@
-import { useEffect, useState } from "react";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+} from "react-router-dom";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
-import {
-  clearSession,
-  fetchCurrentUser,
-  getStoredUser,
-  type User,
-} from "./lib/api";
-import Gestor from "./pages/Gestor";
 import Home from "./pages/Home";
+import Gestor from "./pages/Gestor";
 import Login from "./pages/Login";
 
-export default function App() {
-  const [user, setUser] = useState<User | null>(() => getStoredUser());
-  const [checkingSession, setCheckingSession] = useState(
-    Boolean(getStoredUser()),
-  );
+function ProtectedRoute({
+  children,
+  roles,
+}: {
+  children: React.ReactNode;
+  roles?: string[];
+}) {
+  const { user } = useAuth();
+  const location = useLocation();
 
-  useEffect(() => {
-    if (!getStoredUser()) {
-      setCheckingSession(false);
-      return;
-    }
-
-    fetchCurrentUser()
-      .then(setUser)
-      .catch(() => {
-        clearSession();
-        setUser(null);
-      })
-      .finally(() => setCheckingSession(false));
-  }, []);
-
-  if (checkingSession) {
+  if (!user) {
     return (
-      <div className="min-h-screen bg-[#F5F7F6] flex items-center justify-center text-sm text-[#404040]">
-        Carregando sessão...
-      </div>
+      <Navigate to="/login" replace state={{ from: location.pathname }} />
     );
   }
 
-  if (!user) {
-    return <Login onLogin={setUser} />;
+  if (roles && !roles.includes(user.papel)) {
+    return <Navigate to={user.papel === "GESTOR" ? "/gestor" : "/"} replace />;
   }
 
+  return children;
+}
+
+function Layout() {
+  const { user } = useAuth();
+  const location = useLocation();
+  const showShell = Boolean(user) && location.pathname !== "/login";
+
   return (
-    <BrowserRouter>
-      <Navbar
-        user={user}
-        onLogout={() => {
-          clearSession();
-          setUser(null);
-        }}
-      />
-      <Sidebar />
+    <>
+      {showShell && <Navbar />}
+      {showShell && <Sidebar />}
       <Routes>
-        <Route path="/" element={<Home user={user} />} />
-        <Route path="/gestor" element={<Gestor />} />
+        <Route path="/login" element={<Login />} />
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute roles={["ADMIN", "PORTARIA"]}>
+              <Home />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/gestor"
+          element={
+            <ProtectedRoute roles={["ADMIN", "GESTOR"]}>
+              <Gestor />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
-    </BrowserRouter>
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <Layout />
+      </BrowserRouter>
+    </AuthProvider>
   );
 }

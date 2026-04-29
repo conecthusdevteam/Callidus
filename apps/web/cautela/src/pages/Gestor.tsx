@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import StatusBadge from "../components/StatusBadge";
 import {
   mockCautelas,
   type Cautela,
   type StatusCautela,
 } from "../data/mockData";
+import { approveCautela, getCautelas, rejectCautela } from "../lib/api";
 
 type Tab = "recebidas" | "historico";
 type MobileView =
@@ -19,7 +20,11 @@ interface CautelaComDecisao extends Cautela {
 
 // ── Modal de aprovação ──
 function ModalAprovado({ onClose }: { onClose: () => void }) {
-  setTimeout(onClose, 3000);
+  useEffect(() => {
+    const timer = window.setTimeout(onClose, 3000);
+    return () => window.clearTimeout(timer);
+  }, [onClose]);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-xl px-16 py-10 flex flex-col items-center gap-4 min-w-[340px]">
@@ -53,7 +58,11 @@ function ModalAprovado({ onClose }: { onClose: () => void }) {
 
 // ── Modal de recusado ──
 function ModalRecusado({ onClose }: { onClose: () => void }) {
-  setTimeout(onClose, 3000);
+  useEffect(() => {
+    const timer = window.setTimeout(onClose, 3000);
+    return () => window.clearTimeout(timer);
+  }, [onClose]);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-xl px-16 py-10 flex flex-col items-center gap-4 min-w-[340px]">
@@ -232,14 +241,14 @@ function DetalhesConteudo({ cautela }: { cautela: CautelaComDecisao }) {
       </div>
       <div className="mb-4">
         <p className="text-base font-bold text-black">E-mail do proprietário</p>
-        <p className="text-base text-black">
-          {cautela.visitante.toLowerCase().replace(" ", ".")}@callidus.org.br
-        </p>
+        <p className="text-base text-black">{cautela.proprietarioEmail}</p>
       </div>
-      {cautela.aprovadoEm && (
+      {(cautela.validade || cautela.aprovadoEm) && (
         <div className="mb-4">
           <p className="text-sm font-bold text-black">Válido até:</p>
-          <p className="text-sm text-gray-700">{cautela.aprovadoEm}</p>
+          <p className="text-sm text-gray-700">
+            {cautela.validade ?? cautela.aprovadoEm}
+          </p>
         </div>
       )}
       <table className="w-full mt-16 mb-2 overflow-hidden">
@@ -349,6 +358,19 @@ export default function Gestor() {
   // Mobile
   const [mobileView, setMobileView] = useState<MobileView>("lista");
 
+  useEffect(() => {
+    carregarCautelas();
+  }, []);
+
+  async function carregarCautelas() {
+    try {
+      const data = await getCautelas();
+      setCautelas(data);
+    } catch {
+      setCautelas(mockCautelas);
+    }
+  }
+
   const recebidas = cautelas.filter(
     (c) => c.status === "Em análise" && !c.decisaoLocal,
   );
@@ -362,12 +384,21 @@ export default function Gestor() {
     c.status === "Aprovado" ||
     c.status === "Reprovado";
 
-  function aprovar(id: string) {
-    setCautelas((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, decisaoLocal: "aprovado" } : c)),
-    );
-    setCautelaSelecionada(null);
-    setModalAprovado(true);
+  async function aprovar(id: string) {
+    try {
+      const cautelaAtualizada = await approveCautela(id);
+      setCautelas((prev) =>
+        prev.map((c) => (c.id === id ? cautelaAtualizada : c)),
+      );
+    } catch {
+      setCautelas((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, decisaoLocal: "aprovado" } : c)),
+      );
+    } finally {
+      setCautelaSelecionada(null);
+      setModalAprovado(true);
+      setMobileView("lista");
+    }
   }
 
   function abrirDescartar(id: string) {
@@ -375,15 +406,31 @@ export default function Gestor() {
     setModalDescartar(true);
   }
 
-  function confirmarDescartar(justificativa: string) {
+  async function confirmarDescartar(justificativa: string) {
     if (cautelaSelecionada) {
-      setCautelas((prev) =>
-        prev.map((c) =>
-          c.id === cautelaSelecionada.id
-            ? { ...c, decisaoLocal: "reprovado", motivoNegativa: justificativa }
-            : c,
-        ),
-      );
+      try {
+        const cautelaAtualizada = await rejectCautela(
+          cautelaSelecionada.id,
+          justificativa,
+        );
+        setCautelas((prev) =>
+          prev.map((c) =>
+            c.id === cautelaSelecionada.id ? cautelaAtualizada : c,
+          ),
+        );
+      } catch {
+        setCautelas((prev) =>
+          prev.map((c) =>
+            c.id === cautelaSelecionada.id
+              ? {
+                  ...c,
+                  decisaoLocal: "reprovado",
+                  motivoNegativa: justificativa,
+                }
+              : c,
+          ),
+        );
+      }
     }
     setModalDescartar(false);
     setCautelaSelecionada(null);
@@ -593,14 +640,14 @@ export default function Gestor() {
 
       {/* ══════════════ DESKTOP ══════════════ */}
       <div className="hidden md:flex h-screen pt-[60px] pl-[70px] bg-white overflow-hidden">
-        {/* Painel esquerdo — Respondidos */}
+        {/* Painel esquerdo — Recebidas */}
         <div className="w-xl h-screen flex-shrink-0 flex flex-col overflow-hidden pt-[20px]">
           {/* Header */}
           <div
             className="bg-[#22592A] px-5 py-4 flex-shrink-0 rounded-t-lg mx-4 mt-4"
             style={{ boxShadow: "4px 0 8px rgba(0,0,0,0.25)" }}
           >
-            <h2 className="text-white font-bold text-base">Respondidos</h2>
+            <h2 className="text-white font-bold text-base">Recebidas</h2>
           </div>
 
           {/* Cards */}

@@ -1,9 +1,16 @@
 import { useState, useEffect } from "react";
-import { fetchSectors, type Sector } from "../lib/api";
+import { getSectors } from "../lib/api";
+
+interface Setor {
+  id: string;
+  numeroSetor: number;
+  nome: string;
+  gestorId: string;
+  ativo: boolean;
+}
 
 interface Props {
   onSetorChange: (setorId: string) => void;
-  value: string;
 }
 
 export default function CampoSetor({ onSetorChange, value }: Props) {
@@ -14,7 +21,7 @@ export default function CampoSetor({ onSetorChange, value }: Props) {
   useEffect(() => {
     async function fetchSetores() {
       try {
-        const data = await fetchSectors();
+        const data: Setor[] = await getSectors();
         setSetores(data.filter((s) => s.ativo));
       } catch (err) {
         setError(
