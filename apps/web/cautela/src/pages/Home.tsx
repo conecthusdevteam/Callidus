@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import StatusBadge from "../components/StatusBadge";
 import type { Cautela } from "../data/cautelaTypes";
+import { useAuth } from "../context/AuthContext";
 import { createCautela, getCautelas } from "../lib/api";
 import CampoSetor from "./CampoSetor";
 
@@ -65,25 +66,11 @@ interface FieldErrors {
 }
 
 type Tab = "enviados" | "recebidos";
-type StatusCautela = "Aprovado" | "Reprovado" | "Em análise";
 
-interface Props {
-  user: User;
-}
-
-const statusLabels: Record<CautelaStatusApi, StatusCautela> = {
-  APROVADA: "Aprovado",
-  EM_ANALISE: "Em análise",
-  REPROVADA: "Reprovado",
-};
-
-function formatDate(date: string | null) {
-  if (!date) return "-";
-
-  return new Intl.DateTimeFormat("pt-BR").format(new Date(date));
-}
-
-export default function Home({ user }: Props) {
+export default function Home() {
+  const { user } = useAuth();
+  const canCreateCautela =
+    user?.papel === "ADMIN" || user?.papel === "PORTARIA";
   const [activeTab, setActiveTab] = useState<Tab>("enviados");
   const [descricao, setDescricao] = useState("");
   const [quantidade, setQuantidade] = useState<string>("");
@@ -96,33 +83,39 @@ export default function Home({ user }: Props) {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [setorId, setSetorId] = useState<string>("");
-  const [cautelas, setCautelas] = useState<Cautela[]>([]);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [cautelas, setCautelas] = useState<Cautela[]>([]);
   const [loadingCautelas, setLoadingCautelas] = useState(true);
   const [listError, setListError] = useState("");
   const [submitError, setSubmitError] = useState("");
-  const [decisionError, setDecisionError] = useState("");
-  const [decidingId, setDecidingId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [itemParaExcluir, setItemParaExcluir] = useState<number | null>(null);
   const [showItemDeletedModal, setShowItemDeletedModal] = useState(false);
-  const [submitError, setSubmitError] = useState("");
 
-  useEffect(() => {
-    carregarCautelas();
-  }, []);
+  const carregarCautelas = useCallback(async () => {
+    setLoadingCautelas(true);
+    setListError("");
 
-  async function carregarCautelas() {
     try {
       const data = await getCautelas();
       setCautelas(data);
     } catch (error) {
       console.error("Erro ao carregar cautelas.", error);
       setCautelas([]);
+      setListError(
+        error instanceof Error
+          ? error.message
+          : "Nao foi possivel carregar as cautelas.",
+      );
+    } finally {
+      setLoadingCautelas(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    void carregarCautelas();
+  }, [carregarCautelas]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -205,41 +198,6 @@ export default function Home({ user }: Props) {
       : c.status === "Aprovado" || c.status === "Reprovado",
   );
 
-  async function handleApprove(id: string) {
-    setDecisionError("");
-    setDecidingId(id);
-
-    try {
-      await approveCautela(id);
-      await loadCautelas();
-    } catch (err) {
-      setDecisionError(
-        err instanceof Error ? err.message : "Falha ao aprovar cautela.",
-      );
-    } finally {
-      setDecidingId(null);
-    }
-  }
-
-  async function handleReject(id: string) {
-    const justificativa = window.prompt("Informe a justificativa da reprovação:");
-    if (!justificativa?.trim()) return;
-
-    setDecisionError("");
-    setDecidingId(id);
-
-    try {
-      await rejectCautela(id, justificativa.trim());
-      await loadCautelas();
-    } catch (err) {
-      setDecisionError(
-        err instanceof Error ? err.message : "Falha ao reprovar cautela.",
-      );
-    } finally {
-      setDecidingId(null);
-    }
-  }
-
   return (
     <div className="flex h-screen pt-[60px] pl-[70px] bg-[#F5F7F6] overflow-hidden relative">
       {/* Painel esquerdo */}
@@ -273,11 +231,6 @@ export default function Home({ user }: Props) {
           </div>
 
           <div className="flex-1 overflow-y-auto pb-2 bg-[#E5E7EB]">
-            {decisionError && (
-              <div className="px-3 py-3 text-sm text-red-600 bg-white">
-                {decisionError}
-              </div>
-            )}
             {loadingCautelas && (
               <div className="px-3 py-4 text-sm text-[#404040] bg-white">
                 Carregando cautelas...
@@ -304,40 +257,18 @@ export default function Home({ user }: Props) {
                       </span>
                     </span>
                     <span className="text-[14px] font-normal leading-[100%] text-[#404040]">
-                      Data: {formatDate(cautela.criadoEm)}
+                      Data: {cautela.data || "-"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-[14px] font-normal leading-[100%] text-[#404040]">
                       Ciente:{" "}
                       <span className="font-bold text-[14px] leading-[100%] text-[#404040]">
-                        {(cautela.gestor?.nome || "-").toUpperCase()}
+                        {(cautela.gestor || "-").toUpperCase()}
                       </span>
                     </span>
-                    <StatusBadge status={statusLabels[cautela.status]} />
+                    <StatusBadge status={cautela.status} />
                   </div>
-                  {user.papel === "GESTOR" &&
-                    activeTab === "recebidos" &&
-                    cautela.status === "EM_ANALISE" && (
-                      <div className="flex justify-end gap-2 mt-3">
-                        <button
-                          type="button"
-                          disabled={decidingId === cautela.id}
-                          onClick={() => handleReject(cautela.id)}
-                          className="px-3 py-1.5 rounded-lg bg-[#FBD5D5] text-[#171717] text-xs font-medium hover:bg-[#F05252] hover:text-white disabled:opacity-60"
-                        >
-                          Reprovar
-                        </button>
-                        <button
-                          type="button"
-                          disabled={decidingId === cautela.id}
-                          onClick={() => handleApprove(cautela.id)}
-                          className="px-3 py-1.5 rounded-lg bg-[#BCF0DA] text-[#171717] text-xs font-medium hover:bg-[#31C48D] disabled:opacity-60"
-                        >
-                          Aprovar
-                        </button>
-                      </div>
-                    )}
                 </div>
                 {index < cautelasFiltradas.length - 1 && <LineSeparator />}
               </div>
