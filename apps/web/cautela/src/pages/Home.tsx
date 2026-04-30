@@ -241,11 +241,13 @@ export default function Home() {
                 {listError}
               </div>
             )}
-            {!loadingCautelas && !listError && cautelasFiltradas.length === 0 && (
-              <div className="px-3 py-4 text-sm text-[#404040] bg-white">
-                Nenhuma cautela encontrada.
-              </div>
-            )}
+            {!loadingCautelas &&
+              !listError &&
+              cautelasFiltradas.length === 0 && (
+                <div className="px-3 py-4 text-sm text-[#404040] bg-white">
+                  Nenhuma cautela encontrada.
+                </div>
+              )}
             {cautelasFiltradas.map((cautela, index) => (
               <div key={cautela.id}>
                 <div className="px-3 py-3 hover:bg-gray-100 transition-colors bg-white">
@@ -373,9 +375,13 @@ export default function Home() {
                   Quantidade
                 </label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   value={quantidade}
-                  onChange={(e) => setQuantidade(e.target.value)}
+                  onChange={(e) => {
+                    const valor = e.target.value.replace(/\D/g, "").slice(0, 6);
+                    setQuantidade(valor);
+                  }}
                   className="mt-1 w-full border-2 border-[#D4D4D4] bg-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-600 focus:outline-none h-[42px]"
                   placeholder="000"
                 />
