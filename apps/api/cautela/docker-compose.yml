@@ -48,7 +48,7 @@ services:
       - '1433:1433'
     environment:
       ACCEPT_EULA: 'Y'
-      SA_PASSWORD: 'SecurePassword123!'
+      SA_PASSWORD: 'G@leotti28'
       MSSQL_PID: 'Developer'
     volumes:
       - sqlserver_data:/var/opt/mssql
