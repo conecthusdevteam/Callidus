@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { StatusPill } from "./StatusPill";
 import type { StencilWash } from "@/data/mockWashes";
+import attentionIcon from "@/assets/icon-attention-triangle.svg";
 
 interface Props {
   rows: StencilWash[];
@@ -10,7 +11,7 @@ interface Props {
 
 export function StencilTable({ rows, selectedId, onSelect }: Props) {
   return (
-    <div className="overflow-hidden rounded-lg border bg-card">
+    <div className="relative overflow-visible rounded-lg border bg-card">
       {/* Linhas em 18px Regular (font-body) — img1 */}
         <table className="w-full text-lg font-normal">
         <thead>
@@ -34,7 +35,7 @@ export function StencilTable({ rows, selectedId, onSelect }: Props) {
                 onClick={() => onSelect(row)}
                 className={cn(
                   "cursor-pointer border-t border-border transition-colors",
-                  row.attention && "bg-row-attention",
+                  row.attention && "bg-row-attention",  // fundo 
                   selected && "bg-row-selected",
                   !row.attention && !selected && "hover:bg-row-stripe",
                 )}
@@ -46,7 +47,19 @@ export function StencilTable({ rows, selectedId, onSelect }: Props) {
                 <td className="px-4 py-3">
                   <StatusPill status={row.motivo} />
                 </td>
-                <td className="px-4 py-3 text-foreground">{row.linha}</td>
+                <td className="relative px-4 py-3 text-foreground">
+                  {row.linha}
+                  {row.attention && (
+                    <span
+                      aria-label="Intervalo de lavagem fora do padrão"
+                      title="Intervalo de lavagem fora do padrão"
+                      className="absolute left-full top-1/2 ml-3 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-full"
+                      style={{ backgroundColor: "hsl(0 90% 96%)" }}  // 👈 círculo rosa
+                    >
+                      <img src={attentionIcon} alt="" className="h-4 w-4" />  {/* 👈 triângulo vermelho */}
+                    </span>
+                  )}
+                </td>
               </tr>
             );
           })}

@@ -7,13 +7,15 @@ import { PlacaTable } from "@/components/dashboard/PlacaTable";
 import { DetailsPanel } from "@/components/dashboard/DetailsPanel";
 import { SystemStatusCard } from "@/components/dashboard/SystemStatusCard";
 import { Pagination } from "@/components/dashboard/Pagination";
+import { WashNotification } from "@/components/dashboard/WashNotification";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import type { StencilWash, PlacaWash } from "@/data/mockWashes";
 
 const PAGE_SIZE = 10;
 
 const Index = () => {
-  const { data } = useDashboardData(60_000);
+  // — recebe eventos e função de dismiss do hook
+  const { data, newEvents, dismissEvent } = useDashboardData(60_000);
   const [tab, setTab] = useState<"stencil" | "placas">("stencil");
   const [showAttention, setShowAttention] = useState(false);
   const [stencilPage, setStencilPage] = useState(1);
@@ -41,9 +43,13 @@ const Index = () => {
     () => data.placas.slice((placaPage - 1) * PAGE_SIZE, placaPage * PAGE_SIZE),
     [data.placas, placaPage],
   );
-
+   //  — renderiza o overlay de notificações
   return (
     <div className="flex min-h-screen bg-background">
+      <WashNotification
+        notifications={newEvents.map((e) => ({ id: e.id, origin: e.origin }))}
+        onDismiss={dismissEvent}
+      />
       <Sidebar />
       <div className="flex flex-1 flex-col">
         <Header />
