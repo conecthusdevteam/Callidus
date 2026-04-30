@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { stencilsApi, platesApi } from '@/lib/api';
 import type { StencilWash, PlacaWash } from '@/data/mockWashes';
+import { getDashboardData } from '@/data/mockWashes';
 
 /**
  * Interface da API
@@ -125,13 +126,15 @@ function mapPlateApiToWash(plate: ApiPlate): PlacaWash {
 
 /**
  * Hook para buscar Stencils da API
+ * TEMPORÁRIO: Usando dados mockados ao invés da API
  */
 export function useStencils(enabled = true) {
   return useQuery({
     queryKey: ['stencils'],
     queryFn: async () => {
-      const data = await stencilsApi.getAll() as ApiStencil[];
-      return data.map(mapStencilApiToWash);
+      // TODO: Substituir por stencilsApi.getAll() quando o banco estiver pronto
+      const mockData = getDashboardData();
+      return mockData.stencils;
     },
     enabled,
     staleTime: 30000, // 30 segundos
@@ -141,13 +144,15 @@ export function useStencils(enabled = true) {
 
 /**
  * Hook para buscar Plates da API
+ * TEMPORÁRIO: Usando dados mockados ao invés da API
  */
 export function usePlates(enabled = true) {
   return useQuery({
     queryKey: ['plates'],
     queryFn: async () => {
-      const data = await platesApi.getAll() as ApiPlate[];
-      return data.map(mapPlateApiToWash);
+      // TODO: Substituir por platesApi.getAll() quando o banco estiver pronto
+      const mockData = getDashboardData();
+      return mockData.placas;
     },
     enabled,
     staleTime: 30000, // 30 segundos
