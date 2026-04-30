@@ -1,0 +1,9 @@
+services:
+  smt-stencil-web:
+    build:
+      context: .
+#      args:
+#        VITE_SMT_STENCIL_API_URL: ${VITE_SMT_STENCIL_API_URL:-http://localhost:3001}
+    ports:
+      - "${WEB_PORT:-5172}:81"
+    restart: unless-stopped
