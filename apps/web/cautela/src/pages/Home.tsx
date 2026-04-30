@@ -1,14 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import StatusBadge from "../components/StatusBadge";
-import {
-  approveCautela,
-  createCautela,
-  fetchCautelas,
-  rejectCautela,
-  type CautelaApi,
-  type CautelaStatusApi,
-  type User,
-} from "../lib/api";
+import type { Cautela } from "../data/cautelaTypes";
+import { useAuth } from "../context/AuthContext";
+import { createCautela, getCautelas } from "../lib/api";
 import CampoSetor from "./CampoSetor";
 
 function LineSeparator() {
@@ -72,25 +66,11 @@ interface FieldErrors {
 }
 
 type Tab = "enviados" | "recebidos";
-type StatusCautela = "Aprovado" | "Reprovado" | "Em análise";
 
-interface Props {
-  user: User;
-}
-
-const statusLabels: Record<CautelaStatusApi, StatusCautela> = {
-  APROVADA: "Aprovado",
-  EM_ANALISE: "Em análise",
-  REPROVADA: "Reprovado",
-};
-
-function formatDate(date: string | null) {
-  if (!date) return "-";
-
-  return new Intl.DateTimeFormat("pt-BR").format(new Date(date));
-}
-
-export default function Home({ user }: Props) {
+export default function Home() {
+  const { user } = useAuth();
+  const canCreateCautela =
+    user?.papel === "ADMIN" || user?.papel === "PORTARIA";
   const [activeTab, setActiveTab] = useState<Tab>("enviados");
   const [descricao, setDescricao] = useState("");
   const [quantidade, setQuantidade] = useState<string>("");
@@ -104,25 +84,29 @@ export default function Home({ user }: Props) {
   const [email, setEmail] = useState("");
   const [setorId, setSetorId] = useState<string>("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const [cautelas, setCautelas] = useState<CautelaApi[]>([]);
+  const [cautelas, setCautelas] = useState<Cautela[]>([]);
   const [loadingCautelas, setLoadingCautelas] = useState(true);
   const [listError, setListError] = useState("");
   const [submitError, setSubmitError] = useState("");
-  const [decisionError, setDecisionError] = useState("");
-  const [decidingId, setDecidingId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const canCreateCautela = user.papel === "PORTARIA";
+  const [itemParaExcluir, setItemParaExcluir] = useState<number | null>(null);
+  const [showItemDeletedModal, setShowItemDeletedModal] = useState(false);
 
-  const loadCautelas = useCallback(async () => {
-    setListError("");
+  const carregarCautelas = useCallback(async () => {
     setLoadingCautelas(true);
+    setListError("");
 
     try {
-      setCautelas(await fetchCautelas());
-    } catch (err) {
+      const data = await getCautelas();
+      setCautelas(data);
+    } catch (error) {
+      console.error("Erro ao carregar cautelas.", error);
+      setCautelas([]);
       setListError(
-        err instanceof Error ? err.message : "Falha ao carregar cautelas.",
+        error instanceof Error
+          ? error.message
+          : "Nao foi possivel carregar as cautelas.",
       );
     } finally {
       setLoadingCautelas(false);
@@ -130,19 +114,21 @@ export default function Home({ user }: Props) {
   }, []);
 
   useEffect(() => {
-    loadCautelas();
-  }, [loadCautelas]);
+    void carregarCautelas();
+  }, [carregarCautelas]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: FieldErrors = {};
+    setSubmitError("");
 
     if (!setorId) newErrors.setor = "Selecione um setor.";
     if (!nome.trim()) newErrors.nome = "O campo Proprietário é obrigatório.";
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[A-Za-z0-9._%+-]+@(callidus|conecthus)\.org\.br$/i;
     if (!emailRegex.test(email))
-      newErrors.email = "Informe um e-mail válido.";
+      newErrors.email =
+        "Use apenas e-mail institucional (@callidus.org.br ou @conecthus.org.br).";
 
     if (items.length === 0)
       newErrors.items = "Adicione pelo menos um item antes de enviar.";
@@ -159,85 +145,58 @@ export default function Home({ user }: Props) {
       setSubmitting(true);
 
       try {
-        await createCautela({
-          setorId,
-          proprietarioNome: nome.trim(),
-          proprietarioEmail: email.trim().toLowerCase(),
-          retornoItem: Boolean(retornado),
-          validade: retornado ? dataFim : undefined,
+        const created = await createCautela({
           itens: items.map((item) => ({
             nomeItem: item.descricao,
             quantidade: item.quantidade,
           })),
+          proprietarioEmail: email,
+          proprietarioNome: nome,
+          retornoItem: retornado === true,
+          setorId,
+          validade: retornado ? dataFim : undefined,
         });
-
-        await loadCautelas();
-        setShowModal(true);
-        setTimeout(() => setShowModal(false), 3000);
-
-        setSetorId("");
-        setNome("");
-        setEmail("");
-        setDescricao("");
-        setQuantidade("");
-        setItems([]);
-        setRetornado(null);
-        setDataFim("");
-        setFieldErrors({});
-      } catch (err) {
+        setCautelas((prev) => [created, ...prev]);
+      } catch (error) {
+        console.error("Erro ao criar cautela.", error);
         setSubmitError(
-          err instanceof Error ? err.message : "Falha ao enviar cautela.",
+          error instanceof Error
+            ? error.message
+            : "Nao foi possivel enviar a cautela.",
         );
-      } finally {
-        setSubmitting(false);
+        return;
       }
+
+      setShowModal(true);
+      setTimeout(() => setShowModal(false), 3000);
+
+      setSetorId("");
+      setNome("");
+      setEmail("");
+      setDescricao("");
+      setQuantidade("");
+      setItems([]);
+      setRetornado(null);
+      setDataFim("");
+      setFieldErrors({});
+      setSubmitError("");
     }
   };
 
-  const cautelasFiltradas = useMemo(
-    () =>
-      cautelas.filter((cautela) =>
-        activeTab === "enviados"
-          ? cautela.solicitadoPorId === user.id
-          : cautela.gestorId === user.id,
-      ),
-    [activeTab, cautelas, user.id],
+  function confirmarExclusaoItem() {
+    if (itemParaExcluir === null) return;
+
+    setItems((prev) => prev.filter((_, i) => i !== itemParaExcluir));
+    setItemParaExcluir(null);
+    setShowItemDeletedModal(true);
+    setTimeout(() => setShowItemDeletedModal(false), 3000);
+  }
+
+  const cautelasFiltradas = cautelas.filter((c) =>
+    activeTab === "enviados"
+      ? c.status === "Em análise"
+      : c.status === "Aprovado" || c.status === "Reprovado",
   );
-
-  async function handleApprove(id: string) {
-    setDecisionError("");
-    setDecidingId(id);
-
-    try {
-      await approveCautela(id);
-      await loadCautelas();
-    } catch (err) {
-      setDecisionError(
-        err instanceof Error ? err.message : "Falha ao aprovar cautela.",
-      );
-    } finally {
-      setDecidingId(null);
-    }
-  }
-
-  async function handleReject(id: string) {
-    const justificativa = window.prompt("Informe a justificativa da reprovação:");
-    if (!justificativa?.trim()) return;
-
-    setDecisionError("");
-    setDecidingId(id);
-
-    try {
-      await rejectCautela(id, justificativa.trim());
-      await loadCautelas();
-    } catch (err) {
-      setDecisionError(
-        err instanceof Error ? err.message : "Falha ao reprovar cautela.",
-      );
-    } finally {
-      setDecidingId(null);
-    }
-  }
 
   return (
     <div className="flex h-screen pt-[60px] pl-[70px] bg-[#F5F7F6] overflow-hidden relative">
@@ -272,11 +231,6 @@ export default function Home({ user }: Props) {
           </div>
 
           <div className="flex-1 overflow-y-auto pb-2 bg-[#E5E7EB]">
-            {decisionError && (
-              <div className="px-3 py-3 text-sm text-red-600 bg-white">
-                {decisionError}
-              </div>
-            )}
             {loadingCautelas && (
               <div className="px-3 py-4 text-sm text-[#404040] bg-white">
                 Carregando cautelas...
@@ -303,40 +257,18 @@ export default function Home({ user }: Props) {
                       </span>
                     </span>
                     <span className="text-[14px] font-normal leading-[100%] text-[#404040]">
-                      Data: {formatDate(cautela.criadoEm)}
+                      Data: {cautela.data || "-"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-[14px] font-normal leading-[100%] text-[#404040]">
                       Ciente:{" "}
                       <span className="font-bold text-[14px] leading-[100%] text-[#404040]">
-                        {(cautela.gestor?.nome || "-").toUpperCase()}
+                        {(cautela.gestor || "-").toUpperCase()}
                       </span>
                     </span>
-                    <StatusBadge status={statusLabels[cautela.status]} />
+                    <StatusBadge status={cautela.status} />
                   </div>
-                  {user.papel === "GESTOR" &&
-                    activeTab === "recebidos" &&
-                    cautela.status === "EM_ANALISE" && (
-                      <div className="flex justify-end gap-2 mt-3">
-                        <button
-                          type="button"
-                          disabled={decidingId === cautela.id}
-                          onClick={() => handleReject(cautela.id)}
-                          className="px-3 py-1.5 rounded-lg bg-[#FBD5D5] text-[#171717] text-xs font-medium hover:bg-[#F05252] hover:text-white disabled:opacity-60"
-                        >
-                          Reprovar
-                        </button>
-                        <button
-                          type="button"
-                          disabled={decidingId === cautela.id}
-                          onClick={() => handleApprove(cautela.id)}
-                          className="px-3 py-1.5 rounded-lg bg-[#BCF0DA] text-[#171717] text-xs font-medium hover:bg-[#31C48D] disabled:opacity-60"
-                        >
-                          Aprovar
-                        </button>
-                      </div>
-                    )}
                 </div>
                 {index < cautelasFiltradas.length - 1 && <LineSeparator />}
               </div>
@@ -494,9 +426,7 @@ export default function Home({ user }: Props) {
                       <td className="py-2 text-center">
                         <button
                           type="button"
-                          onClick={() =>
-                            setItems(items.filter((_, i) => i !== index))
-                          }
+                          onClick={() => setItemParaExcluir(index)}
                           className="text-black hover:text-red-600"
                         >
                           <IconTrash />
@@ -584,7 +514,7 @@ export default function Home({ user }: Props) {
 
             {/* Botões finais */}
             {submitError && (
-              <p className="text-sm text-red-600 text-center">{submitError}</p>
+              <p className="text-red-500 text-sm text-center">{submitError}</p>
             )}
             <div className="flex justify-center gap-4 pt-4">
               <button
@@ -646,6 +576,75 @@ export default function Home({ user }: Props) {
             </div>
             <p className="text-base font-bold text-black text-center">
               Sua solicitação foi enviada ao gestor
+            </p>
+          </div>
+        </div>
+      )}
+      {itemParaExcluir !== null && (
+        <div
+          className="fixed flex items-center justify-center bg-black/20 backdrop-blur-sm z-30"
+          style={{ top: "60px", left: "70px", right: 0, bottom: 0 }}
+        >
+          <div className="bg-white rounded-2xl shadow-xl px-14 py-10 flex flex-col items-center gap-4 min-w-[320px]">
+            <div
+              className="w-14 h-14 rounded-2xl flex items-center justify-center"
+              style={{ backgroundColor: "#FEE2E2" }}
+            >
+              <IconTrash />
+            </div>
+            <p className="text-base font-bold text-black text-center">
+              Você deseja excluir este item?
+            </p>
+            <p className="text-xs text-[#404040] text-center">
+              Os dados serão removidos permanentemente.
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setItemParaExcluir(null)}
+                className="px-4 py-2 rounded-lg bg-[#F5F5F5] text-[#171717] text-sm font-medium hover:bg-gray-300"
+              >
+                Não
+              </button>
+              <button
+                type="button"
+                onClick={confirmarExclusaoItem}
+                className="px-4 py-2 rounded-lg bg-[#3BB14A] text-white text-sm font-medium hover:bg-[#2B8E37]"
+              >
+                Sim
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showItemDeletedModal && (
+        <div
+          className="fixed flex items-center justify-center bg-black/20 backdrop-blur-sm z-30"
+          style={{ top: "60px", left: "70px", right: 0, bottom: 0 }}
+        >
+          <div className="bg-white rounded-2xl shadow-xl px-12 py-10 flex flex-col items-center gap-4 min-w-[320px]">
+            <div
+              className="w-16 h-16 rounded-2xl flex items-center justify-center"
+              style={{ backgroundColor: "#EEF5EE" }}
+            >
+              <div className="w-9 h-9 rounded-full border-2 border-[#2B8E37] flex items-center justify-center">
+                <svg
+                  className="w-6 h-6 text-[#2B8E37]"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </div>
+            </div>
+            <p className="text-base font-bold text-black text-center">
+              O item foi EXCLUÍDO com sucesso.
             </p>
           </div>
         </div>

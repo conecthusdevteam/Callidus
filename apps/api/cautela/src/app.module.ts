@@ -27,6 +27,9 @@ import { UserModule } from './user/user.module';
         database: configService.get<string>('DATABASE_NAME'),
         entities: [User, Sector, Cautela, CautelaItem, CautelaEvent],
         logging: configService.get<string>('DATABASE_LOGGING') === 'true',
+        migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
+        migrationsRun:
+          configService.get<string>('DATABASE_MIGRATIONS_RUN') === 'true',
         options: {
           encrypt: configService.get<string>('DATABASE_ENCRYPT') !== 'false',
           trustServerCertificate:

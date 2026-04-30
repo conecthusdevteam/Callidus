@@ -1,11 +1,15 @@
-import type { User } from "../lib/api";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
-interface Props {
-  user: User;
-  onLogout: () => void;
-}
+export default function Navbar() {
+  const { logout, user } = useAuth();
+  const navigate = useNavigate();
 
-export default function Navbar({ user, onLogout }: Props) {
+  async function handleLogout() {
+    await logout();
+    navigate("/login", { replace: true });
+  }
+
   return (
     <>
       {/* DESKTOP */}
@@ -38,12 +42,15 @@ export default function Navbar({ user, onLogout }: Props) {
             Controle de Cautelas
           </span>
         </div>
-        <div className="flex items-center gap-3 text-sm text-[#404040]">
-          <span>{user.nome}</span>
+        <div className="ml-auto flex items-center gap-3">
+          {user && (
+            <span className="text-sm text-[#404040] font-medium">
+              {user.nome}
+            </span>
+          )}
           <button
-            type="button"
-            onClick={onLogout}
-            className="px-3 py-1.5 rounded-lg bg-[#F5F5F5] text-[#171717] hover:bg-gray-200"
+            onClick={handleLogout}
+            className="px-3 py-1.5 rounded-lg bg-[#F5F5F5] text-[#171717] text-sm font-medium hover:bg-gray-200"
           >
             Sair
           </button>
@@ -60,9 +67,15 @@ export default function Navbar({ user, onLogout }: Props) {
           boxShadow: "0px 4px 4px rgba(0,0,0,0.25)",
         }}
       >
-        <span className="text-black font-bold text-xl tracking-wide">
+        <span className="font-bold text-[24px] leading-[26px] tracking-[-0.25px] text-center">
           Controle de Cautelas
         </span>
+        <button
+          onClick={handleLogout}
+          className="absolute right-3 text-sm font-medium text-[#171717]"
+        >
+          Sair
+        </button>
       </header>
     </>
   );
