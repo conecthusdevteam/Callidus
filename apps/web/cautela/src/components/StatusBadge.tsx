@@ -1,4 +1,4 @@
-import type { StatusCautela } from "../data/mockData";
+import type { StatusCautela } from "../data/cautelaTypes";
 
 export function IconSuccess() {
   return (
@@ -124,6 +124,7 @@ export function IconAnalise() {
 }
 interface Props {
   status: StatusCautela;
+  fullWidth?: boolean;
 }
 
 const config: Record<StatusCautela, { label: string; className: string }> = {
@@ -141,12 +142,14 @@ const config: Record<StatusCautela, { label: string; className: string }> = {
   },
 };
 
-export default function StatusBadge({ status }: Props) {
+export default function StatusBadge({ status, fullWidth = false }: Props) {
   const { label, className } = config[status];
 
   return (
     <span
-      className={`inline-flex items-center justify-center gap-1 w-[114px] h-[28px] rounded-lg px-2 py-1 text-[14px] font-medium leading-[100%] ${className}`}
+      className={`inline-flex items-center justify-center gap-1 rounded-lg px-2 py-1 text-[14px] font-medium leading-[100%] ${
+        fullWidth ? "w-full h-[36px]" : "w-[114px] h-[28px]"
+      } ${className}`}
     >
       {/* Ícone à esquerda */}
       {status === "Aprovado" && (

@@ -1,5 +1,13 @@
 import { useState, useEffect } from "react";
-import { fetchSectors, type Sector } from "../lib/api";
+import { getSectors } from "../lib/api";
+
+interface Setor {
+  id: string;
+  numeroSetor: number;
+  nome: string;
+  gestorId: string;
+  ativo: boolean;
+}
 
 interface Props {
   onSetorChange: (setorId: string) => void;
@@ -7,19 +15,19 @@ interface Props {
 }
 
 export default function CampoSetor({ onSetorChange, value }: Props) {
-  const [setores, setSetores] = useState<Sector[]>([]);
+  const [setores, setSetores] = useState<Setor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
     async function fetchSetores() {
       try {
-        const data = await fetchSectors();
+        const data: Setor[] = await getSectors();
         setSetores(data.filter((s) => s.ativo));
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Falha ao carregar setores.",
-        );
+      } catch (error) {
+        console.error("Erro ao carregar setores.", error);
+        setError("Nao foi possivel carregar os setores.");
+        setSetores([]);
       } finally {
         setLoading(false);
       }

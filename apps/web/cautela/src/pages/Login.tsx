@@ -1,81 +1,87 @@
 import { useState } from "react";
-import { login, type User } from "../lib/api";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
-interface Props {
-  onLogin: (user: User) => void;
-}
-
-export default function Login({ onLogin }: Props) {
+export default function Login() {
+  const { login, user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
-  const [error, setError] = useState("");
+  const [erro, setErro] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    setError("");
+  if (user) {
+    return <Navigate to={user.papel === "GESTOR" ? "/gestor" : "/"} replace />;
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setErro("");
     setLoading(true);
 
     try {
-      const session = await login(email, senha);
-      onLogin(session.user);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Não foi possível fazer login.",
-      );
+      const authUser = await login(email, senha);
+      const from = (location.state as { from?: string } | null)?.from;
+      navigate(from || (authUser.papel === "GESTOR" ? "/gestor" : "/"), {
+        replace: true,
+      });
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : "Falha ao entrar.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <main className="min-h-screen bg-[#F5F7F6] flex items-center justify-center px-6">
-      <section className="w-full max-w-sm bg-white border border-[#D4D4D4] rounded-lg shadow-sm p-8">
-        <h1 className="text-2xl font-bold text-black">Controle de Cautelas</h1>
-        <p className="mt-2 text-sm text-[#404040]">
-          Entre com seu usuário para acessar as cautelas.
+    <div className="min-h-screen bg-[#F5F7F6] flex items-center justify-center px-4">
+      <form
+        onSubmit={handleSubmit}
+        className="w-full max-w-[420px] bg-white rounded-2xl shadow-xl border border-gray-200 p-8"
+      >
+        <h1 className="text-2xl font-bold text-black text-center">
+          Controle de Cautelas
+        </h1>
+        <p className="text-sm text-[#404040] text-center mt-2 mb-8">
+          Entre para continuar
         </p>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-black">
-              E-mail
-            </label>
+            <label className="block font-medium text-black mb-1">E-mail</label>
             <input
               type="email"
               value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className="mt-1 w-full border-2 border-[#D4D4D4] bg-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-600 focus:outline-none"
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full border-2 border-[#D4D4D4] bg-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-600 focus:outline-none"
               autoComplete="email"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-black">
-              Senha
-            </label>
+            <label className="block font-medium text-black mb-1">Senha</label>
             <input
               type="password"
               value={senha}
-              onChange={(event) => setSenha(event.target.value)}
-              className="mt-1 w-full border-2 border-[#D4D4D4] bg-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-600 focus:outline-none"
+              onChange={(e) => setSenha(e.target.value)}
+              className="w-full border-2 border-[#D4D4D4] bg-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-600 focus:outline-none"
               autoComplete="current-password"
               required
             />
           </div>
+        </div>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+        {erro && <p className="text-red-500 text-sm mt-4">{erro}</p>}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full px-4 py-2 rounded-lg bg-[#22592A] text-white text-sm font-medium hover:bg-[#2B8E37] disabled:opacity-60"
-          >
-            {loading ? "Entrando..." : "Entrar"}
-          </button>
-        </form>
-      </section>
-    </main>
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full mt-6 py-2.5 rounded-lg bg-[#2B8E37] text-white text-sm font-semibold hover:bg-[#22592A] transition-colors disabled:opacity-60"
+        >
+          {loading ? "Entrando..." : "Entrar"}
+        </button>
+      </form>
+    </div>
   );
 }
