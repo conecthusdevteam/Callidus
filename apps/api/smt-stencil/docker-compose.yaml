@@ -6,9 +6,8 @@ services:
       - ACCEPT_EULA=Y
       - SA_PASSWORD=StrongPassword1234@
       - MSSQL_PID=Developer
-      - MSSQL_TCP_PORT=1433
     ports:
-      - "1433:1433"
+      - "1434:1433"
     volumes:
       - sqlserver_data:/var/opt/mssql
     restart: unless-stopped
