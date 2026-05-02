@@ -24,7 +24,7 @@ services:
     build: .
     container_name: smt-stencil-app
     ports:
-      - "${PORT}:3001"
+      - "${PORT}:3000"
     environment:
       - NODE_ENV=${NODE_ENV}
       - DB_HOST=${DB_HOST}
