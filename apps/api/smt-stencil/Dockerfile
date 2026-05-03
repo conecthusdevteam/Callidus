@@ -3,7 +3,7 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install && npm install mssql @types/mssql
+RUN npm install
 
 COPY . .
 COPY scripts/ ./scripts/
@@ -11,8 +11,6 @@ COPY scripts/ ./scripts/
 RUN npm run build
 
 RUN chmod +x ./scripts/*.sh
-
-RUN npm list mssql
 
 EXPOSE 3001
 
