@@ -1,16 +1,9 @@
-// seeds/seed-stencils-plates-sqlite.ts
 import { DataSource } from 'typeorm';
+import { config } from 'dotenv';
 import { Stencil, WashStatus } from '../../stencils/entities/stencil.entity';
 import { Plate } from '../../plates/entities/plate.entity';
-import * as path from 'path';
-import * as fs from 'fs';
 
-const DB_PATH = path.join(__dirname, '../../..', 'db.sqlite');
-
-const dbDir = path.dirname(DB_PATH);
-if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true });
-}
+config();
 
 const random = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1) + min);
 const randomFloat = (min: number, max: number, decimals: number = 6) => {
@@ -123,104 +116,107 @@ async function plateExists(dataSource: DataSource, serialNumber: string): Promis
 }
 
 async function runSeed() {
-  console.log('🚀 Iniciando seed de Stencils e Plates (SQLite)...');
-  console.log(`📁 Banco de dados: ${DB_PATH}`);
+  console.log('🚀 Initializing seed of Stencils and Plates (SQL Server)...');
+  console.log(`📊 Host: ${process.env.DB_HOST}:${process.env.DB_PORT}`);
+  console.log(`💾 Database: ${process.env.DB_DATABASE}`);
   
   const dataSource = new DataSource({
-    type: 'sqlite',
-    database: DB_PATH,
+    type: 'mssql',
+    host: process.env.DB_HOST || 'localhost',
+    port: Number(process.env.DB_PORT) || 1433,
+    username: process.env.DB_USER || 'sa',
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_DATABASE || 'smt_stencil',
     entities: [Stencil, Plate],
-    synchronize: true,
-    logging: false, 
+    synchronize: false,
+    options: {
+      encrypt: false,
+      trustServerCertificate: true,
+    },
   });
   
   try {
     await dataSource.initialize();
-    console.log('✅ Conectado ao SQLite');
+    console.log('✅ Connect on SQL Server');
     
     const stencilRepo = dataSource.getRepository(Stencil);
     const plateRepo = dataSource.getRepository(Plate);
     
     // ============================================
-    // 1. SEED DE STENCILS (120 registros)
+    // 1. SEED DE STENCILS (120 registers)
     // ============================================
-    console.log('\n📦 Gerando 120 Stencils...');
+    console.log('\n📦 Generate 120 Stencils...');
     let stencilsInserted = 0;
     let stencilsSkipped = 0;
     
-    await dataSource.transaction(async (transactionalEntityManager) => {
-      for (let i = 1; i <= 120; i++) {
-        const stencilData = generateStencilData(i);
-        const stencilCode = stencilData.stencilCode!;
-        
-        const exists = await stencilExists(dataSource, stencilCode);
-        
-        if (!exists) {
-          const stencil = transactionalEntityManager.create(Stencil, stencilData);
-          await transactionalEntityManager.save(stencil);
-          stencilsInserted++;
-        } else {
-          stencilsSkipped++;
-        }
-        
-        if (i % 10 === 0) {
-          process.stdout.write(`\r   ✅ Stencils: ${stencilsInserted} inseridos, ${stencilsSkipped} existentes`);
-        }
+    for (let i = 1; i <= 120; i++) {
+      const stencilData = generateStencilData(i);
+      const stencilCode = stencilData.stencilCode!;
+      
+      const exists = await stencilExists(dataSource, stencilCode);
+      
+      if (!exists) {
+        const stencil = stencilRepo.create(stencilData);
+        await stencilRepo.save(stencil);
+        stencilsInserted++;
+      } else {
+        stencilsSkipped++;
       }
-    });
+      
+      if (i % 10 === 0) {
+        console.log(`   ✅ Stencils: ${stencilsInserted} inserted, ${stencilsSkipped} existing`);
+      }
+    }
     
-    console.log(`\r   ✅ Stencils: ${stencilsInserted} inseridos, ${stencilsSkipped} existentes`);
+    console.log(`   ✅ Stencils: ${stencilsInserted} inserted, ${stencilsSkipped} existing`);
     
     // ============================================
-    // 2. SEED DE PLATES (120 registros)
+    // 2. SEED DE PLATES (120 registers)
     // ============================================
-    console.log('\n📦 Gerando 120 Plates...');
+    console.log('\n📦 Generate 120 Plates...');
     let platesInserted = 0;
     let platesSkipped = 0;
     
-    await dataSource.transaction(async (transactionalEntityManager) => {
-      for (let i = 1; i <= 120; i++) {
-        const plateData = generatePlateData(i);
-        const serialNumber = plateData.serialNumber!;
-        
-        const exists = await plateExists(dataSource, serialNumber);
-        
-        if (!exists) {
-          const plate = transactionalEntityManager.create(Plate, plateData);
-          await transactionalEntityManager.save(plate);
-          platesInserted++;
-        } else {
-          platesSkipped++;
-        }
-        
-        if (i % 10 === 0) {
-          process.stdout.write(`\r   ✅ Plates: ${platesInserted} inseridos, ${platesSkipped} existentes`);
-        }
+    for (let i = 1; i <= 120; i++) {
+      const plateData = generatePlateData(i);
+      const serialNumber = plateData.serialNumber!;
+      
+      const exists = await plateExists(dataSource, serialNumber);
+      
+      if (!exists) {
+        const plate = plateRepo.create(plateData);
+        await plateRepo.save(plate);
+        platesInserted++;
+      } else {
+        platesSkipped++;
       }
-    });
+      
+      if (i % 10 === 0) {
+        console.log(`   ✅ Plates: ${platesInserted} inserted, ${platesSkipped} existing`);
+      }
+    }
     
-    console.log(`\r   ✅ Plates: ${platesInserted} inseridos, ${platesSkipped} existentes`);
+    console.log(`   ✅ Plates: ${platesInserted} inserted, ${platesSkipped} existing`);
     
     // ============================================
-    // 3. VERIFICAÇÃO FINAL
+    // 3. FINAL VERIFICATION
     // ============================================
     const totalStencils = await stencilRepo.count();
     const totalPlates = await plateRepo.count();
     
-    console.log('\n📊 RESUMO DO SEED:');
-    console.log(`   Stencils: ${stencilsInserted} inseridos, ${stencilsSkipped} já existentes`);
-    console.log(`   Plates: ${platesInserted} inseridos, ${platesSkipped} já existentes`);
+    console.log('\n📊 SEED RESUME:');
+    console.log(`   Stencils: ${stencilsInserted} inserted, ${stencilsSkipped} existing.`);
+    console.log(`   Plates: ${platesInserted} inserted, ${platesSkipped} existing.`);
     console.log(`   Total de novos registros: ${stencilsInserted + platesInserted}`);
     
-    console.log('\n📈 TOTAL NO BANCO (SQLite):');
+    console.log('\n📈 TOTAL DATABASE:');
     console.log(`   Stencils: ${totalStencils}`);
     console.log(`   Plates: ${totalPlates}`);
-    console.log(`   Banco: ${DB_PATH}`);
     
     // Amostra dos dados inseridos
     if (stencilsInserted > 0) {
       const lastStencils = await stencilRepo.find({ take: 3, order: { createdAt: 'DESC' } });
-      console.log('\n🔍 Últimos stencils inseridos:');
+      console.log('\n🔍 Last stencils inserted:');
       lastStencils.forEach(s => {
         console.log(`   - ${s.stencilCode} | ${s.operator} | ${s.createdAt.toLocaleString()}`);
       });
@@ -228,26 +224,26 @@ async function runSeed() {
     
     if (platesInserted > 0) {
       const lastPlates = await plateRepo.find({ take: 3, order: { createdAt: 'DESC' } });
-      console.log('\n🔍 Últimas plates inseridas:');
+      console.log('\n🔍 Latest plates inserted:');
       lastPlates.forEach(p => {
         console.log(`   - ${p.serialNumber} | ${p.operator} | ${p.createdAt.toLocaleString()}`);
       });
     }
     
-    console.log('\n✅ Seed concluído com sucesso!');
+    console.log('\n✅ Seed concluded successfully!');
     
   } catch (error) {
-    console.error('\n❌ Erro durante o seed:', error);
+    console.error('\n❌ Error on seed:', error);
     if (error instanceof Error) {
-        console.error('Detalhe:', error.message);
+        console.error('Detail:', error.message);
     } else if (typeof error === 'string') {
-        console.error('Detalhe:', error);
+        console.error('Detail:', error);
     } else {
-        console.error('Detalhe: Erro desconhecido');
+        console.error('Detail: Unknown error');
     }
   } finally {
     await dataSource.destroy();
-    console.log('🔌 Conexão com SQLite finalizada');
+    console.log('🔌 Connection to SQL Server completed.');
   }
 }
 
