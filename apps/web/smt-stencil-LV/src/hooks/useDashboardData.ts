@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { getDashboardData, type DashboardData, type WashOrigin } from "@/data/mockWashes";
+import { type DashboardData, type WashOrigin } from "@/data/mockWashes";
+import { platesApi, stencilsApi } from '@/lib/api';
+import {
+  mapPlateApiToWash,
+  mapStencilApiToWash,
+  type ApiPlate,
+  type ApiStencil,
+} from "@/hooks/useApi";
 
 export interface NewWashEvent {
   id: string;
@@ -8,48 +15,92 @@ export interface NewWashEvent {
   at: number;
 }
 
-/**
- * Hook que simula a atualização automática a cada 60 segundos
- * (RP: dados se atualizam automaticamente sem ação do usuário).
- * Em produção, este hook fará fetch do endpoint /extracted do backend.
- *
- * Também emite eventos de "nova lavagem" comparando os IDs do snapshot
- * anterior com o novo, para alimentar o componente de notificação.
- */
+const initialDashboardData: DashboardData = {
+  totalDia: 0,
+  totalStencil: 0,
+  totalPlacas: 0,
+  ultimaSyncLabel: 'sem dados',
+  stencils: [],
+  placas: [],
+  status: {
+    scs: { ok: false, lastSyncMin: -1 },
+    clp: { ok: false, lastSyncMin: -1 },
+  },
+};
+
+function buildDashboardData(stencils: ApiStencil[], placas: ApiPlate[]): DashboardData {
+  const stencilRows = stencils.map(mapStencilApiToWash);
+  const placaRows = placas.map(mapPlateApiToWash);
+
+  return {
+    totalDia: stencilRows.length + placaRows.length,
+    totalStencil: stencilRows.length,
+    totalPlacas: placaRows.length,
+    ultimaSyncLabel: 'agora',
+    stencils: stencilRows,
+    placas: placaRows,
+    status: {
+      scs: { ok: true, lastSyncMin: 0 },
+      clp: { ok: true, lastSyncMin: 0 },
+    },
+  };
+}
+
 export function useDashboardData(intervalMs = 60_000) {
-  const [data, setData] = useState<DashboardData>(() => getDashboardData());
+  const [data, setData] = useState<DashboardData>(() => initialDashboardData);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [newEvents, setNewEvents] = useState<NewWashEvent[]>([]);
-  // Linhas 22-27 — guarda os IDs já conhecidos
   const knownStencilIds = useRef<Set<string>>(new Set(data.stencils.map((s) => s.id)));
   const knownPlacaIds = useRef<Set<string>>(new Set(data.placas.map((p) => p.id)));
+  const initialized = useRef(false);
   const seq = useRef(0);
 
   useEffect(() => {
-    const tick = () => {
+    let isActive = true;
+
+    const tick = async () => {
       try {
-        const next = getDashboardData();
+        const [stencils, placas] = await Promise.all([
+          stencilsApi.getAll().then((result) => result as ApiStencil[]),
+          platesApi.getAll().then((result) => result as ApiPlate[]),
+        ]);
+
+        const next = buildDashboardData(stencils, placas);
+
+        if (!isActive) {
+          return;
+        }
+
+        if (!initialized.current) {
+          knownStencilIds.current = new Set(next.stencils.map((s) => s.id));
+          knownPlacaIds.current = new Set(next.placas.map((p) => p.id));
+          initialized.current = true;
+          setData(next);
+          setLastUpdate(new Date());
+          return;
+        }
 
         const fresh: NewWashEvent[] = [];
-        // Linhas 35-56 — detecta IDs novos a cada tick e gera eventos
+
         for (const s of next.stencils) {
           if (!knownStencilIds.current.has(s.id)) {
             knownStencilIds.current.add(s.id);
             fresh.push({
               id: `evt-${Date.now()}-${seq.current++}`,
               washId: s.id,
-              origin: "stencil",
+              origin: 'stencil',
               at: Date.now(),
             });
           }
         }
+
         for (const p of next.placas) {
           if (!knownPlacaIds.current.has(p.id)) {
             knownPlacaIds.current.add(p.id);
             fresh.push({
               id: `evt-${Date.now()}-${seq.current++}`,
               washId: p.id,
-              origin: "placa",
+              origin: 'placa',
               at: Date.now(),
             });
           }
@@ -58,16 +109,23 @@ export function useDashboardData(intervalMs = 60_000) {
         if (fresh.length > 0) {
           setNewEvents((prev) => [...prev, ...fresh]);
         }
+
         setData(next);
         setLastUpdate(new Date());
-      } catch {
-        // Silencioso: se falhar em um ciclo, tenta no próximo (RP-02).
+      } catch (error) {
+        console.error('Falha ao carregar dados do dashboard', error);
       }
     };
-    const id = window.setInterval(tick, intervalMs);
-    return () => window.clearInterval(id);
+
+    tick();
+    const intervalId = window.setInterval(tick, intervalMs);
+
+    return () => {
+      isActive = false;
+      window.clearInterval(intervalId);
+    };
   }, [intervalMs]);
-  // Linhas 70-71 — função de fechar uma notificação específica
+
   const dismissEvent = (id: string) =>
     setNewEvents((prev) => prev.filter((e) => e.id !== id));
 

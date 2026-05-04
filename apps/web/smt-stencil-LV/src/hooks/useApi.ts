@@ -1,7 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { stencilsApi, platesApi } from '@/lib/api';
 import type { StencilWash, PlacaWash } from '@/data/mockWashes';
-import { getDashboardData } from '@/data/mockWashes';
 
 /**
  * Interface da API
@@ -63,7 +62,7 @@ function formatarHora(data: Date | string): string {
 /**
  * Mapeia dados da API para o formato do front-end
  */
-function mapStencilApiToWash(stencil: ApiStencil): StencilWash {
+export function mapStencilApiToWash(stencil: ApiStencil): StencilWash {
   const createdDate = new Date(stencil.createdAt);
   const formattedDate = formatarData(createdDate);
   const formattedTime = formatarHora(createdDate);
@@ -95,7 +94,7 @@ function mapStencilApiToWash(stencil: ApiStencil): StencilWash {
   };
 }
 
-function mapPlateApiToWash(plate: ApiPlate): PlacaWash {
+export function mapPlateApiToWash(plate: ApiPlate): PlacaWash {
   const createdDate = new Date(plate.createdAt);
   const formattedDate = formatarData(createdDate);
   const formattedTime = formatarHora(createdDate);
@@ -126,15 +125,13 @@ function mapPlateApiToWash(plate: ApiPlate): PlacaWash {
 
 /**
  * Hook para buscar Stencils da API
- * TEMPORÁRIO: Usando dados mockados ao invés da API
  */
 export function useStencils(enabled = true) {
-  return useQuery({
+  return useQuery<StencilWash[]>({
     queryKey: ['stencils'],
     queryFn: async () => {
-      // TODO: Substituir por stencilsApi.getAll() quando o banco estiver pronto
-      const mockData = getDashboardData();
-      return mockData.stencils;
+      const stencils = await stencilsApi.getAll() as ApiStencil[];
+      return stencils.map(mapStencilApiToWash);
     },
     enabled,
     staleTime: 30000, // 30 segundos
@@ -144,15 +141,13 @@ export function useStencils(enabled = true) {
 
 /**
  * Hook para buscar Plates da API
- * TEMPORÁRIO: Usando dados mockados ao invés da API
  */
 export function usePlates(enabled = true) {
-  return useQuery({
+  return useQuery<PlacaWash[]>({
     queryKey: ['plates'],
     queryFn: async () => {
-      // TODO: Substituir por platesApi.getAll() quando o banco estiver pronto
-      const mockData = getDashboardData();
-      return mockData.placas;
+      const plates = await platesApi.getAll() as ApiPlate[];
+      return plates.map(mapPlateApiToWash);
     },
     enabled,
     staleTime: 30000, // 30 segundos
