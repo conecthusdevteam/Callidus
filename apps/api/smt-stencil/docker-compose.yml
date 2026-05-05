@@ -7,7 +7,7 @@ services:
       - SA_PASSWORD=${DB_PASSWORD}
       - MSSQL_PID=Developer
     ports:
-      - "${DB_PORT}:1433"
+      - "1434:1433"
     volumes:
       - sqlserver_data:/var/opt/mssql
     healthcheck:

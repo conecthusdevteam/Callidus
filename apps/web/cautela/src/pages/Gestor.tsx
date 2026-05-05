@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import StatusBadge from "../components/StatusBadge";
 import { type Cautela, type StatusCautela } from "../data/cautelaTypes";
 import { approveCautela, getCautelas, rejectCautela } from "../lib/api";
@@ -355,11 +355,7 @@ export default function Gestor() {
   // Mobile
   const [mobileView, setMobileView] = useState<MobileView>("lista");
 
-  useEffect(() => {
-    carregarCautelas();
-  }, []);
-
-  async function carregarCautelas() {
+  const carregarCautelas = useCallback(async () => {
     try {
       const data = await getCautelas();
       setCautelas(data);
@@ -367,7 +363,17 @@ export default function Gestor() {
       console.error("Erro ao carregar cautelas.", error);
       setCautelas([]);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    void carregarCautelas();
+
+    const interval = setInterval(() => {
+      void carregarCautelas();
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [carregarCautelas]);
 
   const recebidas = cautelas.filter(
     (c) => c.status === "Em análise" && !c.decisaoLocal,
