@@ -80,10 +80,18 @@
     /* Status fornecimento de dados — borda lateral roxa (img3) */
     --status-accent: 258 90% 66%;
 
-    /* Tab pill (Stencil/Placas) — verde da marca #3BB14A */
-    --tab-green: 128 51% 46%;
-    --tab-bg: 0 0% 98%;       /* #F9F9F9 */
-    --tab-inactive-fg: 0 0% 25%; /* #404040 */
+    /* Tab pill (Stencil/Placas) — azul da marca #1A56DB */
+    --tab-green: 222 80% 48%;     /* #1A56DB (mantém nome do token por compat) */
+    --tab-bg: 0 0% 98%;            /* #F9F9F9 */
+    --tab-inactive-fg: 0 0% 25%;   /* #404040 */
+
+    /* Cabeçalho de tabela — azul #1C64F2 */
+    --table-head-bg: 220 89% 53%;  /* #1C64F2 */
+    --table-head-fg: 0 0% 100%;
+
+    /* Ação primária (botões de detalhe / CTA) — azul #1A56DB */
+    --action-blue: 222 80% 48%;
+    --action-blue-hover: 222 80% 42%;
 
     /* Toast de notificação de nova lavagem */
     --toast-success-bg: 152 39% 86%;     /* #D1E7DD */
@@ -173,11 +181,11 @@
     letter-spacing: 0;
   }
 
-  /* Tab pill Stencil/Placas — Geist Medium 18px, verde #3BB14A */
+  /* Tab pill Stencil/Placas / filtros */
   .tab-pill {
     font-family: 'Geist', 'Inter', system-ui, sans-serif;
     font-weight: 500;
-    font-size: 18px;
+    font-size: 16px;
     line-height: 1;
     display: inline-flex;
     align-items: center;
@@ -185,13 +193,36 @@
     padding: 12px 16px;
     min-height: 36px;
     border-radius: 0.5rem; /* rounded-lg */
-    transition: background-color 150ms ease, color 150ms ease;
+    transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
     color: hsl(var(--tab-inactive-fg));
+    background-color: hsl(var(--tab-bg));
+    
   }
-  .tab-pill[data-active="true"] {
+
+  .tab-pill--stencil[data-active="true"] {
     background-color: hsl(var(--tab-green));
     color: hsl(var(--tab-bg));
+    border-color: transparent;
   }
+
+  .tab-pill--placa[data-active="true"] {
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    border-color: transparent;
+  }
+
+  .tab-pill--filter {
+    background-color: hsl(var(--tab-bg));
+    color: hsl(var(--tab-inactive-fg));
+    border-color: hsl(var(--border));
+  }
+
+  .tab-pill--filter[data-active="true"] {
+    background-color: hsl(var(--secondary));
+    color: hsl(var(--foreground));
+    border-color: hsl(var(--primary));
+  }
+
   .tab-pill[data-active="false"]:hover {
     color: hsl(var(--foreground));
   }

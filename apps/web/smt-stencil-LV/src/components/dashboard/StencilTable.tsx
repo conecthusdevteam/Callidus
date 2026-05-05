@@ -15,7 +15,7 @@ export function StencilTable({ rows, selectedId, onSelect }: Props) {
       {/* Linhas em 18px Regular (font-body) — img1 */}
         <table className="w-full text-lg font-normal">
         <thead>
-          <tr className="bg-primary text-primary-foreground">
+          <tr className="bg-table-head text-table-head-foreground">
             {["Data", "Hora", "Código", "Endereçamento", "Status", "Linha"].map((h) => (
   <th
     key={h}
@@ -47,18 +47,19 @@ export function StencilTable({ rows, selectedId, onSelect }: Props) {
                 <td className="px-4 py-3">
                   <StatusPill status={row.motivo} />
                 </td>
-                <td className="relative px-4 py-3 text-foreground">
-                  {row.linha}
-                  {row.attention && (
-                    <span
-                      aria-label="Intervalo de lavagem fora do padrão"
-                      title="Intervalo de lavagem fora do padrão"
-                      className="absolute left-full top-1/2 ml-3 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-full"
-                      style={{ backgroundColor: "hsl(0 90% 96%)" }}  // 👈 círculo rosa
-                    >
-                      <img src={attentionIcon} alt="" className="h-4 w-4" />  {/* 👈 triângulo vermelho */}
-                    </span>
-                  )}
+                <td className="px-4 py-3 text-foreground">
+                  <div className="flex items-center justify-between gap-2">
+                    <span>{row.linha}</span>
+                    {row.attention && (
+                      <img
+                        src={attentionIcon}
+                        alt=""
+                        aria-label="Intervalo de lavagem fora do padrão"
+                        title="Intervalo de lavagem fora do padrão"
+                        className="h-5 w-5 shrink-0"
+                      />
+                    )}
+                  </div>
                 </td>
               </tr>
             );

@@ -2,19 +2,19 @@ import { useEffect, useMemo, useState } from "react";
 import { Header } from "@/components/dashboard/Header";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { KpiCard } from "@/components/dashboard/KpiCard";
+import { SupplyStatusKpi } from "@/components/dashboard/SupplyStatusKpi";
 import { StencilTable } from "@/components/dashboard/StencilTable";
 import { PlacaTable } from "@/components/dashboard/PlacaTable";
 import { DetailsPanel } from "@/components/dashboard/DetailsPanel";
-import { SystemStatusCard } from "@/components/dashboard/SystemStatusCard";
 import { Pagination } from "@/components/dashboard/Pagination";
 import { WashNotification } from "@/components/dashboard/WashNotification";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import type { StencilWash, PlacaWash } from "@/data/mockWashes";
+import filterIcon from "@/assets/icon-filter.svg";
 
 const PAGE_SIZE = 10;
 
 const Index = () => {
-  // — recebe eventos e função de dismiss do hook
   const { data, newEvents, dismissEvent } = useDashboardData(60_000);
   const [tab, setTab] = useState<"stencil" | "placas">("stencil");
   const [showAttention, setShowAttention] = useState(false);
@@ -43,7 +43,7 @@ const Index = () => {
     () => data.placas.slice((placaPage - 1) * PAGE_SIZE, placaPage * PAGE_SIZE),
     [data.placas, placaPage],
   );
-   //  — renderiza o overlay de notificações
+
   return (
     <div className="flex min-h-screen bg-background">
       <WashNotification
@@ -54,8 +54,8 @@ const Index = () => {
       <div className="flex flex-1 flex-col">
         <Header />
         <main className="flex-1 p-4 md:p-6">
-          {/* KPIs RP-01 */}
-          <section className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+          {/* KPIs RP-01 — agora 5 cards (inclui "Fornecimento de dados") */}
+          <section className="grid grid-cols-2 gap-3 md:grid-cols-5 md:gap-4">
             <KpiCard label="Lavagens do dia" value={data.totalDia} variant="primary" />
             <KpiCard label="Lavagens de Stencil" value={data.totalStencil} variant="neutral" />
             <KpiCard label="Lavagens de Placas" value={data.totalPlacas} variant="neutral" />
@@ -64,33 +64,63 @@ const Index = () => {
               value={data.ultimaSyncLabel}
               variant="attention"
             />
+            <SupplyStatusKpi status={data.status} />
           </section>
 
           {/* Tabs + filtros */}
           <section className="mt-6">
-            <div className="grid grid-cols-1 gap-12 lg:grid-cols-[1fr_320px]">
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_320px]">
               <div>
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                  <div className="inline-flex rounded-lg ">
-                    <TabButton active={tab === "stencil"} onClick={() => { setTab("stencil"); setSelected(null); }}>
+                  <div className="inline-flex rounded-lg border bg-card p-1 shadow-card">
+                    <TabButton
+                      active={tab === "stencil"}
+                      onClick={() => {
+                        setTab("stencil");
+                        setSelected(null);
+                      }}
+                      className="tab-pill--stencil"
+                    >
                       Stencil
                     </TabButton>
-                    <TabButton active={tab === "placas"} onClick={() => { setTab("placas"); setSelected(null); }}>
+                    <TabButton
+                      active={tab === "placas"}
+                      onClick={() => {
+                        setTab("placas");
+                        setSelected(null);
+                      }}
+                      className="tab-pill--placa"
+                    >
                       Placas
                     </TabButton>
                   </div>
 
-                  <div className="flex min-h-10 items-center justify-end">
+                  <div className="flex min-h-10 items-center justify-end gap-2">
                     {tab === "stencil" && (
-                      <div className="inline-flex rounded-lg border ">
-                        <TabButton active={!showAttention} onClick={() => setShowAttention(false)}>
+                      <div className="inline-flex rounded-lg border bg-card p-1 shadow-card">
+                        <TabButton
+                          active={!showAttention}
+                          onClick={() => setShowAttention(false)}
+                          className="tab-pill--filter"
+                        >
                           Todos
                         </TabButton>
-                        <TabButton active={showAttention} onClick={() => setShowAttention(true)}>
+                        <TabButton
+                          active={showAttention}
+                          onClick={() => setShowAttention(true)}
+                          className="tab-pill--filter"
+                        >
                           Itens de Atenção
                         </TabButton>
                       </div>
                     )}
+                    <button
+                      type="button"
+                      className="inline-flex h-9 items-center gap-2 rounded-lg border bg-card px-3 text-sm font-medium text-foreground shadow-card transition-colors hover:bg-muted"
+                    >
+                      <img src={filterIcon} alt="" className="h-4 w-4" />
+                      Filtrar
+                    </button>
                   </div>
                 </div>
                 {tab === "stencil" ? (
@@ -123,15 +153,14 @@ const Index = () => {
 
               </div>
 
-            {/* Coluna lateral: alinha com o TOPO da tabela (img2), não do bloco de tabs */}
-<aside className="lg:sticky lg:top-4 lg:self-start">
-  {/* Spacer com altura idêntica à barra de tabs+filtros (botões h-[34px] + p-1 + mb-3 = 12px) */}
-  <div aria-hidden className="hidden lg:block" style={{ height: "calc(2.125rem + 0.5rem + 0.75rem)" }} />
-  <div className="space-y-4">
-    <DetailsPanel item={selected} onClose={() => setSelected(null)} />
-    <SystemStatusCard status={data.status} />
-  </div>
-</aside>
+              {/* Coluna lateral: alinha com o TOPO da tabela (img2), não do bloco de tabs */}
+              <aside className="lg:sticky lg:top-4 lg:self-start">
+                {/* Spacer com altura idêntica à barra de tabs+filtros (botões h-[34px] + p-1 + mb-3 = 12px) */}
+                <div aria-hidden className="hidden lg:block" style={{ height: "calc(2.125rem + 0.5rem + 0.75rem)" }} />
+                <div className="space-y-4">
+                  <DetailsPanel item={selected} onClose={() => setSelected(null)} />
+                </div>
+              </aside>
             </div>
           </section>
         </main>
@@ -144,21 +173,22 @@ function TabButton({
   active,
   onClick,
   children,
+  className,
 }: {
   active: boolean;
   onClick: () => void;
   children: React.ReactNode;
+  className?: string;
 }) {
   return (
     <button
       onClick={onClick}
-      data-active={active}     // ← controla o estado visual
-      className="tab-pill"     // ← aplica todo o estilo via CSS
+      data-active={active}
+      className={`tab-pill ${className ?? ""}`}
     >
       {children}
     </button>
   );
 }
-
 
 export default Index;

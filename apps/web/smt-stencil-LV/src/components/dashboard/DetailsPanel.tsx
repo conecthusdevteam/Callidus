@@ -122,7 +122,7 @@ export function DetailsPanel({ item, onClose }: Props) {
 
       <Button
         onClick={onClose}
-        className="w-full bg-primary text-primary-foreground hover:bg-primary-hover"
+        className="w-full bg-action-blue text-white hover:bg-action-blue-hover"
       >
         Fechar detalhes
       </Button>

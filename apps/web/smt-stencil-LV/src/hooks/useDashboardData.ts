@@ -32,6 +32,19 @@ function buildDashboardData(stencils: ApiStencil[], placas: ApiPlate[]): Dashboa
   const stencilRows = stencils.map(mapStencilApiToWash);
   const placaRows = placas.map(mapPlateApiToWash);
 
+  // Função para converter data e hora em timestamp
+  const toTimestamp = (data: string, hora: string) => {
+    const [dia, mes, ano] = data.split('/').map(Number);
+    const [horaNum, min] = hora.split(':').map(Number);
+    return new Date(ano, mes - 1, dia, horaNum, min).getTime();
+  };
+
+  // Ordenar stencils por data e hora decrescentes (mais recentes primeiro)
+  stencilRows.sort((a, b) => toTimestamp(b.data, b.hora) - toTimestamp(a.data, a.hora));
+
+  // Ordenar placas por data e hora decrescentes (mais recentes primeiro)
+  placaRows.sort((a, b) => toTimestamp(b.data, b.hora) - toTimestamp(a.data, a.hora));
+
   return {
     totalDia: stencilRows.length + placaRows.length,
     totalStencil: stencilRows.length,
