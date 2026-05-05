@@ -68,7 +68,7 @@ const Index = () => {
 
           {/* Tabs + filtros */}
           <section className="mt-6">
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
+            <div className="grid grid-cols-1 gap-12 lg:grid-cols-[1fr_320px]">
               <div>
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                   <div className="inline-flex rounded-lg ">
