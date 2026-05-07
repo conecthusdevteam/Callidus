@@ -11,11 +11,17 @@ import { WashNotification } from "@/components/dashboard/WashNotification";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { isWashOutsideStandardSchedule } from "@/data/mockWashes";
 import type { StencilWash, PlacaWash } from "@/data/mockWashes";
-import filterIcon from "@/assets/icon-filter.svg";
+import {
+  FilterPopover,
+  StencilFilters,
+  PlacaFilters,
+  emptyStencilFilters,
+  emptyPlacaFilters,
+} from "@/components/dashboard/FilterPopover";
 
 function formatSyncLabel(lastUpdate: Date) {
   const diffMinutes = Math.floor((Date.now() - lastUpdate.getTime()) / 60000);
-  return diffMinutes <= 0 ? "agora" : `há ${diffMinutes} min`;
+  return `há ${Math.max(diffMinutes, 0)} min`;
 }
 
 const PAGE_SIZE = 10;
@@ -27,6 +33,14 @@ const Index = () => {
   const [stencilPage, setStencilPage] = useState(1);
   const [placaPage, setPlacaPage] = useState(1);
   const [selected, setSelected] = useState<StencilWash | PlacaWash | null>(null);
+  const [stencilFilters, setStencilFilters] = useState<StencilFilters>(emptyStencilFilters);
+  const [placaFilters, setPlacaFilters] = useState<PlacaFilters>(emptyPlacaFilters);
+  const [tableSort, setTableSort] = useState<{ stencil: "asc" | "desc"; placas: "asc" | "desc" }>(
+    {
+      stencil: "desc",
+      placas: "desc",
+    },
+  );
   const [syncLabel, setSyncLabel] = useState(() => formatSyncLabel(lastUpdate));
 
   useEffect(() => {
@@ -39,26 +53,60 @@ const Index = () => {
     return () => window.clearInterval(intervalId);
   }, [lastUpdate]);
 
-  // Reset paginação ao alternar filtro de atenção.
+  // Reset paginação ao alternar filtro, ordem ou atenção.
   useEffect(() => {
     setStencilPage(1);
-  }, [showAttention]);
+  }, [showAttention, stencilFilters, tableSort.stencil]);
 
-  const stencilFiltered = useMemo(
-    () => (showAttention ? data.stencils.filter((s) => isWashOutsideStandardSchedule(s.hora)) : data.stencils),
-    [data.stencils, showAttention],
-  );
+  useEffect(() => {
+    setPlacaPage(1);
+  }, [placaFilters, tableSort.placas]);
 
-  const stencilPages = Math.max(1, Math.ceil(stencilFiltered.length / PAGE_SIZE));
+  const toTimestamp = (data: string, hora: string) => {
+    const [dia, mes, ano] = data.split("/").map(Number);
+    const [horaNum, min] = hora.split(":").map(Number);
+    return new Date(ano, mes - 1, dia, horaNum, min).getTime();
+  };
+
+  const sortByDate = <T extends { data: string; hora: string }>(rows: T[], direction: "asc" | "desc") =>
+    [...rows].sort((a, b) =>
+      direction === "asc"
+        ? toTimestamp(a.data, a.hora) - toTimestamp(b.data, b.hora)
+        : toTimestamp(b.data, b.hora) - toTimestamp(a.data, a.hora),
+    );
+
+  const filteredStencils = useMemo(() => {
+    return data.stencils
+      .filter((row) => !showAttention || isWashOutsideStandardSchedule(row.hora))
+      .filter((row) => {
+        if (stencilFilters.codigo && !row.codigo.toLowerCase().includes(stencilFilters.codigo.toLowerCase())) return false;
+        if (stencilFilters.idFabricante && !(row.idFabricante ?? "").toLowerCase().includes(stencilFilters.idFabricante.toLowerCase())) return false;
+        if (stencilFilters.pais && !(row.pais ?? "").toLowerCase().includes(stencilFilters.pais.toLowerCase())) return false;
+        if (stencilFilters.status && row.motivo !== stencilFilters.status) return false;
+        return true;
+      });
+  }, [data.stencils, showAttention, stencilFilters]);
+
+  const stencilPages = Math.max(1, Math.ceil(filteredStencils.length / PAGE_SIZE));
   const stencilRows = useMemo(
-    () => stencilFiltered.slice((stencilPage - 1) * PAGE_SIZE, stencilPage * PAGE_SIZE),
-    [stencilFiltered, stencilPage],
+    () => sortByDate(filteredStencils, tableSort.stencil).slice((stencilPage - 1) * PAGE_SIZE, stencilPage * PAGE_SIZE),
+    [filteredStencils, stencilPage, tableSort.stencil],
   );
 
-  const placaPages = Math.max(1, Math.ceil(data.placas.length / PAGE_SIZE));
+  const filteredPlacas = useMemo(() => {
+    return data.placas.filter((row) => {
+      if (placaFilters.modelo && !row.modelo.toLowerCase().includes(placaFilters.modelo.toLowerCase())) return false;
+      if (placaFilters.blankId && !(row.codigoBarras ?? "").toLowerCase().includes(placaFilters.blankId.toLowerCase())) return false;
+      if (placaFilters.serial && !(row.serial ?? "").toLowerCase().includes(placaFilters.serial.toLowerCase())) return false;
+      if (placaFilters.linha && !row.linha.toLowerCase().includes(placaFilters.linha.toLowerCase())) return false;
+      return true;
+    });
+  }, [data.placas, placaFilters]);
+
+  const placaPages = Math.max(1, Math.ceil(filteredPlacas.length / PAGE_SIZE));
   const placaRows = useMemo(
-    () => data.placas.slice((placaPage - 1) * PAGE_SIZE, placaPage * PAGE_SIZE),
-    [data.placas, placaPage],
+    () => sortByDate(filteredPlacas, tableSort.placas).slice((placaPage - 1) * PAGE_SIZE, placaPage * PAGE_SIZE),
+    [filteredPlacas, placaPage, tableSort.placas],
   );
 
   return (
@@ -131,14 +179,13 @@ const Index = () => {
                         </TabButton>
                       </div>
                     )}
-                    <button
-                      type="button"
-                      className="inline-flex  h-12 items-center gap-2 rounded-lg border bg-card px-3 
-                      text-sm font-medium text-foreground shadow-card transition-colors hover:bg-muted"
-                    >
-                      <img src={filterIcon} alt="" className="h-4 w-4" />
-                      Filtrar
-                    </button>
+                    <FilterPopover
+                      tab={tab}
+                      stencilFilters={stencilFilters}
+                      placaFilters={placaFilters}
+                      onApplyStencil={(filters) => setStencilFilters(filters)}
+                      onApplyPlaca={(filters) => setPlacaFilters(filters)}
+                    />
                   </div>
                 </div>
                 {tab === "stencil" ? (
@@ -147,6 +194,13 @@ const Index = () => {
                       rows={stencilRows}
                       selectedId={selected?.id}
                       onSelect={setSelected}
+                      sort={tableSort.stencil}
+                      onToggleSort={() =>
+                        setTableSort((prev) => ({
+                          ...prev,
+                          stencil: prev.stencil === "asc" ? "desc" : "asc",
+                        }))
+                      }
                     />
                     <Pagination
                       page={stencilPage}
@@ -161,6 +215,13 @@ const Index = () => {
                       rows={placaRows}
                       selectedId={selected?.id}
                       onSelect={setSelected}
+                      sort={tableSort.placas}
+                      onToggleSort={() =>
+                        setTableSort((prev) => ({
+                          ...prev,
+                          placas: prev.placas === "asc" ? "desc" : "asc",
+                        }))
+                      }
                     />
                     <Pagination
                       page={placaPage}
