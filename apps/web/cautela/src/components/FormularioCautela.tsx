@@ -1,4 +1,4 @@
-import CampoSetor from "../pages/CampoSetor";
+import CampoSetor from "./CampoSetor";
 
 export interface FieldErrors {
   setor?: string;
