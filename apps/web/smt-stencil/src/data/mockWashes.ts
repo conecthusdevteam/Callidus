@@ -78,6 +78,22 @@ export interface DashboardData {
   status: SystemStatus;
 }
 
+export function isWashOutsideStandardSchedule(hora: string) {
+  const [hourString, minuteString] = hora.split(":");
+  const hours = Number(hourString);
+  const minutes = Number(minuteString);
+
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+    return false;
+  }
+
+  const totalMinutes = hours * 60 + minutes;
+  const isMorningWash = totalMinutes >= 11 * 60 && totalMinutes < 12 * 60;
+  const isAfternoonWash = totalMinutes >= 16 * 60 && totalMinutes < 17 * 60;
+
+  return !(isMorningWash || isAfternoonWash);
+}
+
 const stencils: StencilWash[] = [
   {
     id: "s1", data: "21/04/2026", hora: "12:33", codigo: "D230_MAIN_V03_2F_74729",

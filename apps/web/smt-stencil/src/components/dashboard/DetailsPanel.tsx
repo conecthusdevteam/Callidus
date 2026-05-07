@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import type { StencilWash, PlacaWash } from "@/data/mockWashes";
 
@@ -122,7 +123,12 @@ export function DetailsPanel({ item, onClose }: Props) {
 
       <Button
         onClick={onClose}
-        className="w-full bg-action-blue text-white hover:bg-action-blue-hover"
+        className={cn(
+          "w-full text-white",
+          isStencil
+            ? "bg-action-blue hover:bg-action-blue-hover"
+            : "bg-action-green hover:bg-action-green-hover",
+        )}
       >
         Fechar detalhes
       </Button>

@@ -5,13 +5,13 @@ interface PaginationProps {
   page: number;
   totalPages: number;
   onChange: (page: number) => void;
+  variant?: "stencil" | "placas";
 }
 
 /**
- * Paginação customizada — botão numerado ativo em verde (primary),
- * fiel ao protótipo do Figma.
+ * Paginação customizada — botão numerado ativo em azul para stencil e verde para placa.
  */
-export function Pagination({ page, totalPages, onChange }: PaginationProps) {
+export function Pagination({ page, totalPages, onChange, variant = "stencil" }: PaginationProps) {
   if (totalPages <= 1) return null;
 
   const goTo = (p: number) => onChange(Math.min(Math.max(1, p), totalPages));
@@ -70,7 +70,9 @@ export function Pagination({ page, totalPages, onChange }: PaginationProps) {
               className={cn(
                 "h-9 min-w-9 rounded-md px-3 text-sm font-semibold tabular-nums transition-colors",
                 p === page
-                  ? "bg-primary text-primary-foreground shadow-sm"
+                  ? variant === "placas"
+                    ? "bg-action-green text-white shadow-sm"
+                    : "bg-action-blue text-white shadow-sm"
                   : "text-foreground hover:bg-muted",
               )}
             >

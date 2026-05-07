@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { StatusPill } from "./StatusPill";
+import { isWashOutsideStandardSchedule } from "@/data/mockWashes";
 import type { StencilWash } from "@/data/mockWashes";
 import attentionIcon from "@/assets/icon-attention-triangle.svg";
 
@@ -29,15 +30,16 @@ export function StencilTable({ rows, selectedId, onSelect }: Props) {
         <tbody>
           {rows.map((row) => {
             const selected = row.id === selectedId;
+            const attention = isWashOutsideStandardSchedule(row.hora);
             return (
               <tr
                 key={row.id}
                 onClick={() => onSelect(row)}
                 className={cn(
                   "cursor-pointer border-t border-border transition-colors",
-                  row.attention && "bg-row-attention",  // fundo 
+                  attention && "bg-row-attention",
                   selected && "bg-row-selected",
-                  !row.attention && !selected && "hover:bg-row-stripe",
+                  !attention && !selected && "hover:bg-row-stripe",
                 )}
               >
                 <td className="px-4 py-3 tabular text-foreground">{row.data}</td>
@@ -50,7 +52,7 @@ export function StencilTable({ rows, selectedId, onSelect }: Props) {
                 <td className="px-4 py-3 text-foreground">
                   <div className="flex items-center justify-between gap-2">
                     <span>{row.linha}</span>
-                    {row.attention && (
+                    {attention && (
                       <img
                         src={attentionIcon}
                         alt=""

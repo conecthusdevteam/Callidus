@@ -9,18 +9,35 @@ import { DetailsPanel } from "@/components/dashboard/DetailsPanel";
 import { Pagination } from "@/components/dashboard/Pagination";
 import { WashNotification } from "@/components/dashboard/WashNotification";
 import { useDashboardData } from "@/hooks/useDashboardData";
+import { isWashOutsideStandardSchedule } from "@/data/mockWashes";
 import type { StencilWash, PlacaWash } from "@/data/mockWashes";
 import filterIcon from "@/assets/icon-filter.svg";
+
+function formatSyncLabel(lastUpdate: Date) {
+  const diffMinutes = Math.floor((Date.now() - lastUpdate.getTime()) / 60000);
+  return diffMinutes <= 0 ? "agora" : `há ${diffMinutes} min`;
+}
 
 const PAGE_SIZE = 10;
 
 const Index = () => {
-  const { data, newEvents, dismissEvent } = useDashboardData(60_000);
+  const { data, lastUpdate, newEvents, dismissEvent } = useDashboardData(60_000);
   const [tab, setTab] = useState<"stencil" | "placas">("stencil");
   const [showAttention, setShowAttention] = useState(false);
   const [stencilPage, setStencilPage] = useState(1);
   const [placaPage, setPlacaPage] = useState(1);
   const [selected, setSelected] = useState<StencilWash | PlacaWash | null>(null);
+  const [syncLabel, setSyncLabel] = useState(() => formatSyncLabel(lastUpdate));
+
+  useEffect(() => {
+    setSyncLabel(formatSyncLabel(lastUpdate));
+    
+    const intervalId = window.setInterval(() => {
+      setSyncLabel(formatSyncLabel(lastUpdate));
+    }, 60_000);
+
+    return () => window.clearInterval(intervalId);
+  }, [lastUpdate]);
 
   // Reset paginação ao alternar filtro de atenção.
   useEffect(() => {
@@ -28,7 +45,7 @@ const Index = () => {
   }, [showAttention]);
 
   const stencilFiltered = useMemo(
-    () => (showAttention ? data.stencils.filter((s) => s.attention) : data.stencils),
+    () => (showAttention ? data.stencils.filter((s) => isWashOutsideStandardSchedule(s.hora)) : data.stencils),
     [data.stencils, showAttention],
   );
 
@@ -61,7 +78,7 @@ const Index = () => {
             <KpiCard label="Lavagens de Placas" value={data.totalPlacas} variant="neutral" />
             <KpiCard
               label="Última coleta de dados"
-              value={data.ultimaSyncLabel}
+              value={syncLabel}
               variant="attention"
             />
             <SupplyStatusKpi status={data.status} />
@@ -95,7 +112,7 @@ const Index = () => {
                     </TabButton>
                   </div>
 
-                  <div className="flex min-h-10 items-center justify-end gap-2">
+                  <div className="flex min-h-10 items-center justify-end gap-3">
                     {tab === "stencil" && (
                       <div className="inline-flex rounded-lg border bg-card p-1 shadow-card">
                         <TabButton
@@ -116,7 +133,8 @@ const Index = () => {
                     )}
                     <button
                       type="button"
-                      className="inline-flex h-9 items-center gap-2 rounded-lg border bg-card px-3 text-sm font-medium text-foreground shadow-card transition-colors hover:bg-muted"
+                      className="inline-flex  h-12 items-center gap-2 rounded-lg border bg-card px-3 
+                      text-sm font-medium text-foreground shadow-card transition-colors hover:bg-muted"
                     >
                       <img src={filterIcon} alt="" className="h-4 w-4" />
                       Filtrar
@@ -134,6 +152,7 @@ const Index = () => {
                       page={stencilPage}
                       totalPages={stencilPages}
                       onChange={setStencilPage}
+                      variant="stencil"
                     />
                   </>
                 ) : (
@@ -147,6 +166,7 @@ const Index = () => {
                       page={placaPage}
                       totalPages={placaPages}
                       onChange={setPlacaPage}
+                      variant="placas"
                     />
                   </>
                 )}

@@ -93,6 +93,10 @@
     --action-blue: 222 80% 48%;
     --action-blue-hover: 222 80% 42%;
 
+    /* Destaque Placa / ação verde — #3BB14A */
+    --action-green: 128 50% 46%;  /* #3BB14A */
+    --action-green-hover: 128 50% 40%;
+
     /* Toast de notificação de nova lavagem */
     --toast-success-bg: 152 39% 86%;     /* #D1E7DD */
     --toast-success-border: 151 38% 72%; /* #A3CFBB */
@@ -206,8 +210,8 @@
   }
 
   .tab-pill--placa[data-active="true"] {
-    background-color: hsl(var(--primary));
-    color: hsl(var(--primary-foreground));
+    background-color: hsl(var(--action-green));
+    color: hsl(var(--table-head-fg));
     border-color: transparent;
   }
 
