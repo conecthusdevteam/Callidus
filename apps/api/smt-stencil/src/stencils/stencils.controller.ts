@@ -1,4 +1,4 @@
-  import { Body, Controller, Delete, Get, HttpCode, NotFoundException, Param, Patch, Post } from '@nestjs/common';
+  import { Body, Controller, Delete, Get, HttpCode, HttpException, InternalServerErrorException, NotFoundException, Param, Patch, Post } from '@nestjs/common';
 import { CreateStencilDto } from './dto/create-stencil.dto';
 import { UpdateStencilDto } from './dto/update-stencil.dto';
 import { StencilsService } from './stencils.service';
@@ -14,8 +14,22 @@ export class StencilsController {
   }
 
   @Get()
-  findAll() {
-    return this.stencilsService.findAll();
+  async findAll() {
+    try {
+      const stencils = await this.stencilsService.findAll();
+  
+      if (!stencils || stencils.length === 0) {
+        throw new NotFoundException('No stencils found');
+      }
+  
+      return stencils;
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException('Error when searching for stencils.');
+    }
   }
 
   @Get(':id')

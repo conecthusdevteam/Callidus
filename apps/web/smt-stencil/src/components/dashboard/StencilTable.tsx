@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { StatusPill } from "./StatusPill";
+import { isWashOutsideStandardSchedule } from "@/data/mockWashes";
 import type { StencilWash } from "@/data/mockWashes";
 import attentionIcon from "@/assets/icon-attention-triangle.svg";
 
@@ -15,7 +16,7 @@ export function StencilTable({ rows, selectedId, onSelect }: Props) {
       {/* Linhas em 18px Regular (font-body) — img1 */}
         <table className="w-full text-lg font-normal">
         <thead>
-          <tr className="bg-primary text-primary-foreground">
+          <tr className="bg-table-head text-table-head-foreground">
             {["Data", "Hora", "Código", "Endereçamento", "Status", "Linha"].map((h) => (
   <th
     key={h}
@@ -29,15 +30,16 @@ export function StencilTable({ rows, selectedId, onSelect }: Props) {
         <tbody>
           {rows.map((row) => {
             const selected = row.id === selectedId;
+            const attention = isWashOutsideStandardSchedule(row.hora);
             return (
               <tr
                 key={row.id}
                 onClick={() => onSelect(row)}
                 className={cn(
                   "cursor-pointer border-t border-border transition-colors",
-                  row.attention && "bg-row-attention",  // fundo 
+                  attention && "bg-row-attention",
                   selected && "bg-row-selected",
-                  !row.attention && !selected && "hover:bg-row-stripe",
+                  !attention && !selected && "hover:bg-row-stripe",
                 )}
               >
                 <td className="px-4 py-3 tabular text-foreground">{row.data}</td>
@@ -47,18 +49,19 @@ export function StencilTable({ rows, selectedId, onSelect }: Props) {
                 <td className="px-4 py-3">
                   <StatusPill status={row.motivo} />
                 </td>
-                <td className="relative px-4 py-3 text-foreground">
-                  {row.linha}
-                  {row.attention && (
-                    <span
-                      aria-label="Intervalo de lavagem fora do padrão"
-                      title="Intervalo de lavagem fora do padrão"
-                      className="absolute left-full top-1/2 ml-3 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-full"
-                      style={{ backgroundColor: "hsl(0 90% 96%)" }}  // 👈 círculo rosa
-                    >
-                      <img src={attentionIcon} alt="" className="h-4 w-4" />  {/* 👈 triângulo vermelho */}
-                    </span>
-                  )}
+                <td className="px-4 py-3 text-foreground">
+                  <div className="flex items-center justify-between gap-2">
+                    <span>{row.linha}</span>
+                    {attention && (
+                      <img
+                        src={attentionIcon}
+                        alt=""
+                        aria-label="Intervalo de lavagem fora do padrão"
+                        title="Intervalo de lavagem fora do padrão"
+                        className="h-5 w-5 shrink-0"
+                      />
+                    )}
+                  </div>
                 </td>
               </tr>
             );

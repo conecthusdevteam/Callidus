@@ -2,7 +2,7 @@
  * Cliente HTTP para consumir a API
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 export interface ApiResponse<T> {
   data: T;

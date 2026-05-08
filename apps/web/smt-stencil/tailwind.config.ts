@@ -82,6 +82,19 @@ export default {
           stripe: "hsl(var(--row-stripe))",
         },
         "status-accent": "hsl(var(--status-accent))",
+        "table-head": {
+          DEFAULT: "hsl(var(--table-head-bg))",
+          foreground: "hsl(var(--table-head-fg))",
+        },
+        "action-blue": {
+          DEFAULT: "hsl(var(--action-blue))",
+          hover: "hsl(var(--action-blue-hover))",
+        },
+        "action-green": {
+          DEFAULT: "hsl(var(--action-green))",
+          hover: "hsl(var(--action-green-hover))",
+        },
+        "tab-green": "hsl(var(--tab-green))",
       },
       borderRadius: {
         lg: "var(--radius)",

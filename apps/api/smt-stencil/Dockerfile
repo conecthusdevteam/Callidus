@@ -12,6 +12,6 @@ RUN npm run build
 
 RUN chmod +x ./scripts/*.sh
 
-EXPOSE 3001
+EXPOSE 3000
 
 CMD ["sh", "./scripts/entrypoint.sh"]
