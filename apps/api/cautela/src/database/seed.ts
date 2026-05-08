@@ -185,12 +185,20 @@ async function bootstrap() {
       existingSeedCautela.setorId = almoxarifado.id;
       existingSeedCautela.proprietarioNome = 'Visitante Almoxarifado';
       existingSeedCautela.proprietarioEmail = seedCautelaOwnerEmail;
+      existingSeedCautela.empresa = 'Fornecedor Seed';
+      existingSeedCautela.documentoProprietario = '12345678900';
       existingSeedCautela.retornoItem = true;
       existingSeedCautela.validade = new Date('2026-03-15T18:00:00');
       existingSeedCautela.status = CautelaStatus.EM_ANALISE;
       existingSeedCautela.tipo = CautelaType.EQUIPAMENTO;
       existingSeedCautela.justificativaRejeicao = null;
+      existingSeedCautela.aprovadoEm = null;
+      existingSeedCautela.rejeitadoEm = null;
       existingSeedCautela.respondidoEm = null;
+      existingSeedCautela.saidaAutorizadaEm = null;
+      existingSeedCautela.saidaAutorizadaPorId = null;
+      existingSeedCautela.encerradoEm = null;
+      existingSeedCautela.encerradoPorId = null;
       existingSeedCautela.criadoEm = seedCautelaDate;
       existingSeedCautela.atualizadoEm = seedCautelaDate;
 
@@ -211,6 +219,11 @@ async function bootstrap() {
             }),
           ],
           gestorId: gestorTeste.id,
+          aprovadoEm: null,
+          documentoProprietario: '12345678900',
+          empresa: 'Fornecedor Seed',
+          encerradoEm: null,
+          encerradoPorId: null,
           itens: [
             itemsRepository.create({
               criadoEm: seedCautelaDate,
@@ -222,8 +235,11 @@ async function bootstrap() {
           justificativaRejeicao: null,
           proprietarioEmail: seedCautelaOwnerEmail,
           proprietarioNome: 'Visitante Almoxarifado',
+          rejeitadoEm: null,
           respondidoEm: null,
           retornoItem: true,
+          saidaAutorizadaEm: null,
+          saidaAutorizadaPorId: null,
           setorId: almoxarifado.id,
           solicitadoPorId: portariaTeste.id,
           status: CautelaStatus.EM_ANALISE,
@@ -231,6 +247,211 @@ async function bootstrap() {
           validade: new Date('2026-03-15T18:00:00'),
         }),
       );
+      cautelasCriadas += 1;
+    }
+
+    const seedFlowCautelas = [
+      {
+        atualizadoEm: new Date('2026-03-02T09:15:00'),
+        criadoEm: new Date('2026-03-02T09:00:00'),
+        email: 'aprovada.seed@cautela.local',
+        empresa: 'Manutencao Externa Ltda',
+        eventos: [
+          {
+            acao: CautelaStatus.EM_ANALISE,
+            descricao: 'Cautela seed criada para validacao de fluxo aprovado.',
+            feitoPorId: portariaTeste.id,
+            timestamp: new Date('2026-03-02T09:00:00'),
+          },
+          {
+            acao: CautelaStatus.APROVADA,
+            descricao: 'Cautela seed aprovada pelo gestor.',
+            feitoPorId: gestorTeste.id,
+            timestamp: new Date('2026-03-02T09:15:00'),
+          },
+        ],
+        item: 'Furadeira industrial',
+        nome: 'Visitante Aprovado',
+        status: CautelaStatus.APROVADA,
+        aprovadoEm: new Date('2026-03-02T09:15:00'),
+        saidaAutorizadaEm: null,
+        encerradoEm: null,
+      },
+      {
+        atualizadoEm: new Date('2026-03-03T10:30:00'),
+        criadoEm: new Date('2026-03-03T10:00:00'),
+        email: 'saida.autorizada.seed@cautela.local',
+        empresa: 'Calibracao Norte',
+        eventos: [
+          {
+            acao: CautelaStatus.EM_ANALISE,
+            descricao: 'Cautela seed criada para validacao de saida autorizada.',
+            feitoPorId: portariaTeste.id,
+            timestamp: new Date('2026-03-03T10:00:00'),
+          },
+          {
+            acao: CautelaStatus.APROVADA,
+            descricao: 'Cautela seed aprovada pelo gestor.',
+            feitoPorId: gestorTeste.id,
+            timestamp: new Date('2026-03-03T10:10:00'),
+          },
+          {
+            acao: 'SAIDA_AUTORIZADA',
+            descricao: 'Saida seed autorizada pelo gestor.',
+            feitoPorId: gestorTeste.id,
+            timestamp: new Date('2026-03-03T10:30:00'),
+          },
+        ],
+        item: 'Notebook de diagnostico',
+        nome: 'Visitante Saida Autorizada',
+        status: CautelaStatus.APROVADA,
+        aprovadoEm: new Date('2026-03-03T10:10:00'),
+        saidaAutorizadaEm: new Date('2026-03-03T10:30:00'),
+        encerradoEm: null,
+      },
+      {
+        atualizadoEm: new Date('2026-03-04T16:00:00'),
+        criadoEm: new Date('2026-03-04T13:00:00'),
+        email: 'encerrada.seed@cautela.local',
+        empresa: 'Inspecao Tecnica SA',
+        eventos: [
+          {
+            acao: CautelaStatus.EM_ANALISE,
+            descricao: 'Cautela seed criada para validacao de encerramento.',
+            feitoPorId: portariaTeste.id,
+            timestamp: new Date('2026-03-04T13:00:00'),
+          },
+          {
+            acao: CautelaStatus.APROVADA,
+            descricao: 'Cautela seed aprovada pelo gestor.',
+            feitoPorId: gestorTeste.id,
+            timestamp: new Date('2026-03-04T13:20:00'),
+          },
+          {
+            acao: 'SAIDA_AUTORIZADA',
+            descricao: 'Saida seed autorizada pelo gestor.',
+            feitoPorId: gestorTeste.id,
+            timestamp: new Date('2026-03-04T15:45:00'),
+          },
+          {
+            acao: CautelaStatus.ENCERRADA,
+            descricao: 'Cautela seed encerrada pela portaria.',
+            feitoPorId: portariaTeste.id,
+            timestamp: new Date('2026-03-04T16:00:00'),
+          },
+        ],
+        item: 'Camera termografica',
+        nome: 'Visitante Encerrado',
+        status: CautelaStatus.ENCERRADA,
+        aprovadoEm: new Date('2026-03-04T13:20:00'),
+        saidaAutorizadaEm: new Date('2026-03-04T15:45:00'),
+        encerradoEm: new Date('2026-03-04T16:00:00'),
+      },
+      {
+        atualizadoEm: new Date('2026-02-06T11:00:00'),
+        criadoEm: new Date('2026-02-06T08:00:00'),
+        email: 'encerrada.30dias.seed@cautela.local',
+        empresa: 'Arquivo Historico Ltda',
+        eventos: [
+          {
+            acao: CautelaStatus.EM_ANALISE,
+            descricao: 'Cautela seed historica criada para validacao de busca.',
+            feitoPorId: portariaTeste.id,
+            timestamp: new Date('2026-02-06T08:00:00'),
+          },
+          {
+            acao: CautelaStatus.APROVADA,
+            descricao: 'Cautela seed historica aprovada pelo gestor.',
+            feitoPorId: gestorTeste.id,
+            timestamp: new Date('2026-02-06T08:30:00'),
+          },
+          {
+            acao: 'SAIDA_AUTORIZADA',
+            descricao: 'Saida seed historica autorizada pelo gestor.',
+            feitoPorId: gestorTeste.id,
+            timestamp: new Date('2026-02-06T10:45:00'),
+          },
+          {
+            acao: CautelaStatus.ENCERRADA,
+            descricao: 'Cautela seed historica encerrada pela portaria.',
+            feitoPorId: portariaTeste.id,
+            timestamp: new Date('2026-02-06T11:00:00'),
+          },
+        ],
+        item: 'Scanner patrimonial',
+        nome: 'Visitante Encerrado Historico',
+        status: CautelaStatus.ENCERRADA,
+        aprovadoEm: new Date('2026-02-06T08:30:00'),
+        saidaAutorizadaEm: new Date('2026-02-06T10:45:00'),
+        encerradoEm: new Date('2026-02-06T11:00:00'),
+      },
+    ];
+
+    for (const seedData of seedFlowCautelas) {
+      const existingCautela = await cautelasRepository.findOne({
+        where: {
+          proprietarioEmail: seedData.email,
+          setorId: almoxarifado.id,
+        },
+      });
+
+      const cautelaData = {
+        aprovadoEm: seedData.aprovadoEm,
+        atualizadoEm: seedData.atualizadoEm,
+        criadoEm: seedData.criadoEm,
+        documentoProprietario: '98765432100',
+        empresa: seedData.empresa,
+        encerradoEm: seedData.encerradoEm,
+        encerradoPorId: seedData.encerradoEm ? portariaTeste.id : null,
+        gestorId: gestorTeste.id,
+        justificativaRejeicao: null,
+        proprietarioEmail: seedData.email,
+        proprietarioNome: seedData.nome,
+        rejeitadoEm: null,
+        respondidoEm: seedData.aprovadoEm,
+        retornoItem: true,
+        saidaAutorizadaEm: seedData.saidaAutorizadaEm,
+        saidaAutorizadaPorId: seedData.saidaAutorizadaEm ? gestorTeste.id : null,
+        setorId: almoxarifado.id,
+        solicitadoPorId: portariaTeste.id,
+        status: seedData.status,
+        tipo: CautelaType.EQUIPAMENTO,
+        validade: new Date('2026-12-31T18:00:00'),
+      };
+
+      if (existingCautela) {
+        await cautelasRepository.save({
+          ...existingCautela,
+          ...cautelaData,
+        });
+        cautelasAtualizadas += 1;
+        continue;
+      }
+
+      const savedCautela = await cautelasRepository.save(
+        cautelasRepository.create({
+          ...cautelaData,
+          itens: [
+            itemsRepository.create({
+              atualizadoEm: seedData.criadoEm,
+              criadoEm: seedData.criadoEm,
+              nomeItem: seedData.item,
+              quantidade: 1,
+            }),
+          ],
+        }),
+      );
+
+      await eventsRepository.save(
+        seedData.eventos.map((event) => ({
+          acao: event.acao,
+          cautelaId: savedCautela.id,
+          descricao: event.descricao,
+          feitoPorId: event.feitoPorId,
+          timestamp: event.timestamp,
+        })),
+      );
+
       cautelasCriadas += 1;
     }
 
