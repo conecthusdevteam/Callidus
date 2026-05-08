@@ -3,9 +3,10 @@ import { cn } from "@/lib/utils";
 import type { SystemStatus } from "@/data/mockWashes";
 
 /**
- * KPI card "Fornecimento de dados" (substitui o card lateral antigo).
- * Mostra SGS e CLP lado a lado, com pill verde/vermelho conforme status.
- * Borda esquerda roxa (--status-accent), seguindo o padrão dos outros KPIs.
+ * KPI card "Fornecimento de dados".
+ * Layout conforme referência: SGS e CLP em texto bold ao lado de um ícone
+ * circular (✓ verde / ✗ vermelho), com "há X minutos" abaixo de cada um.
+ * Quando o sistema está fora do ar, o bloco recebe borda/fundo vermelho suave.
  */
 export function SupplyStatusKpi({ status }: { status: SystemStatus }) {
   const items = [
@@ -22,23 +23,28 @@ export function SupplyStatusKpi({ status }: { status: SystemStatus }) {
       style={{ borderLeftColor: "hsl(var(--status-accent))" }}
     >
       <p className="kpi-label">Fornecimento de dados</p>
-      <div className="mt-2 flex items-center gap-2">
+      <div className="mt-3 flex items-start gap-3">
         {items.map((it) => (
           <div
             key={it.label}
             className={cn(
-              "flex flex-1 items-center gap-2 rounded-md px-2 py-1",
-              it.ok ? "bg-badge-ok-bg text-badge-ok-fg" : "bg-badge-danger-bg text-badge-danger-fg",
+              "flex flex-1 flex-col gap-1 rounded-md px-3 py-2",
+              !it.ok &&
+                "border border-badge-danger-fg/40 bg-badge-danger-bg/60",
             )}
           >
-            <span className="text-base font-bold tabular">{it.label}</span>
-            {it.ok ? (
-              <CheckCircle2 className="h-4 w-4" />
-            ) : (
-              <XCircle className="h-4 w-4" />
-            )}
-            <span className="ml-auto text-xs font-medium">
-              {`há ${it.mins} min${it.mins === 1 ? "" : "s"}`}
+            <div className="flex items-center gap-2">
+              <span className="text-x1 font-bold tabular text-foreground">
+                {it.label}
+              </span>
+              {it.ok ? (
+                <CheckCircle2 className="h-5 w-5 text-badge-ok-fg" />
+              ) : (
+                <XCircle className="h-5 w-5 text-badge-danger-fg" />
+              )}
+            </div>
+            <span className="text-sm text-muted-foreground">
+              {`há ${it.mins} minuto${it.mins === 1 ? "" : "s"}`}
             </span>
           </div>
         ))}
