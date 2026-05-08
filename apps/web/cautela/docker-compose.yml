@@ -6,5 +6,5 @@ services:
       args:
         VITE_CAUTELA_API_URL: ${VITE_CAUTELA_API_URL:-http://localhost:3000}
     ports:
-      - "${WEB_PORT:-5173}:80"
+      - "${WEB_PORT:-5273}:80"
     restart: unless-stopped

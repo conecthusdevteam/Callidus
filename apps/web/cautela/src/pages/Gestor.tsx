@@ -1,7 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
 import StatusBadge from "../components/StatusBadge";
 import { type Cautela, type StatusCautela } from "../data/cautelaTypes";
-import { approveCautela, getCautelas, rejectCautela } from "../lib/api";
+import {
+  approveCautela,
+  getCautelas,
+  rejectCautela,
+  authorizeDeparture,
+} from "../lib/api";
+import {
+  ModalAprovado,
+  ModalRecusado,
+  ModalDescartar,
+  ModalAutorizarSaida,
+} from "../components/ModalGestor";
 
 type Tab = "recebidas" | "historico";
 type MobileView =
@@ -14,184 +25,14 @@ interface CautelaComDecisao extends Cautela {
   decisaoLocal?: "aprovado" | "reprovado";
 }
 
-// ── Modal de aprovação ──
-function ModalAprovado({ onClose }: { onClose: () => void }) {
-  useEffect(() => {
-    const timer = window.setTimeout(onClose, 3000);
-    return () => window.clearTimeout(timer);
-  }, [onClose]);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-xl px-16 py-10 flex flex-col items-center gap-4 min-w-[340px]">
-        <div
-          className="w-16 h-16 rounded-2xl flex items-center justify-center"
-          style={{ backgroundColor: "#EEF5EE" }}
-        >
-          <div className="w-10 h-10 rounded-full border-2 border-[#2B8E37] flex items-center justify-center">
-            <svg
-              className="w-5 h-5 text-[#2B8E37]"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2.5}
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-          </div>
-        </div>
-        <p className="text-base font-bold text-black text-center">
-          Sua resposta foi enviada ao solicitante
-        </p>
-      </div>
-    </div>
-  );
-}
-
-// ── Modal de recusado ──
-function ModalRecusado({ onClose }: { onClose: () => void }) {
-  useEffect(() => {
-    const timer = window.setTimeout(onClose, 3000);
-    return () => window.clearTimeout(timer);
-  }, [onClose]);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-xl px-16 py-10 flex flex-col items-center gap-4 min-w-[340px]">
-        <div
-          className="w-16 h-16 rounded-2xl flex items-center justify-center"
-          style={{ backgroundColor: "#EEF5EE" }}
-        >
-          <div className="w-10 h-10 rounded-full border-2 border-[#2B8E37] flex items-center justify-center">
-            <svg
-              className="w-5 h-5 text-[#2B8E37]"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2.5}
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-          </div>
-        </div>
-        <p className="text-base font-bold text-black text-center">
-          A cautela foi recusada com sucesso
-        </p>
-      </div>
-    </div>
-  );
-}
-
-// ── Modal de descartar ──
-function ModalDescartar({
-  onConfirmar,
-  onCancelar,
-}: {
-  onConfirmar: (justificativa: string) => void;
-  onCancelar: () => void;
-}) {
-  const [justificativa, setJustificativa] = useState("");
-  const [erro, setErro] = useState(false);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-xl p-8 w-[420px] flex flex-col items-center gap-4">
-        <div
-          className="w-14 h-14 rounded-2xl flex items-center justify-center"
-          style={{ backgroundColor: "#FEE2E2" }}
-        >
-          <svg className="w-7 h-7 text-red-500" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M3 6h18"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-            <path
-              d="M9 6V4h6v2"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-            <path
-              d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M10 11v6M14 11v6"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-          </svg>
-        </div>
-
-        <h2 className="text-lg font-bold text-black text-center">
-          Tem certeza que deseja
-          <br />
-          recusar a cautela?
-        </h2>
-
-        <div className="w-full">
-          <label className="text-sm text-gray-600 mb-1 block">
-            Justificativa:
-          </label>
-          <textarea
-            rows={4}
-            value={justificativa}
-            onChange={(e) => {
-              setJustificativa(e.target.value);
-              if (e.target.value.trim()) setErro(false);
-            }}
-            className={`w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-600 focus:outline-none resize-none ${
-              erro ? "border-red-400 border-2" : "border-gray-300"
-            }`}
-          />
-          {erro && (
-            <p className="text-red-500 text-xs mt-1">
-              A justificativa é obrigatória.
-            </p>
-          )}
-        </div>
-
-        <div className="flex gap-3 w-full">
-          <button
-            onClick={() => {
-              if (!justificativa.trim()) {
-                setErro(true);
-                return;
-              }
-              onConfirmar(justificativa.trim());
-            }}
-            className="flex-1 py-2.5 rounded-xl bg-[#2B8E37] text-white font-semibold text-sm hover:bg-[#22592A] transition-colors"
-          >
-            Enviar
-          </button>
-          <button
-            onClick={onCancelar}
-            className="flex-1 py-2.5 rounded-xl border border-gray-300 text-black font-medium text-sm hover:bg-gray-100 transition-colors"
-          >
-            Cancelar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── Painel de detalhes da cautela ──
-function DetalhesConteudo({ cautela }: { cautela: CautelaComDecisao }) {
+function DetalhesConteudo({
+  cautela,
+  onAutorizarSaida,
+}: {
+  cautela: CautelaComDecisao;
+  onAutorizarSaida?: () => void;
+}) {
   const statusExibido =
     cautela.decisaoLocal === "aprovado"
       ? "Aprovado"
@@ -209,6 +50,16 @@ function DetalhesConteudo({ cautela }: { cautela: CautelaComDecisao }) {
       {isSomenteLeitura && (
         <div className="mb-4">
           <StatusBadge status={statusExibido as StatusCautela} fullWidth />
+          {cautela.status === "Aprovado" && cautela.aprovadoEm && (
+            <p className="text-xs text-center text-[#065F46] mt-1">
+              em {cautela.aprovadoEm}
+            </p>
+          )}
+          {cautela.status === "Reprovado" && cautela.reprovadoEm && (
+            <p className="text-xs text-center text-[#9B1C1C] mt-1">
+              em {cautela.reprovadoEm}
+            </p>
+          )}
           {(cautela.motivoNegativa || cautela.decisaoLocal === "reprovado") && (
             <div className="mt-3">
               <p className="text-sm text-black">
@@ -247,6 +98,12 @@ function DetalhesConteudo({ cautela }: { cautela: CautelaComDecisao }) {
           </p>
         </div>
       )}
+      {cautela.status === "Encerrada" && cautela.encerradaEm && (
+        <div className="mb-4">
+          <p className="text-base font-bold text-black">Data e hora de saída</p>
+          <p className="text-base text-black">{cautela.encerradaEm}</p>
+        </div>
+      )}
       <table className="w-full mt-16 mb-2 overflow-hidden">
         <thead>
           <tr style={{ backgroundColor: "#0E9F6E" }}>
@@ -271,6 +128,16 @@ function DetalhesConteudo({ cautela }: { cautela: CautelaComDecisao }) {
           ))}
         </tbody>
       </table>
+      {cautela.status === "Aprovado" &&
+        cautela.decisaoLocal === undefined &&
+        onAutorizarSaida && (
+          <button
+            onClick={onAutorizarSaida}
+            className="w-full py-2.5 rounded-lg bg-[#F5F5F5] text-black text-sm font-semibold hover:bg-gray-300 transition-colors"
+          >
+            Autorizar saída
+          </button>
+        )}
     </div>
   );
 }
@@ -295,7 +162,7 @@ function CardCautela({
       onClick={onClick}
       className={`rounded-sm p-5 border cursor-pointer transition-all ${
         isPrimeiro
-          ? "border-2 border-red-400 bg-[#FCA5A54D]"
+          ? "border-2 border-yellow-300 bg-[#FFFBE1]"
           : "border-black bg-white"
       }`}
     >
@@ -327,7 +194,7 @@ function CardCautela({
       <div className="flex gap-3" onClick={(e) => e.stopPropagation()}>
         <button
           onClick={() => onAprovar(cautela.id)}
-          className="px-5 py-2 rounded-lg bg-[#2B8E37] text-white text-sm font-semibold hover:bg-[#22592A] transition-colors"
+          className="px-5 py-2 rounded-lg bg-[#3BB14A] text-white text-sm font-semibold hover:bg-[#22592A] transition-colors"
         >
           Aprovar
         </button>
@@ -351,6 +218,7 @@ export default function Gestor() {
   const [modalAprovado, setModalAprovado] = useState(false);
   const [modalRecusado, setModalRecusado] = useState(false);
   const [actionError, setActionError] = useState("");
+  const [modalAutorizarSaida, setModalAutorizarSaida] = useState(false);
 
   // Mobile
   const [mobileView, setMobileView] = useState<MobileView>("lista");
@@ -366,11 +234,12 @@ export default function Gestor() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void carregarCautelas();
 
     const interval = setInterval(() => {
       void carregarCautelas();
-    }, 10000);
+    }, 20000);
 
     return () => clearInterval(interval);
   }, [carregarCautelas]);
@@ -380,13 +249,17 @@ export default function Gestor() {
   );
   const historico = cautelas.filter(
     (c) =>
-      c.decisaoLocal || c.status === "Aprovado" || c.status === "Reprovado",
+      c.decisaoLocal ||
+      c.status === "Aprovado" ||
+      c.status === "Reprovado" ||
+      c.status === "Encerrada",
   );
 
   const isSomenteLeitura = (c: CautelaComDecisao) =>
     c.decisaoLocal !== undefined ||
     c.status === "Aprovado" ||
-    c.status === "Reprovado";
+    c.status === "Reprovado" ||
+    c.status === "Encerrada";
 
   async function aprovar(id: string) {
     try {
@@ -414,6 +287,28 @@ export default function Gestor() {
   function abrirDescartar(id: string) {
     setCautelaSelecionada(cautelas.find((c) => c.id === id) ?? null);
     setModalDescartar(true);
+  }
+
+  async function handleAutorizarSaida(id: string) {
+    try {
+      setActionError("");
+      const cautelaAtualizada = await authorizeDeparture(id);
+      setCautelas((prev) =>
+        prev.map((c) => (c.id === id ? cautelaAtualizada : c)),
+      );
+      // Atualiza painel de detalhes aberto imediatamente
+      setCautelaSelecionada((prev) =>
+        prev?.id === id ? cautelaAtualizada : prev,
+      );
+    } catch (error) {
+      setActionError(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível autorizar a saída.",
+      );
+      return;
+    }
+    setModalAutorizarSaida(true);
   }
 
   async function confirmarDescartar(justificativa: string) {
@@ -590,7 +485,12 @@ export default function Gestor() {
             <div className="flex-1 overflow-y-auto px-4 py-2 flex flex-col gap-3">
               {/* Só o conteúdo tem borda */}
               <div className="bg-white rounded-sm border border-black p-6">
-                <DetalhesConteudo cautela={cautelaSelecionada} />
+                <DetalhesConteudo
+                  cautela={cautelaSelecionada}
+                  onAutorizarSaida={() =>
+                    handleAutorizarSaida(cautelaSelecionada.id)
+                  }
+                />
               </div>
               {/* Botões fora da borda */}
               {!isSomenteLeitura(cautelaSelecionada) && (
@@ -696,7 +596,12 @@ export default function Gestor() {
           <div className="flex-1 flex flex-col overflow-hidden pt-14 mb-4 px-2">
             {/* Só o conteúdo tem borda */}
             <div className="flex-1 overflow-y-auto bg-white border border-black rounded-sm p-6">
-              <DetalhesConteudo cautela={cautelaSelecionada} />
+              <DetalhesConteudo
+                cautela={cautelaSelecionada}
+                onAutorizarSaida={() =>
+                  handleAutorizarSaida(cautelaSelecionada.id)
+                }
+              />
             </div>
             {/* Botões fora da borda */}
             {!isSomenteLeitura(cautelaSelecionada) && (
@@ -724,7 +629,7 @@ export default function Gestor() {
         <div className="w-lg h-screen flex-shrink-0 flex flex-col overflow-hidden pt-[20px]">
           {/* Header */}
           <div
-            className="bg-[#22592A] pl-5 py-4 flex-shrink-0 rounded-t-lg ml-4 mt-4"
+            className="bg-[#22592A] pl-5 py-4 flex-shrink-0 rounded-t-lg mx-4 mt-4"
             style={{ boxShadow: "-4px 0 8px rgba(0,0,0,0.25)" }}
           >
             <h2 className="text-white font-bold text-base">Histórico</h2>
@@ -732,7 +637,7 @@ export default function Gestor() {
 
           {/* Lista */}
           <div
-            className="flex-1 overflow-y-auto ml-4 mb-4 bg-[#E5E7EB] rounded-b-lg border border-gray-200"
+            className="flex-1 overflow-y-auto mx-4 mb-4 bg-[#E5E7EB] rounded-b-lg border border-gray-200"
             style={{ boxShadow: "-4px 0 8px rgba(0,0,0,0.25)" }}
           >
             {historico.length === 0 && (
@@ -798,6 +703,9 @@ export default function Gestor() {
 
       {modalRecusado && (
         <ModalRecusado onClose={() => setModalRecusado(false)} />
+      )}
+      {modalAutorizarSaida && (
+        <ModalAutorizarSaida onClose={() => setModalAutorizarSaida(false)} />
       )}
     </>
   );
