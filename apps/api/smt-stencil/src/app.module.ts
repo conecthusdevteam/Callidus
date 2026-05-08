@@ -24,8 +24,8 @@ import { StencilsModule } from './stencils/stencils.module';
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_DATABASE'),
         entities: [Stencil, Plate],
-        synchronize: configService.get<string>('NODE_ENV') !== 'production',
-        logging: configService.get<string>('NODE_ENV') === 'development',
+        synchronize: configService.get<string>('NODE_ENV') !== 'hml',
+        logging: configService.get<string>('NODE_ENV') === 'dev',
         options: {
           encrypt: false,
           trustServerCertificate: true,

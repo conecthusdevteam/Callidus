@@ -1,5 +1,6 @@
 services:
   smt-stencil-web:
+    container_name: ${NODE_ENV}-smt-stencil-web
     build:
       context: .
       args:
