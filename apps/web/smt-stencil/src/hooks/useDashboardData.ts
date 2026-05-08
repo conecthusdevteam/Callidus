@@ -252,11 +252,12 @@ export function useDashboardData(intervalMs = 60_000) {
   useEffect(() => {
     const intervalId = window.setInterval(() => {
       const now = Date.now();
-      const cycle = (now - clpSimulationStartAt.current) % 150_000;
-      const simulatedClpDown = cycle >= 90_000;
-      const statusBaseAt = lastUpdateRef.current.getTime() - 120_000; // 2 minutos de diferença do card de coleta
-      const scsLastSyncMin = Math.max(0, Math.floor((now - statusBaseAt) / 60000));
-      const clpLastSyncMin = Math.max(0, Math.floor((now - statusBaseAt) / 60000));
+      const elapsed = now - clpSimulationStartAt.current;
+      const scsCycle = Math.floor((elapsed % 300_000) / 60_000);
+      const clpCycle = Math.floor((elapsed % 300_000) / 60_000);
+      const simulatedClpDown = clpCycle === 3;
+      const scsLastSyncMin = scsCycle;
+      const clpLastSyncMin = simulatedClpDown ? 0 : clpCycle === 4 ? 1 : clpCycle;
 
       setData((prev) => {
         const nextStatus = {
