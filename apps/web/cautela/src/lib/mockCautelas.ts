@@ -142,9 +142,10 @@ export async function mockCreateCautela(
   const nova: Cautela = {
     id: generateId(),
     status: "Em análise",
-    empresa: payload.setorId, // em produção viria o nome do setor
+    empresa: payload.empresa, // em produção viria o nome do setor
     visitante: payload.proprietarioNome,
     proprietarioEmail: payload.proprietarioEmail,
+    documento: payload.documento,
     gestor: "Gestor Responsável", // em produção viria do backend
     data: formatNow(),
     direcao: "enviado",

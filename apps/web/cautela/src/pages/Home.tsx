@@ -5,7 +5,7 @@ import { createCautela, getCautelas, closeCautela } from "../lib/api";
 import FormularioCautela, {
   type FieldErrors,
 } from "../components/FormularioCautela";
-import { ModalPermitirSaida, ModalEncerrada } from "../components/ModalGestor";
+import { ModalEncerrada } from "../components/ModalGestor";
 
 // ─── Avatares ─────────────────────────────────────────────────────────────────
 
@@ -341,6 +341,22 @@ function CardCautelaPortaria({
   );
 }
 
+function validarDocumento(documento: string) {
+  const valor = documento.replace(/\D/g, "");
+
+  // CPF
+  if (valor.length === 11) {
+    return true;
+  }
+
+  // RG
+  if (valor.length >= 7 && valor.length <= 14) {
+    return true;
+  }
+
+  return false;
+}
+
 // ─── Painel de detalhes ───────────────────────────────────────────────────────
 
 function DetalhesCautelaPortaria({
@@ -570,6 +586,8 @@ export default function Home() {
   );
   const [searchTerm, setSearchTerm] = useState("");
 
+  const [documento, setDocumento] = useState("");
+  const [empresa, setEmpresa] = useState("");
   const [descricao, setDescricao] = useState("");
   const [quantidade, setQuantidade] = useState<string>("");
   const [items, setItems] = useState<
@@ -593,7 +611,6 @@ export default function Home() {
   const [recemRespondidos, setRecemRespondidos] = useState<Set<string>>(
     new Set(),
   );
-  const [modalPermitirSaida, setModalPermitirSaida] = useState(false);
   const [modalEncerrada, setModalEncerrada] = useState(false);
   // Controla se há nova "Saída Autorizada" ainda não vista (bolinha vermelha)
   const [saidasVistas, setSaidasVistas] = useState<Set<string>>(new Set());
@@ -690,11 +707,18 @@ export default function Home() {
     e.preventDefault();
     const newErrors: FieldErrors = {};
     setSubmitError("");
+
     if (!setorId) newErrors.setor = "Selecione um setor.";
     if (!nome.trim()) newErrors.nome = "O campo Proprietário é obrigatório.";
+    if (!documento.trim())
+      newErrors.documento = "O campo Documento é obrigatório."; // ← novo
+    if (!empresa.trim()) newErrors.empresa = "O campo Empresa é obrigatório."; // ← novo
     const emailRegex = /^[A-Za-z0-9._%+-]+@(callidus|conecthus)\.org\.br$/i;
     if (!emailRegex.test(email))
       newErrors.email = "Use apenas e-mail institucional.";
+    if (!validarDocumento(documento)) {
+      newErrors.documento = "Informe um CPF ou identidade válida";
+    }
     if (items.length === 0) newErrors.items = "Adicione pelo menos um item.";
     if (retornado === null)
       newErrors.retornado = "Selecione se o item será retornado.";
@@ -702,10 +726,13 @@ export default function Home() {
       newErrors.dataFim = "Informe a data de retorno.";
     else if (retornado === true && dataFim.length < 10)
       newErrors.dataFim = "Data inválida.";
+
     const dataFimISO = dataFim
       ? dataFim.split("/").reverse().join("-")
       : undefined;
+
     setFieldErrors(newErrors);
+
     if (Object.keys(newErrors).length === 0) {
       setSubmitting(true);
       try {
@@ -716,12 +743,12 @@ export default function Home() {
           })),
           proprietarioEmail: email,
           proprietarioNome: nome,
+          documento,
+          empresa,
           retornoItem: retornado === true,
           setorId,
           validade: retornado ? dataFimISO : undefined,
         });
-        // Recarrega imediatamente do localStorage para o card aparecer em Enviados
-        // sem esperar o próximo ciclo de polling
         await carregarCautelas();
         setShowModal(true);
         setTimeout(() => setShowModal(false), 3000);
@@ -740,6 +767,8 @@ export default function Home() {
     setSetorId("");
     setNome("");
     setEmail("");
+    setDocumento("");
+    setEmpresa("");
     setDescricao("");
     setQuantidade("");
     setItems([]);
@@ -759,7 +788,6 @@ export default function Home() {
 
   async function handleConfirmarSaida() {
     if (!cautelaSelecionada) return;
-    setModalPermitirSaida(false);
     try {
       const encerrada = await closeCautela(cautelaSelecionada.id);
       setCautelas((prev) =>
@@ -812,6 +840,10 @@ export default function Home() {
     setNome,
     email,
     setEmail,
+    documento,
+    setDocumento,
+    empresa,
+    setEmpresa,
     descricao,
     setDescricao,
     quantidade,
@@ -870,7 +902,7 @@ export default function Home() {
         onFechar={() => setCautelaSelecionada(null)}
         onLiberarSaida={
           cautelaSelecionada.status === "Saída Autorizada"
-            ? () => setModalPermitirSaida(true)
+            ? handleConfirmarSaida
             : undefined
         }
       />
@@ -962,7 +994,7 @@ export default function Home() {
         {/* Coluna direita */}
         <div className="flex-1 overflow-y-auto flex flex-col items-center py-8 px-6 relative">
           {painelDetalhes}
-          <div className="w-full max-w-[580px] text-center mb-6 mt-6">
+          <div className="w-full max-w-[580px] text-center mb-6">
             <h1 className="text-[28px] font-bold text-black leading-snug">
               Cautela para equipamentos externos
             </h1>
@@ -998,7 +1030,7 @@ export default function Home() {
                 onFechar={() => setCautelaSelecionada(null)}
                 onLiberarSaida={
                   cautelaSelecionada.status === "Saída Autorizada"
-                    ? () => setModalPermitirSaida(true)
+                    ? handleConfirmarSaida
                     : undefined
                 }
               />
@@ -1142,13 +1174,6 @@ export default function Home() {
             </p>
           </div>
         </div>
-      )}
-
-      {modalPermitirSaida && (
-        <ModalPermitirSaida
-          onConfirmar={handleConfirmarSaida}
-          onCancelar={() => setModalPermitirSaida(false)}
-        />
       )}
       {modalEncerrada && (
         <ModalEncerrada onClose={() => setModalEncerrada(false)} />

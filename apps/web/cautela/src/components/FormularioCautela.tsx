@@ -4,6 +4,8 @@ export interface FieldErrors {
   setor?: string;
   nome?: string;
   email?: string;
+  documento?: string;
+  empresa?: string;
   items?: string;
   retornado?: string;
   dataFim?: string;
@@ -54,6 +56,10 @@ interface FormularioCautelaProps {
   setNome: (v: string) => void;
   email: string;
   setEmail: (v: string) => void;
+  documento: string;
+  setDocumento: (v: string) => void;
+  empresa: string;
+  setEmpresa: (v: string) => void;
   descricao: string;
   setDescricao: (v: string) => void;
   quantidade: string;
@@ -83,6 +89,10 @@ export default function FormularioCautela({
   setNome,
   email,
   setEmail,
+  documento,
+  setDocumento,
+  empresa,
+  setEmpresa,
   descricao,
   setDescricao,
   quantidade,
@@ -136,6 +146,47 @@ export default function FormularioCautela({
         )}
       </div>
 
+      {/* Documento */}
+      <div>
+        <label className="block font-medium text-black text-sm">
+          Documento{" "}
+          <span className="font-normal text-gray-500">(Identidade ou CPF)</span>
+        </label>
+        <input
+          type="text"
+          value={documento}
+          onChange={(e) => {
+            const valor = e.target.value.replace(/\D/g, "").slice(0, 14);
+
+            setDocumento(valor);
+          }}
+          className={`mt-1 w-full border-2 bg-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-600 focus:outline-none ${
+            fieldErrors.documento ? "border-red-400" : "border-[#D4D4D4]"
+          }`}
+          placeholder="Adicione Identidade ou CPF"
+        />
+        {fieldErrors.documento && (
+          <p className="text-red-500 text-xs mt-1">{fieldErrors.documento}</p>
+        )}
+      </div>
+
+      {/* Empresa */}
+      <div>
+        <label className="block font-medium text-black text-sm">Empresa</label>
+        <input
+          type="text"
+          value={empresa}
+          onChange={(e) => setEmpresa(e.target.value)}
+          className={`mt-1 w-full border-2 bg-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-600 focus:outline-none ${
+            fieldErrors.empresa ? "border-red-400" : "border-[#D4D4D4]"
+          }`}
+          placeholder="Person name A"
+        />
+        {fieldErrors.empresa && (
+          <p className="text-red-500 text-xs mt-1">{fieldErrors.empresa}</p>
+        )}
+      </div>
+
       {/* E-mail */}
       <div>
         <label className="block font-medium text-black text-sm">
@@ -159,7 +210,7 @@ export default function FormularioCautela({
       <div className="flex gap-4">
         <div className="flex-1 min-w-0">
           <label className="block font-medium text-black text-sm">
-            Descrição
+            Descrição de Material
           </label>
           <input
             type="text"

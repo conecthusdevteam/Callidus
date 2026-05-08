@@ -47,6 +47,8 @@ export interface CreateCautelaPayload {
   itens: { nomeItem: string; quantidade: number }[];
   proprietarioEmail: string;
   proprietarioNome: string;
+  documento: string;
+  empresa: string;
   retornoItem: boolean;
   setorId: string;
   validade?: string;

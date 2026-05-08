@@ -17,6 +17,7 @@ export interface Cautela {
   empresa: string;
   visitante: string;
   proprietarioEmail: string;
+  documento?: string;
   gestor: string;
   data: string;
   equipamentos: Equipamento[];
