@@ -79,10 +79,10 @@ export function FilterPopover({
 
   return (
     <Popover open={open} onOpenChange={handleOpen}>
-      <PopoverTrigger asChild>
+     <PopoverTrigger asChild>
         <button
           type="button"
-          className="inline-flex h-9 items-center gap-2 rounded-lg border bg-card px-3 text-sm font-medium text-foreground shadow-card transition-colors hover:bg-muted"
+          className="inline-flex h-[50px] items-center gap-2 rounded-lg border bg-card px-4 text-base font-medium text-foreground shadow-card transition-colors hover:bg-muted"
         >
           <img src={filterIcon} alt="" className="h-4 w-4" />
           Filtrar

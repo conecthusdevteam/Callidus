@@ -17,29 +17,25 @@ export interface NewWashEvent {
 
 type DashboardCache = {
   data: DashboardData;
-  lastUpdate: string;
 };
 
 const DASHBOARD_CACHE_KEY = "smt-stencil-dashboard-data";
 
-const loadCachedDashboardData = (): { data: DashboardData; lastUpdate: Date } | null => {
+const loadCachedDashboardData = (): DashboardData | null => {
   try {
     const raw = window.localStorage.getItem(DASHBOARD_CACHE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as DashboardCache;
-    if (!parsed?.data || !parsed?.lastUpdate) return null;
-    return { data: parsed.data, lastUpdate: new Date(parsed.lastUpdate) };
+    if (!parsed?.data) return null;
+    return parsed.data;
   } catch {
     return null;
   }
 };
 
-const saveDashboardData = (data: DashboardData, lastUpdate: Date) => {
+const saveDashboardData = (data: DashboardData) => {
   try {
-    window.localStorage.setItem(DASHBOARD_CACHE_KEY, JSON.stringify({
-      data,
-      lastUpdate: lastUpdate.toISOString(),
-    }));
+    window.localStorage.setItem(DASHBOARD_CACHE_KEY, JSON.stringify({ data }));
   } catch {
     // falha de storage não impede o app de funcionar
   }
@@ -91,20 +87,19 @@ function buildDashboardData(stencils: ApiStencil[], placas: ApiPlate[]): Dashboa
 
 export function useDashboardData(intervalMs = 60_000) {
   const cachedDashboard = loadCachedDashboardData();
-  const [data, setData] = useState<DashboardData>(() => cachedDashboard?.data ?? initialDashboardData);
-  const [lastUpdate, setLastUpdate] = useState<Date>(() => cachedDashboard?.lastUpdate ?? new Date());
-  const lastUpdateRef = useRef<Date>(cachedDashboard?.lastUpdate ?? new Date());
+  const [data, setData] = useState<DashboardData>(() => cachedDashboard ?? initialDashboardData);
+  const [lastUpdate, setLastUpdate] = useState<Date>(() => new Date());
+  const lastUpdateRef = useRef<Date>(new Date());
   const [newEvents, setNewEvents] = useState<NewWashEvent[]>([]);
-  const knownStencilIds = useRef<Set<string>>(new Set((cachedDashboard?.data.stencils ?? data.stencils).map((s) => s.id)));
-  const knownPlacaIds = useRef<Set<string>>(new Set((cachedDashboard?.data.placas ?? data.placas).map((p) => p.id)));
-  const knownStencilRows = useRef<StencilWash[]>(cachedDashboard?.data.stencils ?? data.stencils);
-  const knownPlacaRows = useRef<PlacaWash[]>(cachedDashboard?.data.placas ?? data.placas);
-  const stencilLastSuccessAt = useRef<number>(
-    cachedDashboard ? Date.now() - cachedDashboard.data.status.scs.lastSyncMin * 60_000 : Date.now(),
-  );
-  const placaLastSuccessAt = useRef<number>(
-    cachedDashboard ? Date.now() - cachedDashboard.data.status.clp.lastSyncMin * 60_000 : Date.now(),
-  );
+  const knownStencilIds = useRef<Set<string>>(new Set((cachedDashboard?.stencils ?? data.stencils).map((s) => s.id)));
+  const knownPlacaIds = useRef<Set<string>>(new Set((cachedDashboard?.placas ?? data.placas).map((p) => p.id)));
+  const knownStencilRows = useRef<StencilWash[]>(cachedDashboard?.stencils ?? data.stencils);
+  const knownPlacaRows = useRef<PlacaWash[]>(cachedDashboard?.placas ?? data.placas);
+  const stencilLastSuccessAt = useRef<number>(Date.now());
+  const placaLastSuccessAt = useRef<number>(Date.now());
+  const clpSimulationStartAt = useRef<number>(Date.now());
+  const actualScsOk = useRef<boolean>(true);
+  const actualClpOk = useRef<boolean>(true);
   const initialized = useRef(false);
   const seq = useRef(0);
 
@@ -156,6 +151,11 @@ export function useDashboardData(intervalMs = 60_000) {
         const clpLastSyncMin = Math.max(0, Math.floor((Date.now() - placaLastSuccessAt.current) / 60000));
         const bothFailed = stencilResult.status === 'rejected' && placaResult.status === 'rejected';
 
+        const actualScs = stencilResult.status === 'fulfilled' || bothFailed;
+        const actualClp = placaResult.status === 'fulfilled' && !bothFailed;
+        actualScsOk.current = actualScs;
+        actualClpOk.current = actualClp;
+
         const next: DashboardData = {
           totalDia: knownStencilRows.current.length + knownPlacaRows.current.length,
           totalStencil: knownStencilRows.current.length,
@@ -165,11 +165,11 @@ export function useDashboardData(intervalMs = 60_000) {
           placas: knownPlacaRows.current,
           status: {
             scs: {
-              ok: stencilResult.status === 'fulfilled' || bothFailed,
+              ok: actualScs,
               lastSyncMin: scsLastSyncMin,
             },
             clp: {
-              ok: placaResult.status === 'fulfilled' && !bothFailed,
+              ok: actualClp,
               lastSyncMin: clpLastSyncMin,
             },
           },
@@ -218,7 +218,7 @@ export function useDashboardData(intervalMs = 60_000) {
             setLastUpdate(shouldSaveAt);
             lastUpdateRef.current = shouldSaveAt;
           }
-          saveDashboardData(next, shouldSaveAt);
+          saveDashboardData(next);
           if (fresh.length > 0) {
             setNewEvents((prev) => [...prev, ...fresh]);
           }
@@ -234,7 +234,7 @@ export function useDashboardData(intervalMs = 60_000) {
           setLastUpdate(shouldSaveAt);
           lastUpdateRef.current = shouldSaveAt;
         }
-        saveDashboardData(next, shouldSaveAt);
+        saveDashboardData(next);
       } catch (error) {
         console.error('Falha ao carregar dados do dashboard', error);
       }
@@ -248,6 +248,37 @@ export function useDashboardData(intervalMs = 60_000) {
       window.clearInterval(intervalId);
     };
   }, [intervalMs]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      const now = Date.now();
+      const cycle = (now - clpSimulationStartAt.current) % 150_000;
+      const simulatedClpDown = cycle >= 90_000;
+      const statusBaseAt = lastUpdateRef.current.getTime() - 120_000; // 2 minutos de diferença do card de coleta
+      const scsLastSyncMin = Math.max(0, Math.floor((now - statusBaseAt) / 60000));
+      const clpLastSyncMin = Math.max(0, Math.floor((now - statusBaseAt) / 60000));
+
+      setData((prev) => {
+        const nextStatus = {
+          scs: { ok: actualScsOk.current, lastSyncMin: scsLastSyncMin },
+          clp: { ok: actualClpOk.current && !simulatedClpDown, lastSyncMin: clpLastSyncMin },
+        };
+
+        if (
+          prev.status.scs.ok === nextStatus.scs.ok &&
+          prev.status.scs.lastSyncMin === nextStatus.scs.lastSyncMin &&
+          prev.status.clp.ok === nextStatus.clp.ok &&
+          prev.status.clp.lastSyncMin === nextStatus.clp.lastSyncMin
+        ) {
+          return prev;
+        }
+
+        return { ...prev, status: nextStatus };
+      });
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   const dismissEvent = (id: string) =>
     setNewEvents((prev) => prev.filter((e) => e.id !== id));
