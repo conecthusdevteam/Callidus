@@ -1,7 +1,7 @@
 services:
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: smt-sqlserver
+    container_name: ${NODE_ENV}-smt-sqlserver
     environment:
       - ACCEPT_EULA=Y
       - SA_PASSWORD=${DB_PASSWORD}
@@ -25,7 +25,7 @@ services:
       context: .
       args:
         PORT: ${PORT}
-    container_name: smt-stencil-app
+    container_name: ${NODE_ENV}-smt-stencil-app
     ports:
       - "${PORT}:3000"
     environment:
