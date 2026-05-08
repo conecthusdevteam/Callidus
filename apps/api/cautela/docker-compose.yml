@@ -4,7 +4,7 @@ services:
       context: .
       args:
         PORT: ${PORT}
-    container_name: cautela-api
+    container_name: ${NODE_ENV}-cautela-api
     env_file:
       - .env
     ports:
@@ -21,7 +21,7 @@ services:
 
   seed:
     build: .
-    container_name: cautela-seed
+    container_name: ${NODE_ENV}-cautela-seed
     env_file:
       - .env
     profiles:
@@ -35,7 +35,7 @@ services:
 
   migrate:
     build: .
-    container_name: cautela-migrate
+    container_name: ${NODE_ENV}-cautela-migrate
     env_file:
       - .env
     profiles:
@@ -49,7 +49,7 @@ services:
 
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: cautela-sqlserver
+    container_name: ${NODE_ENV}-cautela-sqlserver
     ports:
       - '${DB_HOST_PORT}:1433'
     environment:

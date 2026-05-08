@@ -1,5 +1,6 @@
 services:
   cautela-web:
+    container_name: ${NODE_ENV}-cautela-web
     build:
       context: .
       args:
