@@ -12,6 +12,8 @@ interface Props {
   onDismiss: (id: string) => void;
   /** Tempo (ms) até auto-dismiss. Default 6000. */
   autoDismissMs?: number;
+  /** Se true, renderiza inline na interface em vez de fixed no topo. */
+  isInline?: boolean;
 }
 
 /**
@@ -22,8 +24,22 @@ interface Props {
  *   - stencil → "Lavagem de stencil registrada."
  *   - placa  → "Lavagem de placa registrada."
  */
-export function WashNotification({ notifications, onDismiss, autoDismissMs = 6000 }: Props) {
+export function WashNotification({ notifications, onDismiss, autoDismissMs = 6000, isInline = false }: Props) {
   if (notifications.length === 0) return null;
+
+  if (isInline) {
+    return (
+      <div className="flex flex-col gap-2">
+        {notifications.map((n) => (
+          <InlineNotificationItem
+            key={n.id}
+            item={n}
+            onDismiss={onDismiss}
+          />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -92,6 +108,53 @@ function NotificationItem({
     >
       <span className="flex items-center gap-2">
         <CircleAlert className="h-5 w-5" aria-hidden />
+        {message}
+      </span>
+      <button
+        type="button"
+        aria-label="Fechar notificação"
+        onClick={() => onDismiss(item.id)}
+        className="ml-2 inline-flex h-5 w-5 items-center justify-center opacity-70 hover:opacity-100"
+      >
+        <X className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
+function InlineNotificationItem({
+  item,
+  onDismiss,
+}: {
+  item: WashNotificationItem;
+  onDismiss: (id: string) => void;
+}) {
+  const message =
+    item.origin === "stencil"
+      ? "Lavagem de stencil registrada."
+      : "Lavagem de placa registrada.";
+
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      style={{
+        width: 549,
+        minHeight: 40,
+        borderRadius: 4,
+        padding: "8px 16px",
+        backgroundColor: "#C3DDFD",
+        border: "1px solid #76A9FA",
+        color: "#1B427F",
+        fontFamily: "'Geist', 'Inter', system-ui, sans-serif",
+        fontWeight: 500,
+        fontSize: 14,
+        gap: 8,
+      }}
+      className="flex items-center justify-between shadow-card"
+    >
+      <span className="flex items-center gap-2">
+        <CircleAlert className="h-5 w-5 text-[#1B427F]" aria-hidden />
         {message}
       </span>
       <button

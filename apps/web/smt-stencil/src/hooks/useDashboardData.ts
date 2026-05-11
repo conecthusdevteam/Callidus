@@ -41,18 +41,11 @@ const saveDashboardData = (data: DashboardData) => {
   }
 };
 
-const initialDashboardData: DashboardData = {
-  totalDia: 0,
-  totalStencil: 0,
-  totalPlacas: 0,
-  ultimaSyncLabel: 'sem dados',
-  stencils: [],
-  placas: [],
-  status: {
-    scs: { ok: false, lastSyncMin: -1 },
-    clp: { ok: false, lastSyncMin: -1 },
-  },
-};
+function toTimestamp(data: string, hora: string) {
+  const [dia, mes, ano] = data.split('/').map(Number);
+  const [horaNum, min] = hora.split(':').map(Number);
+  return new Date(ano, mes - 1, dia, horaNum, min).getTime();
+}
 
 function buildDashboardData(stencils: ApiStencil[], placas: ApiPlate[]): DashboardData {
   const stencilRows = stencils.map(mapStencilApiToWash);
@@ -206,10 +199,19 @@ export function useDashboardData(intervalMs = 60_000) {
         }
 
         const isInitialLoad = !initialized.current;
+        let maxFreshTimestamp = 0;
+        if (fresh.length > 0) {
+          for (const e of fresh) {
+            const wash = next.stencils.find(s => s.id === e.washId) || next.placas.find(p => p.id === e.washId);
+            if (wash) {
+              maxFreshTimestamp = Math.max(maxFreshTimestamp, toTimestamp(wash.data, wash.hora));
+            }
+          }
+        }
         const shouldResetLastUpdate = isInitialLoad
           ? (!cachedDashboard && anySuccess) || fresh.length > 0
           : fresh.length > 0;
-        const shouldSaveAt = shouldResetLastUpdate ? new Date() : lastUpdateRef.current;
+        const shouldSaveAt = shouldResetLastUpdate ? new Date(maxFreshTimestamp || Date.now()) : lastUpdateRef.current;
 
         if (isInitialLoad) {
           initialized.current = true;
