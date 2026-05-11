@@ -41,18 +41,11 @@ const saveDashboardData = (data: DashboardData) => {
   }
 };
 
-const initialDashboardData: DashboardData = {
-  totalDia: 0,
-  totalStencil: 0,
-  totalPlacas: 0,
-  ultimaSyncLabel: 'sem dados',
-  stencils: [],
-  placas: [],
-  status: {
-    scs: { ok: false, lastSyncMin: -1 },
-    clp: { ok: false, lastSyncMin: -1 },
-  },
-};
+function toTimestamp(data: string, hora: string) {
+  const [dia, mes, ano] = data.split('/').map(Number);
+  const [horaNum, min] = hora.split(':').map(Number);
+  return new Date(ano, mes - 1, dia, horaNum, min).getTime();
+}
 
 function buildDashboardData(stencils: ApiStencil[], placas: ApiPlate[]): DashboardData {
   const stencilRows = stencils.map(mapStencilApiToWash);
@@ -206,10 +199,19 @@ export function useDashboardData(intervalMs = 60_000) {
         }
 
         const isInitialLoad = !initialized.current;
+        let maxFreshTimestamp = 0;
+        if (fresh.length > 0) {
+          for (const e of fresh) {
+            const wash = next.stencils.find(s => s.id === e.washId) || next.placas.find(p => p.id === e.washId);
+            if (wash) {
+              maxFreshTimestamp = Math.max(maxFreshTimestamp, toTimestamp(wash.data, wash.hora));
+            }
+          }
+        }
         const shouldResetLastUpdate = isInitialLoad
           ? (!cachedDashboard && anySuccess) || fresh.length > 0
           : fresh.length > 0;
-        const shouldSaveAt = shouldResetLastUpdate ? new Date() : lastUpdateRef.current;
+        const shouldSaveAt = shouldResetLastUpdate ? new Date(maxFreshTimestamp || Date.now()) : lastUpdateRef.current;
 
         if (isInitialLoad) {
           initialized.current = true;
@@ -252,11 +254,12 @@ export function useDashboardData(intervalMs = 60_000) {
   useEffect(() => {
     const intervalId = window.setInterval(() => {
       const now = Date.now();
-      const cycle = (now - clpSimulationStartAt.current) % 150_000;
-      const simulatedClpDown = cycle >= 90_000;
-      const statusBaseAt = lastUpdateRef.current.getTime() - 120_000; // 2 minutos de diferença do card de coleta
-      const scsLastSyncMin = Math.max(0, Math.floor((now - statusBaseAt) / 60000));
-      const clpLastSyncMin = Math.max(0, Math.floor((now - statusBaseAt) / 60000));
+      const elapsed = now - clpSimulationStartAt.current;
+      const scsCycle = Math.floor((elapsed % 300_000) / 60_000);
+      const clpCycle = Math.floor((elapsed % 300_000) / 60_000);
+      const simulatedClpDown = clpCycle === 3;
+      const scsLastSyncMin = scsCycle;
+      const clpLastSyncMin = simulatedClpDown ? 0 : clpCycle === 4 ? 1 : clpCycle;
 
       setData((prev) => {
         const nextStatus = {

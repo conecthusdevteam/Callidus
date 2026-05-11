@@ -34,16 +34,16 @@ export function SupplyStatusKpi({ status }: { status: SystemStatus }) {
             )}
           >
             <div className="flex items-center gap-2">
-              <span className="text-x1 font-bold tabular text-foreground">
+              <span className="text-xl font-bold tabular text-foreground">
                 {it.label}
               </span>
               {it.ok ? (
-                <CheckCircle2 className="h-5 w-5 text-badge-ok-fg" />
+                <CheckCircle2 className="h-6 w-6 text-badge-ok-fg" />
               ) : (
-                <XCircle className="h-5 w-5 text-badge-danger-fg" />
+                <XCircle className="h-6 w-6 text-badge-danger-fg" />
               )}
             </div>
-            <span className="text-sm text-muted-foreground">
+            <span className="text text-muted-foreground">
               {`há ${it.mins} minuto${it.mins === 1 ? "" : "s"}`}
             </span>
           </div>

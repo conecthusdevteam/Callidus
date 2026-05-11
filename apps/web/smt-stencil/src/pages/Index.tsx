@@ -111,10 +111,6 @@ const Index = () => {
 
   return (
     <div className="flex min-h-screen bg-background">
-      <WashNotification
-        notifications={newEvents.map((e) => ({ id: e.id, origin: e.origin }))}
-        onDismiss={dismissEvent}
-      />
       <Sidebar />
       <div className="flex flex-1 flex-col">
         <Header />
@@ -187,6 +183,13 @@ const Index = () => {
                       onApplyPlaca={(filters) => setPlacaFilters(filters)}
                     />
                   </div>
+                </div>
+                <div className="mt-4">
+                  <WashNotification
+                    notifications={newEvents.map((e) => ({ id: e.id, origin: e.origin }))}
+                    onDismiss={dismissEvent}
+                    isInline={true}
+                  />
                 </div>
                 {tab === "stencil" ? (
                   <>
