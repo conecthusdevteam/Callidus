@@ -610,6 +610,7 @@ export default function Home() {
   const [modalEncerrada, setModalEncerrada] = useState(false);
 
   const [cautelasLidas, setCautelasLidas] = useState<Set<string>>(new Set());
+  const cautelasConhecidasRef = useRef<Map<string, string>>(new Map());
 
   const cautelasRef = useRef<Cautela[]>([]);
   const cautelaSelecionadaRef = useRef<Cautela | null>(null);
@@ -624,6 +625,26 @@ export default function Home() {
   const carregarCautelas = useCallback(async () => {
     try {
       const data = await getCautelas();
+      setCautelas(data);
+      data.forEach((c) => {
+        if (STATUS_RECEBIDOS.includes(c.status as StatusCautela)) {
+          const anterior = cautelasConhecidasRef.current.get(c.id);
+          const isNova = anterior === undefined;
+          const mudouStatus = anterior !== undefined && anterior !== c.status;
+          if (isNova || mudouStatus) {
+            setCautelasLidas((prev) => {
+              const novo = new Set(prev);
+              novo.delete(c.id);
+              return novo;
+            });
+          }
+        }
+      });
+
+      cautelasConhecidasRef.current = new Map(
+        data.map((c) => [c.id, c.status]),
+      );
+
       setCautelas(data);
       const sel = cautelaSelecionadaRef.current;
       if (sel) {
@@ -927,7 +948,7 @@ export default function Home() {
   );
 
   return (
-    <div className="min-h-screen pt-[60px] pl-0 md:pl-[70px] bg-[#F5F7F6] relative overflow-x-hidden">
+    <div className="min-h-screen md:h-screen pt-[60px] pl-0 md:pl-[70px] bg-[#F5F7F6] relative overflow-x-hidden md:overflow-hidden">
       {/* ══ DESKTOP ══ */}
       <div className="hidden md:flex h-[calc(100vh-60px)]">
         <div className="w-[560px] flex-shrink-0 px-8 pt-8 pb-4 flex flex-col h-full">
