@@ -78,6 +78,19 @@ function buildDashboardData(stencils: ApiStencil[], placas: ApiPlate[]): Dashboa
   };
 }
 
+const initialDashboardData: DashboardData = {
+  totalDia: 0,
+  totalStencil: 0,
+  totalPlacas: 0,
+  ultimaSyncLabel: 'sem dados',
+  stencils: [],
+  placas: [],
+  status: {
+    scs: { ok: false, lastSyncMin: -1 },
+    clp: { ok: false, lastSyncMin: -1 },
+  },
+};
+
 export function useDashboardData(intervalMs = 60_000) {
   const cachedDashboard = loadCachedDashboardData();
   const [data, setData] = useState<DashboardData>(() => cachedDashboard ?? initialDashboardData);
@@ -107,9 +120,11 @@ export function useDashboardData(intervalMs = 60_000) {
         ]);
 
         let anySuccess = false;
+        let stencilRows = knownStencilRows.current;
+        let placaRows = knownPlacaRows.current;
 
         if (stencilResult.status === 'fulfilled') {
-          const stencilRows = (stencilResult.value as ApiStencil[]).map(mapStencilApiToWash);
+          stencilRows = (stencilResult.value as ApiStencil[]).map(mapStencilApiToWash);
           stencilRows.sort((a, b) => {
             const [diaA, mesA, anoA] = a.data.split('/').map(Number);
             const [horaA, minA] = a.hora.split(':').map(Number);
@@ -118,14 +133,12 @@ export function useDashboardData(intervalMs = 60_000) {
             return new Date(anoB, mesB - 1, diaB, horaB, minB).getTime() -
               new Date(anoA, mesA - 1, diaA, horaA, minA).getTime();
           });
-          knownStencilRows.current = stencilRows;
-          knownStencilIds.current = new Set(stencilRows.map((s) => s.id));
           stencilLastSuccessAt.current = Date.now();
           anySuccess = true;
         }
 
         if (placaResult.status === 'fulfilled') {
-          const placaRows = (placaResult.value as ApiPlate[]).map(mapPlateApiToWash);
+          placaRows = (placaResult.value as ApiPlate[]).map(mapPlateApiToWash);
           placaRows.sort((a, b) => {
             const [diaA, mesA, anoA] = a.data.split('/').map(Number);
             const [horaA, minA] = a.hora.split(':').map(Number);
@@ -134,8 +147,6 @@ export function useDashboardData(intervalMs = 60_000) {
             return new Date(anoB, mesB - 1, diaB, horaB, minB).getTime() -
               new Date(anoA, mesA - 1, diaA, horaA, minA).getTime();
           });
-          knownPlacaRows.current = placaRows;
-          knownPlacaIds.current = new Set(placaRows.map((p) => p.id));
           placaLastSuccessAt.current = Date.now();
           anySuccess = true;
         }
@@ -149,13 +160,53 @@ export function useDashboardData(intervalMs = 60_000) {
         actualScsOk.current = actualScs;
         actualClpOk.current = actualClp;
 
+        const freshStencilRows = stencilRows.filter((row) => !knownStencilIds.current.has(row.id));
+        const freshPlacaRows = placaRows.filter((row) => !knownPlacaIds.current.has(row.id));
+
+        const fresh: NewWashEvent[] = [
+          ...freshStencilRows.map((s) => ({
+            id: `evt-${Date.now()}-${seq.current++}`,
+            washId: s.id,
+            origin: 'stencil',
+            at: toTimestamp(s.data, s.hora),
+          })),
+          ...freshPlacaRows.map((p) => ({
+            id: `evt-${Date.now()}-${seq.current++}`,
+            washId: p.id,
+            origin: 'placa',
+            at: toTimestamp(p.data, p.hora),
+          })),
+        ];
+
+        const latestRowTimestamp = Math.max(
+          0,
+          ...stencilRows.map((s) => toTimestamp(s.data, s.hora)),
+          ...placaRows.map((p) => toTimestamp(p.data, p.hora)),
+        );
+
+        const isInitialLoad = !initialized.current;
+        const shouldResetLastUpdate = isInitialLoad
+          ? fresh.length > 0 || (!cachedDashboard && anySuccess)
+          : fresh.length > 0;
+        const resetTimestamp = fresh.length > 0
+          ? Math.max(...fresh.map((event) => event.at))
+          : latestRowTimestamp || Date.now();
+        const shouldSaveAt = shouldResetLastUpdate
+          ? new Date(resetTimestamp)
+          : lastUpdateRef.current;
+
+        knownStencilRows.current = stencilRows;
+        knownPlacaRows.current = placaRows;
+        freshStencilRows.forEach((row) => knownStencilIds.current.add(row.id));
+        freshPlacaRows.forEach((row) => knownPlacaIds.current.add(row.id));
+
         const next: DashboardData = {
-          totalDia: knownStencilRows.current.length + knownPlacaRows.current.length,
-          totalStencil: knownStencilRows.current.length,
-          totalPlacas: knownPlacaRows.current.length,
+          totalDia: stencilRows.length + placaRows.length,
+          totalStencil: stencilRows.length,
+          totalPlacas: placaRows.length,
           ultimaSyncLabel: 'agora',
-          stencils: knownStencilRows.current,
-          placas: knownPlacaRows.current,
+          stencils: stencilRows,
+          placas: placaRows,
           status: {
             scs: {
               ok: actualScs,
@@ -172,46 +223,10 @@ export function useDashboardData(intervalMs = 60_000) {
           return;
         }
 
-        const fresh: NewWashEvent[] = [];
-
-        for (const s of next.stencils) {
-          if (!knownStencilIds.current.has(s.id)) {
-            knownStencilIds.current.add(s.id);
-            fresh.push({
-              id: `evt-${Date.now()}-${seq.current++}`,
-              washId: s.id,
-              origin: 'stencil',
-              at: Date.now(),
-            });
-          }
+        const shouldShowEvents = !(isInitialLoad && !cachedDashboard);
+        if (shouldShowEvents && fresh.length > 0) {
+          setNewEvents((prev) => [...prev, ...fresh]);
         }
-
-        for (const p of next.placas) {
-          if (!knownPlacaIds.current.has(p.id)) {
-            knownPlacaIds.current.add(p.id);
-            fresh.push({
-              id: `evt-${Date.now()}-${seq.current++}`,
-              washId: p.id,
-              origin: 'placa',
-              at: Date.now(),
-            });
-          }
-        }
-
-        const isInitialLoad = !initialized.current;
-        let maxFreshTimestamp = 0;
-        if (fresh.length > 0) {
-          for (const e of fresh) {
-            const wash = next.stencils.find(s => s.id === e.washId) || next.placas.find(p => p.id === e.washId);
-            if (wash) {
-              maxFreshTimestamp = Math.max(maxFreshTimestamp, toTimestamp(wash.data, wash.hora));
-            }
-          }
-        }
-        const shouldResetLastUpdate = isInitialLoad
-          ? (!cachedDashboard && anySuccess) || fresh.length > 0
-          : fresh.length > 0;
-        const shouldSaveAt = shouldResetLastUpdate ? new Date(maxFreshTimestamp || Date.now()) : lastUpdateRef.current;
 
         if (isInitialLoad) {
           initialized.current = true;
@@ -221,14 +236,7 @@ export function useDashboardData(intervalMs = 60_000) {
             lastUpdateRef.current = shouldSaveAt;
           }
           saveDashboardData(next);
-          if (fresh.length > 0) {
-            setNewEvents((prev) => [...prev, ...fresh]);
-          }
           return;
-        }
-
-        if (fresh.length > 0) {
-          setNewEvents((prev) => [...prev, ...fresh]);
         }
 
         setData(next);

@@ -89,7 +89,7 @@ function NotificationItem({
       role="status"
       aria-live="polite"
       style={{
-        width: 535,
+        width: 390,
         height: 40,
         borderRadius: 4,
         padding: "8px 16px",
