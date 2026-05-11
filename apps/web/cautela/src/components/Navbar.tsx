@@ -1,19 +1,57 @@
-/**
- * Navbar.tsx
- *
- * A barra de pesquisa emite um CustomEvent "cautela-search" com o termo digitado.
- * O Home.tsx escuta esse evento e aplica o filtro.
- * Isso evita prop drilling ou context desnecessário.
- */
-
-import { useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { getCautelas } from "../lib/api";
+import type { Cautela } from "../data/cautelaTypes";
+
+function statusLabel(status: string): { label: string; color: string } {
+  switch (status) {
+    case "Aprovado":
+      return { label: "APROVADO", color: "#0E9F6E" };
+    case "Reprovado":
+      return { label: "REPROVADO", color: "#E02424" };
+    case "Em análise":
+      return { label: "EM ANÁLISE", color: "#D97706" };
+    case "Saída Autorizada":
+      return { label: "SAÍDA AUTORIZADA", color: "#D97706" };
+    case "Encerrada":
+      return { label: "ENCERRADA", color: "#6B7280" };
+    default:
+      return { label: status.toUpperCase(), color: "#6B7280" };
+  }
+}
 
 export default function Navbar() {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const inputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const [termo, setTermo] = useState("");
+  const [todasCautelas, setTodasCautelas] = useState<Cautela[]>([]);
+  const [dropdownAberto, setDropdownAberto] = useState(false);
+
+  useEffect(() => {
+    getCautelas()
+      .then(setTodasCautelas)
+      .catch(() => setTodasCautelas([]));
+  }, []);
+
+  useEffect(() => {
+    function handleClickFora(e: MouseEvent) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node) &&
+        inputRef.current &&
+        !inputRef.current.contains(e.target as Node)
+      ) {
+        setDropdownAberto(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickFora);
+    return () => document.removeEventListener("mousedown", handleClickFora);
+  }, []);
 
   async function handleLogout() {
     await logout();
@@ -26,22 +64,78 @@ export default function Navbar() {
     );
   }
 
-  function handlePesquisar() {
-    emitSearch(inputRef.current?.value ?? "");
-  }
-
-  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter") handlePesquisar();
-    // Limpa ao apagar tudo
-    if (e.key === "Backspace" && e.currentTarget.value.length <= 1) {
-      emitSearch("");
-    }
+  function emitSelecionar(cautela: Cautela) {
+    window.dispatchEvent(
+      new CustomEvent("cautela-selecionar", { detail: { cautela } }),
+    );
   }
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    // Pesquisa em tempo real enquanto digita
-    emitSearch(e.target.value);
+    const val = e.target.value;
+    setTermo(val);
+    emitSearch(val);
+    setDropdownAberto(val.trim().length > 0);
   }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter") {
+      emitSearch(e.currentTarget.value);
+      setDropdownAberto(false);
+    }
+    if (e.key === "Escape") setDropdownAberto(false);
+    if (e.key === "Backspace" && e.currentTarget.value.length <= 1) {
+      emitSearch("");
+      setDropdownAberto(false);
+    }
+  }
+
+  function handlePesquisar() {
+    emitSearch(inputRef.current?.value ?? "");
+    setDropdownAberto(false);
+  }
+
+  function handleSelecionarCautela(cautela: Cautela) {
+    setDropdownAberto(false);
+    setTermo("");
+    emitSearch("");
+
+    const isHistorico =
+      location.pathname === "/historico" ||
+      location.pathname === "/gestor/historico";
+
+    if (isHistorico) {
+      const destino = user?.papel === "GESTOR" ? "/gestor" : "/";
+      navigate(destino, { state: { cautelaSelecionada: cautela } });
+    } else {
+      emitSelecionar(cautela);
+    }
+  }
+
+  function handleVerHistorico() {
+    setDropdownAberto(false);
+    if (user?.papel === "GESTOR") {
+      navigate("/gestor/historico");
+    } else {
+      navigate("/historico");
+    }
+  }
+
+  const resultadosDropdown = termo.trim()
+    ? todasCautelas
+        .filter((c) => {
+          const q = termo.toLowerCase();
+          return (
+            c.id.toLowerCase().includes(q) ||
+            c.visitante?.toLowerCase().includes(q) ||
+            c.gestor?.toLowerCase().includes(q) ||
+            c.empresa?.toLowerCase().includes(q) ||
+            c.status.toLowerCase().includes(q)
+          );
+        })
+        .slice(0, 3)
+    : [];
+
+  const mostrarDropdown = dropdownAberto && termo.trim().length > 0;
 
   return (
     <>
@@ -55,7 +149,6 @@ export default function Navbar() {
           boxShadow: "0px 4px 4px rgba(0,0,0,0.25)",
         }}
       >
-        {/* Ícone menu + título */}
         <div className="ml-2 flex items-center gap-5 flex-shrink-0">
           <svg
             width="20"
@@ -76,8 +169,7 @@ export default function Navbar() {
           </span>
         </div>
 
-        {/* Campo de pesquisa — fiel ao design */}
-        <div className="ml-4 flex items-center gap-2 flex-1 max-w-[480px]">
+        <div className="ml-4 flex items-center gap-2 flex-1 max-w-[480px] relative">
           <div className="relative flex-1">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
               <svg
@@ -97,12 +189,72 @@ export default function Navbar() {
             <input
               ref={inputRef}
               type="text"
+              value={termo}
               placeholder="Pesquise por nome, solicitante, Id de cautela ou status"
               className="w-full pl-9 pr-3 py-1.5 text-[13px] border border-[#D1D5DB] rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-[#2B8E37] focus:border-transparent"
               onChange={handleChange}
               onKeyDown={handleKeyDown}
+              onFocus={() => termo.trim() && setDropdownAberto(true)}
             />
+
+            {mostrarDropdown && (
+              <div
+                ref={dropdownRef}
+                className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-2xl border border-[#E5E7EB] z-50 overflow-hidden"
+                style={{ minWidth: "360px" }}
+              >
+                {resultadosDropdown.length === 0 ? (
+                  <div className="px-4 py-4 text-[13px] text-[#6B7280] text-center">
+                    Nenhum resultado encontrado.
+                  </div>
+                ) : (
+                  resultadosDropdown.map((cautela) => {
+                    const { label, color } = statusLabel(cautela.status);
+                    return (
+                      <button
+                        key={cautela.id}
+                        onClick={() => handleSelecionarCautela(cautela)}
+                        className="w-full text-left px-4 py-3 hover:bg-[#F9FAFB] transition-colors border-b border-[#F3F4F6] last:border-0"
+                      >
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="min-w-0">
+                            <p className="text-[12px] text-[#6B7280]">
+                              Id Cautela:{" "}
+                              <span className="font-mono">{cautela.id}</span>
+                            </p>
+                            <p className="text-[13px] text-[#111827] mt-0.5">
+                              Ciente:{" "}
+                              <span className="font-bold">
+                                {(cautela.gestor || "—").toUpperCase()}
+                              </span>
+                            </p>
+                          </div>
+                          <div className="flex-shrink-0 text-right">
+                            <p className="text-[12px] text-[#6B7280]">
+                              Data: {cautela.data}
+                            </p>
+                            <p
+                              className="text-[13px] font-bold mt-0.5"
+                              style={{ color }}
+                            >
+                              {label}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+                <button
+                  onClick={handleVerHistorico}
+                  className="w-full px-4 py-3 text-[13px] text-[#6B7280] hover:text-[#2B8E37] hover:bg-[#F9FAFB] transition-colors text-center font-medium border-t border-[#E5E7EB]"
+                >
+                  Ver histórico completo
+                </button>
+              </div>
+            )}
           </div>
+
           <button
             onClick={handlePesquisar}
             className="px-2 py-1.5 rounded-md bg-[#3BB14A] text-white text-[13px] font-semibold hover:bg-[#22592A] transition-colors whitespace-nowrap"
@@ -111,7 +263,6 @@ export default function Navbar() {
           </button>
         </div>
 
-        {/* Usuário + Sair */}
         <div className="ml-auto flex items-center gap-3 flex-shrink-0">
           {user && (
             <span className="text-sm text-[#404040] font-medium">
@@ -136,7 +287,6 @@ export default function Navbar() {
           boxShadow: "0px 4px 4px rgba(0,0,0,0.25)",
         }}
       >
-        {/* Linha título */}
         <div className="flex items-center justify-center h-[50px] relative">
           <span className="font-bold text-[20px] leading-[26px] tracking-[-0.25px]">
             Controle de Cautelas
@@ -148,7 +298,6 @@ export default function Navbar() {
             Sair
           </button>
         </div>
-        {/* Linha pesquisa mobile */}
         <div className="flex items-center gap-2 px-3 pb-2">
           <div className="relative flex-1">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -168,11 +317,15 @@ export default function Navbar() {
             </span>
             <input
               type="text"
+              value={termo}
               placeholder="Pesquisar..."
               className="w-full pl-9 pr-3 py-1.5 text-[12px] border border-[#D1D5DB] rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-[#2B8E37]"
-              onChange={(e) => emitSearch(e.target.value)}
+              onChange={handleChange}
               onKeyDown={(e) => {
-                if (e.key === "Enter") emitSearch(e.currentTarget.value);
+                if (e.key === "Enter") {
+                  emitSearch(e.currentTarget.value);
+                  setDropdownAberto(false);
+                }
               }}
             />
           </div>

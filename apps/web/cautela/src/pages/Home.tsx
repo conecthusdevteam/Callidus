@@ -6,10 +6,10 @@ import FormularioCautela, {
   type FieldErrors,
 } from "../components/FormularioCautela";
 import { ModalEncerrada } from "../components/ModalGestor";
+import { useLocation } from "react-router-dom";
 
 // ─── Avatares ─────────────────────────────────────────────────────────────────
 
-/** Avatar amarelo com ícone de pessoa — usado para Em análise e card Nova (fiel ao design) */
 function AvatarAnalise() {
   return (
     <div className="w-12 h-12 rounded-full bg-[#FCE96A] flex items-center justify-center flex-shrink-0">
@@ -110,9 +110,8 @@ function AvatarEncerrada() {
   );
 }
 
-// ─── Badges inline dos cards ──────────────────────────────────────────────────
+// ─── Badges ───────────────────────────────────────────────────────────────────
 
-/** Badge amarelo "Em análise" com ícone ! — fiel ao design */
 function BadgeAnalise() {
   return (
     <span className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-medium bg-[#FCE96A] text-[#111827] border border-[#FACA15]">
@@ -221,15 +220,15 @@ function BadgeEncerrada() {
   );
 }
 
-// ─── Card de cautela — fiel ao design ────────────────────────────────────────
+// ─── Card de cautela ──────────────────────────────────────────────────────────
 
 function CardCautelaPortaria({
   cautela,
-  isNova,
+  isNaoLida,
   onClick,
 }: {
   cautela: Cautela;
-  isNova: boolean;
+  isNaoLida: boolean;
   onClick: () => void;
 }) {
   const status = cautela.status as StatusCautela;
@@ -260,8 +259,7 @@ function CardCautelaPortaria({
       <BadgeAnalise />
     );
 
-  // Borda do card — amarela para nova/atenção, padrão para os demais
-  const borderClass = isNova
+  const borderClass = isNaoLida
     ? "border-2 border-amber-400 bg-[#FFFBEB]"
     : status === "Saída Autorizada"
       ? "border border-amber-300 bg-amber-50"
@@ -272,19 +270,16 @@ function CardCautelaPortaria({
       onClick={onClick}
       className={`rounded-lg p-5 cursor-pointer transition-all hover:shadow-md mb-3 ${borderClass}`}
     >
-      {/* Topo: avatar + nome + badge */}
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="flex items-center gap-3 min-w-0 flex-1">
           {avatar}
           <p className="text-[18px] font-bold leading-tight text-[#404040]">
-            {cautela.visitante || "Nome do solicitante sendo mt grande desce"}
+            {cautela.visitante || "Nome do solicitante"}
           </p>
         </div>
-
-        {/* Badge(s) + tag Nova */}
         <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-1">
           {badge}
-          {isNova && (
+          {isNaoLida && (
             <span className="inline-flex items-center rounded-lg px-2 py-0.5 text-[12px] font-semibold bg-[#FCE96A] text-black mt-0.5">
               Nova
             </span>
@@ -292,7 +287,6 @@ function CardCautelaPortaria({
         </div>
       </div>
 
-      {/* Data e Ciente */}
       <p className="text-[15px] text-[#404040] mt-1">
         Data: {cautela.data || "00/00/0000"}
       </p>
@@ -303,10 +297,8 @@ function CardCautelaPortaria({
         </span>
       </p>
 
-      {/* Separador preto — fiel ao design */}
       <div className="border-t border-black my-3" />
 
-      {/* Cautelados */}
       <p className="text-[14px] font-medium text-[#404040] mb-1">Cautelados:</p>
       <ul className="space-y-0.5 mb-3">
         {cautela.equipamentos?.slice(0, 3).map((eq, i) => (
@@ -325,7 +317,6 @@ function CardCautelaPortaria({
         )}
       </ul>
 
-      {/* Botão Ver detalhes — alinhado à direita, sem borda */}
       <div className="flex justify-end">
         <button
           onClick={(e) => {
@@ -343,17 +334,8 @@ function CardCautelaPortaria({
 
 function validarDocumento(documento: string) {
   const valor = documento.replace(/\D/g, "");
-
-  // CPF
-  if (valor.length === 11) {
-    return true;
-  }
-
-  // RG
-  if (valor.length >= 7 && valor.length <= 14) {
-    return true;
-  }
-
+  if (valor.length === 11) return true;
+  if (valor.length >= 7 && valor.length <= 14) return true;
   return false;
 }
 
@@ -421,7 +403,7 @@ function DetalhesCautelaPortaria({
                   d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                 />
               </svg>
-              Encerrada
+              Encerrada {cautela.encerradaEm ? `em ${cautela.encerradaEm}` : ""}
             </div>
           ) : cautela.status === "Reprovado" ? (
             <div className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-[#FBD5D5] border border-[#F05252] text-[#9B1C1C] text-[13px] font-medium">
@@ -571,21 +553,38 @@ function matchesSearch(cautela: Cautela, term: string): boolean {
   return false;
 }
 
-// ─── Página principal ─────────────────────────────────────────────────────────
+const STATUS_RECEBIDOS: StatusCautela[] = [
+  "Aprovado",
+  "Reprovado",
+  "Saída Autorizada",
+  "Encerrada",
+];
 
 type Tab = "enviados" | "recebidos";
 
 export default function Home() {
   const { user } = useAuth();
+  const location = useLocation();
   const canCreateCautela =
     user?.papel === "ADMIN" || user?.papel === "PORTARIA";
 
-  const [activeTab, setActiveTab] = useState<Tab>("enviados");
-  const [cautelaSelecionada, setCautelaSelecionada] = useState<Cautela | null>(
-    null,
-  );
-  const [searchTerm, setSearchTerm] = useState("");
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    const state = location.state as { cautelaSelecionada?: Cautela } | null;
+    return state?.cautelaSelecionada ? "recebidos" : "enviados";
+  });
 
+  const [cautelaSelecionada, setCautelaSelecionada] = useState<Cautela | null>(
+    () => {
+      const state = location.state as { cautelaSelecionada?: Cautela } | null;
+      if (state?.cautelaSelecionada) {
+        window.history.replaceState({}, "");
+        return state.cautelaSelecionada;
+      }
+      return null;
+    },
+  );
+
+  const [searchTerm, setSearchTerm] = useState("");
   const [documento, setDocumento] = useState("");
   const [empresa, setEmpresa] = useState("");
   const [descricao, setDescricao] = useState("");
@@ -608,12 +607,9 @@ export default function Home() {
   const [showModal, setShowModal] = useState(false);
   const [itemParaExcluir, setItemParaExcluir] = useState<number | null>(null);
   const [showItemDeletedModal, setShowItemDeletedModal] = useState(false);
-  const [recemRespondidos, setRecemRespondidos] = useState<Set<string>>(
-    new Set(),
-  );
   const [modalEncerrada, setModalEncerrada] = useState(false);
-  // Controla se há nova "Saída Autorizada" ainda não vista (bolinha vermelha)
-  const [saidasVistas, setSaidasVistas] = useState<Set<string>>(new Set());
+
+  const [cautelasLidas, setCautelasLidas] = useState<Set<string>>(new Set());
 
   const cautelasRef = useRef<Cautela[]>([]);
   const cautelaSelecionadaRef = useRef<Cautela | null>(null);
@@ -628,44 +624,7 @@ export default function Home() {
   const carregarCautelas = useCallback(async () => {
     try {
       const data = await getCautelas();
-      const prev = cautelasRef.current;
-
-      // Nova "Saída Autorizada" detectada → ativa bolinha vermelha
-      data.forEach((nova) => {
-        if (nova.status !== "Saída Autorizada") return;
-        const antiga = prev.find((c) => c.id === nova.id);
-        const ehNova = !antiga || antiga.status !== "Saída Autorizada";
-        if (ehNova) {
-          setSaidasVistas((s) => {
-            const novo = new Set(s);
-            novo.delete(nova.id);
-            return novo;
-          });
-        }
-      });
-
-      // Transição Em análise → Aprovado/Reprovado
-      const respondidas = data.filter((nova) => {
-        const antiga = prev.find((c) => c.id === nova.id);
-        return (
-          antiga?.status === "Em análise" &&
-          (nova.status === "Aprovado" || nova.status === "Reprovado")
-        );
-      });
-      if (respondidas.length > 0) {
-        const ids = new Set(respondidas.map((c) => c.id));
-        setRecemRespondidos((p) => new Set([...p, ...ids]));
-        setTimeout(() => {
-          setRecemRespondidos((p) => {
-            const n = new Set(p);
-            ids.forEach((id) => n.delete(id));
-            return n;
-          });
-        }, 3000);
-      }
-
       setCautelas(data);
-
       const sel = cautelaSelecionadaRef.current;
       if (sel) {
         const atualizada = data.find((c) => c.id === sel.id);
@@ -692,33 +651,48 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [carregarCautelas]);
 
-  // Escuta evento de pesquisa da Navbar
+  useEffect(() => {
+    function onSelecionar(e: Event) {
+      const cautela = (e as CustomEvent<{ cautela: Cautela }>).detail.cautela;
+      setCautelaSelecionada(cautela);
+      setActiveTab("recebidos");
+      setCautelasLidas((prev) => new Set([...prev, cautela.id]));
+    }
+    window.addEventListener("cautela-selecionar", onSelecionar);
+    return () => window.removeEventListener("cautela-selecionar", onSelecionar);
+  }, []);
+
   useEffect(() => {
     function onSearch(e: Event) {
       const term = (e as CustomEvent<{ term: string }>).detail.term;
       setSearchTerm(term);
-      if (term.trim()) setActiveTab("recebidos"); // AC-7: mostra encerradas
+      if (term.trim()) setActiveTab("recebidos");
     }
     window.addEventListener("cautela-search", onSearch);
     return () => window.removeEventListener("cautela-search", onSearch);
   }, []);
 
+  function marcarComoLida(cautela: Cautela) {
+    setCautelaSelecionada((prev) => (prev?.id === cautela.id ? null : cautela));
+    if (STATUS_RECEBIDOS.includes(cautela.status as StatusCautela)) {
+      setCautelasLidas((prev) => new Set([...prev, cautela.id]));
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: FieldErrors = {};
     setSubmitError("");
-
     if (!setorId) newErrors.setor = "Selecione um setor.";
     if (!nome.trim()) newErrors.nome = "O campo Proprietário é obrigatório.";
     if (!documento.trim())
-      newErrors.documento = "O campo Documento é obrigatório."; // ← novo
-    if (!empresa.trim()) newErrors.empresa = "O campo Empresa é obrigatório."; // ← novo
+      newErrors.documento = "O campo Documento é obrigatório.";
+    if (!empresa.trim()) newErrors.empresa = "O campo Empresa é obrigatório.";
     const emailRegex = /^[A-Za-z0-9._%+-]+@(callidus|conecthus)\.org\.br$/i;
     if (!emailRegex.test(email))
       newErrors.email = "Use apenas e-mail institucional.";
-    if (!validarDocumento(documento)) {
+    if (!validarDocumento(documento))
       newErrors.documento = "Informe um CPF ou identidade válida";
-    }
     if (items.length === 0) newErrors.items = "Adicione pelo menos um item.";
     if (retornado === null)
       newErrors.retornado = "Selecione se o item será retornado.";
@@ -726,13 +700,10 @@ export default function Home() {
       newErrors.dataFim = "Informe a data de retorno.";
     else if (retornado === true && dataFim.length < 10)
       newErrors.dataFim = "Data inválida.";
-
     const dataFimISO = dataFim
       ? dataFim.split("/").reverse().join("-")
       : undefined;
-
     setFieldErrors(newErrors);
-
     if (Object.keys(newErrors).length === 0) {
       setSubmitting(true);
       try {
@@ -803,34 +774,22 @@ export default function Home() {
   // ── Filtros e contagens ───────────────────────────────────────────────────
 
   const cautelasPorAba = cautelas.filter((c) => {
-    if (activeTab === "enviados")
-      return c.status === "Em análise" || recemRespondidos.has(c.id);
-    return (
-      c.status === "Aprovado" ||
-      c.status === "Reprovado" ||
-      c.status === "Saída Autorizada" ||
-      c.status === "Encerrada"
-    );
+    if (activeTab === "enviados") return c.status === "Em análise";
+    return STATUS_RECEBIDOS.includes(c.status as StatusCautela);
   });
 
-  // AC-7: pesquisa varre TODAS as cautelas
   const pool = searchTerm.trim() ? cautelas : cautelasPorAba;
   const cautelasFiltradas = pool.filter((c) => matchesSearch(c, searchTerm));
 
-  // Contador verde: cautelas com "Saída Autorizada" (ação pendente da portaria)
-  const totalAtencao = cautelas.filter(
-    (c) => c.status === "Saída Autorizada",
-  ).length;
-
-  // Bolinha vermelha: nova ação chegou e portaria ainda não está na aba Recebidos
-  const mostrarBolinha =
-    totalAtencao > 0 &&
-    !cautelas
-      .filter((c) => c.status === "Saída Autorizada")
-      .every((c) => saidasVistas.has(c.id));
-
-  const novaCautelaId =
-    cautelasPorAba.find((c) => c.status === "Aprovado")?.id ?? null;
+  // Cautelas em Recebidos que ainda não foram lidas
+  const cautelasNaoLidas = cautelas.filter(
+    (c) =>
+      STATUS_RECEBIDOS.includes(c.status as StatusCautela) &&
+      !cautelasLidas.has(c.id),
+  );
+  const totalNaoLidas = cautelasNaoLidas.length;
+  // Bolinha vermelha: há não lidas e o usuário não está na aba Recebidos
+  const mostrarBolinha = totalNaoLidas > 0 && activeTab !== "recebidos";
 
   const formularioProps = {
     canCreateCautela,
@@ -884,12 +843,11 @@ export default function Home() {
         <CardCautelaPortaria
           key={cautela.id}
           cautela={cautela}
-          isNova={cautela.id === novaCautelaId}
-          onClick={() =>
-            setCautelaSelecionada((prev) =>
-              prev?.id === cautela.id ? null : cautela,
-            )
+          isNaoLida={
+            STATUS_RECEBIDOS.includes(cautela.status as StatusCautela) &&
+            !cautelasLidas.has(cautela.id)
           }
+          onClick={() => marcarComoLida(cautela)}
         />
       ))}
     </div>
@@ -909,20 +867,19 @@ export default function Home() {
     </div>
   ) : null;
 
-  // ── Botão da aba Recebidos com contador + bolinha ─────────────────────────
   const abaRecebidos = (isMobile = false) => (
     <button
       onClick={() => {
         setActiveTab("recebidos");
         setCautelaSelecionada(null);
-        setSaidasVistas(
-          new Set(
-            cautelas
-              .filter((c) => c.status === "Saída Autorizada")
-              .map((c) => c.id),
-          ),
-        );
         setSearchTerm("");
+        setCautelasLidas((prev) => {
+          const novo = new Set(prev);
+          cautelas
+            .filter((c) => STATUS_RECEBIDOS.includes(c.status as StatusCautela))
+            .forEach((c) => novo.add(c.id));
+          return novo;
+        });
       }}
       className={`${isMobile ? "w-full h-[56px] text-[16px]" : "w-full h-[68px] text-[18px]"} font-normal rounded-t${isMobile ? "-lg" : "-xl"} transition-all relative ${
         activeTab === "recebidos"
@@ -935,16 +892,14 @@ export default function Home() {
         style={{ paddingLeft: "50%" }}
       >
         <span>Recebidos</span>
-        {/* Contador verde — mostra quantas estão com status "Saída Autorizada" */}
-        {totalAtencao > 0 && (
+        {totalNaoLidas > 0 && (
           <div className="relative flex-shrink-0">
             <div
               className="min-w-[28px] h-[28px] px-1.5 rounded-full flex items-center justify-center text-white text-[13px] font-bold leading-none"
               style={{ backgroundColor: "#0E9F6E" }}
             >
-              {totalAtencao > 9 ? "9+" : totalAtencao}
+              {totalNaoLidas > 9 ? "9+" : totalNaoLidas}
             </div>
-            {/* Bolinha vermelha sobreposta — notifica nova ação pendente */}
             {mostrarBolinha && (
               <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-red-500 border-2 border-white" />
             )}
@@ -975,7 +930,6 @@ export default function Home() {
     <div className="min-h-screen pt-[60px] pl-0 md:pl-[70px] bg-[#F5F7F6] relative overflow-x-hidden">
       {/* ══ DESKTOP ══ */}
       <div className="hidden md:flex h-[calc(100vh-60px)]">
-        {/* Coluna esquerda */}
         <div className="w-[560px] flex-shrink-0 px-8 pt-8 pb-4 flex flex-col h-full">
           <div
             className="flex flex-col h-full bg-white rounded-xl border border-[#E5E7EB] overflow-hidden"
@@ -991,7 +945,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Coluna direita */}
         <div className="flex-1 overflow-y-auto flex flex-col items-center py-8 px-6 relative">
           {painelDetalhes}
           <div className="w-full max-w-[580px] text-center mb-6">
@@ -1175,6 +1128,7 @@ export default function Home() {
           </div>
         </div>
       )}
+
       {modalEncerrada && (
         <ModalEncerrada onClose={() => setModalEncerrada(false)} />
       )}
