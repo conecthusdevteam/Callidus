@@ -156,6 +156,17 @@ const Index = () => {
                     </TabButton>
                   </div>
 
+                  <div className="flex flex-1 justify-center px-2">
+                    <div className="w-full max-w-[520px]">
+                      <WashNotification
+                        notifications={newEvents.map((e) => ({ id: e.id, origin: e.origin }))}
+                        onDismiss={dismissEvent}
+                        isInline={true}
+                        currentTab={tab}
+                      />
+                    </div>
+                  </div>
+
                   <div className="flex min-h-10 items-center justify-end gap-3">
                     {tab === "stencil" && (
                       <div className="inline-flex rounded-lg border bg-card p-1 shadow-card">
@@ -183,13 +194,6 @@ const Index = () => {
                       onApplyPlaca={(filters) => setPlacaFilters(filters)}
                     />
                   </div>
-                </div>
-                <div className="mt-4">
-                  <WashNotification
-                    notifications={newEvents.map((e) => ({ id: e.id, origin: e.origin }))}
-                    onDismiss={dismissEvent}
-                    isInline={true}
-                  />
                 </div>
                 {tab === "stencil" ? (
                   <>

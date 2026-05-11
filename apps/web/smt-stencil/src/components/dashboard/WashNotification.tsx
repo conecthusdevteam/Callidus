@@ -14,6 +14,8 @@ interface Props {
   autoDismissMs?: number;
   /** Se true, renderiza inline na interface em vez de fixed no topo. */
   isInline?: boolean;
+  /** Aba atual para filtrar notificações. */
+  currentTab?: "stencil" | "placas";
 }
 
 /**
@@ -24,13 +26,22 @@ interface Props {
  *   - stencil → "Lavagem de stencil registrada."
  *   - placa  → "Lavagem de placa registrada."
  */
-export function WashNotification({ notifications, onDismiss, autoDismissMs = 6000, isInline = false }: Props) {
-  if (notifications.length === 0) return null;
+export function WashNotification({ notifications, onDismiss, autoDismissMs = 6000, isInline = false, currentTab }: Props) {
+  // Filtrar notificações baseado na aba atual
+  const filteredNotifications = currentTab
+    ? notifications.filter((n) => {
+        if (currentTab === "stencil") return n.origin === "stencil";
+        if (currentTab === "placas") return n.origin === "placa";
+        return true;
+      })
+    : notifications;
+
+  if (filteredNotifications.length === 0) return null;
 
   if (isInline) {
     return (
       <div className="flex flex-col gap-2">
-        {notifications.map((n) => (
+        {filteredNotifications.map((n) => (
           <InlineNotificationItem
             key={n.id}
             item={n}
@@ -47,7 +58,7 @@ export function WashNotification({ notifications, onDismiss, autoDismissMs = 600
       role="region"
       aria-label="Notificações de novas lavagens"
     >
-      {notifications.map((n) => (
+      {filteredNotifications.map((n) => (
         <NotificationItem
           key={n.id}
           item={n}
@@ -129,23 +140,29 @@ function InlineNotificationItem({
   item: WashNotificationItem;
   onDismiss: (id: string) => void;
 }) {
-  const message =
-    item.origin === "stencil"
-      ? "Lavagem de stencil registrada."
-      : "Lavagem de placa registrada.";
+  const isStencil = item.origin === "stencil";
+  const message = isStencil
+    ? "Lavagem de stencil registrada."
+    : "Lavagem de placa registrada.";
+
+  const backgroundColor = isStencil ? "#C3DDFD" : "#D1E7DD";
+  const borderColor = isStencil ? "#76A9FA" : "#A3CFBB";
+  const textColor = isStencil ? "#1B427F" : "#2B8E37";
+  const iconColor = isStencil ? "#1C64F2" : "#2B8E37";
 
   return (
     <div
       role="status"
       aria-live="polite"
       style={{
-        width: 549,
+        width: "100%",
+        maxWidth: 520,
         minHeight: 40,
         borderRadius: 4,
         padding: "8px 16px",
-        backgroundColor: "#C3DDFD",
-        border: "1px solid #76A9FA",
-        color: "#1B427F",
+        backgroundColor,
+        border: `1px solid ${borderColor}`,
+        color: textColor,
         fontFamily: "'Geist', 'Inter', system-ui, sans-serif",
         fontWeight: 500,
         fontSize: 14,
@@ -154,7 +171,7 @@ function InlineNotificationItem({
       className="flex items-center justify-between shadow-card"
     >
       <span className="flex items-center gap-2">
-        <CircleAlert className="h-5 w-5 text-[#1B427F]" aria-hidden />
+        <CircleAlert className="h-5 w-5" aria-hidden style={{ color: iconColor }} />
         {message}
       </span>
       <button
