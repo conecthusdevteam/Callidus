@@ -11,6 +11,7 @@ import Sidebar from "./components/Sidebar";
 import Home from "./pages/Home";
 import Gestor from "./pages/Gestor";
 import Login from "./pages/Login";
+import HistoricoCautelas from "./pages/HistoricoCautelas";
 
 function ProtectedRoute({
   children,
@@ -23,9 +24,7 @@ function ProtectedRoute({
   const location = useLocation();
 
   if (!user) {
-    return (
-      <Navigate to="/login" replace state={{ from: location.pathname }} />
-    );
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 
   if (roles && !roles.includes(user.papel)) {
@@ -55,10 +54,26 @@ function Layout() {
           }
         />
         <Route
+          path="/historico"
+          element={
+            <ProtectedRoute roles={["ADMIN", "PORTARIA"]}>
+              <HistoricoCautelas voltarPara="/" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/gestor"
           element={
             <ProtectedRoute roles={["ADMIN", "GESTOR"]}>
               <Gestor />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/gestor/historico"
+          element={
+            <ProtectedRoute roles={["ADMIN", "GESTOR"]}>
+              <HistoricoCautelas voltarPara="/gestor" />
             </ProtectedRoute>
           }
         />
