@@ -38,7 +38,8 @@ import { UserModule } from './user/user.module';
         },
         password: configService.get<string>('DATABASE_PASSWORD'),
         port: Number(configService.get<string>('DATABASE_PORT')),
-        synchronize: configService.get<string>('DATABASE_SYNCHRONIZE') !== 'false',
+        synchronize:
+          configService.get<string>('DATABASE_SYNCHRONIZE') !== 'false',
         type: 'mssql',
         username: configService.get<string>('DATABASE_USER'),
         host: configService.get<string>('DATABASE_HOST'),

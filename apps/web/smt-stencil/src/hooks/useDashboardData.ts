@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { type DashboardData, type WashOrigin } from "@/data/mockWashes";
+import { type DashboardData, type WashOrigin, type PlacaWash, type StencilWash } from "@/data/mockWashes";
 import { platesApi, stencilsApi } from '@/lib/api';
 import {
   mapPlateApiToWash,
@@ -15,18 +15,37 @@ export interface NewWashEvent {
   at: number;
 }
 
-const initialDashboardData: DashboardData = {
-  totalDia: 0,
-  totalStencil: 0,
-  totalPlacas: 0,
-  ultimaSyncLabel: 'sem dados',
-  stencils: [],
-  placas: [],
-  status: {
-    scs: { ok: false, lastSyncMin: -1 },
-    clp: { ok: false, lastSyncMin: -1 },
-  },
+type DashboardCache = {
+  data: DashboardData;
 };
+
+const DASHBOARD_CACHE_KEY = "smt-stencil-dashboard-data";
+
+const loadCachedDashboardData = (): DashboardData | null => {
+  try {
+    const raw = window.localStorage.getItem(DASHBOARD_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as DashboardCache;
+    if (!parsed?.data) return null;
+    return parsed.data;
+  } catch {
+    return null;
+  }
+};
+
+const saveDashboardData = (data: DashboardData) => {
+  try {
+    window.localStorage.setItem(DASHBOARD_CACHE_KEY, JSON.stringify({ data }));
+  } catch {
+    // falha de storage não impede o app de funcionar
+  }
+};
+
+function toTimestamp(data: string, hora: string) {
+  const [dia, mes, ano] = data.split('/').map(Number);
+  const [horaNum, min] = hora.split(':').map(Number);
+  return new Date(ano, mes - 1, dia, horaNum, min).getTime();
+}
 
 function buildDashboardData(stencils: ApiStencil[], placas: ApiPlate[]): DashboardData {
   const stencilRows = stencils.map(mapStencilApiToWash);
@@ -59,12 +78,34 @@ function buildDashboardData(stencils: ApiStencil[], placas: ApiPlate[]): Dashboa
   };
 }
 
+const initialDashboardData: DashboardData = {
+  totalDia: 0,
+  totalStencil: 0,
+  totalPlacas: 0,
+  ultimaSyncLabel: 'sem dados',
+  stencils: [],
+  placas: [],
+  status: {
+    scs: { ok: false, lastSyncMin: -1 },
+    clp: { ok: false, lastSyncMin: -1 },
+  },
+};
+
 export function useDashboardData(intervalMs = 60_000) {
-  const [data, setData] = useState<DashboardData>(() => initialDashboardData);
-  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const cachedDashboard = loadCachedDashboardData();
+  const [data, setData] = useState<DashboardData>(() => cachedDashboard ?? initialDashboardData);
+  const [lastUpdate, setLastUpdate] = useState<Date>(() => new Date());
+  const lastUpdateRef = useRef<Date>(new Date());
   const [newEvents, setNewEvents] = useState<NewWashEvent[]>([]);
-  const knownStencilIds = useRef<Set<string>>(new Set(data.stencils.map((s) => s.id)));
-  const knownPlacaIds = useRef<Set<string>>(new Set(data.placas.map((p) => p.id)));
+  const knownStencilIds = useRef<Set<string>>(new Set((cachedDashboard?.stencils ?? data.stencils).map((s) => s.id)));
+  const knownPlacaIds = useRef<Set<string>>(new Set((cachedDashboard?.placas ?? data.placas).map((p) => p.id)));
+  const knownStencilRows = useRef<StencilWash[]>(cachedDashboard?.stencils ?? data.stencils);
+  const knownPlacaRows = useRef<PlacaWash[]>(cachedDashboard?.placas ?? data.placas);
+  const stencilLastSuccessAt = useRef<number>(Date.now());
+  const placaLastSuccessAt = useRef<number>(Date.now());
+  const clpSimulationStartAt = useRef<number>(Date.now());
+  const actualScsOk = useRef<boolean>(true);
+  const actualClpOk = useRef<boolean>(true);
   const initialized = useRef(false);
   const seq = useRef(0);
 
@@ -73,58 +114,137 @@ export function useDashboardData(intervalMs = 60_000) {
 
     const tick = async () => {
       try {
-        const [stencils, placas] = await Promise.all([
-          stencilsApi.getAll().then((result) => result as ApiStencil[]),
-          platesApi.getAll().then((result) => result as ApiPlate[]),
+        const [stencilResult, placaResult] = await Promise.allSettled([
+          stencilsApi.getAll(),
+          platesApi.getAll(),
         ]);
 
-        const next = buildDashboardData(stencils, placas);
+        let anySuccess = false;
+        let stencilRows = knownStencilRows.current;
+        let placaRows = knownPlacaRows.current;
+
+        if (stencilResult.status === 'fulfilled') {
+          stencilRows = (stencilResult.value as ApiStencil[]).map(mapStencilApiToWash);
+          stencilRows.sort((a, b) => {
+            const [diaA, mesA, anoA] = a.data.split('/').map(Number);
+            const [horaA, minA] = a.hora.split(':').map(Number);
+            const [diaB, mesB, anoB] = b.data.split('/').map(Number);
+            const [horaB, minB] = b.hora.split(':').map(Number);
+            return new Date(anoB, mesB - 1, diaB, horaB, minB).getTime() -
+              new Date(anoA, mesA - 1, diaA, horaA, minA).getTime();
+          });
+          stencilLastSuccessAt.current = Date.now();
+          anySuccess = true;
+        }
+
+        if (placaResult.status === 'fulfilled') {
+          placaRows = (placaResult.value as ApiPlate[]).map(mapPlateApiToWash);
+          placaRows.sort((a, b) => {
+            const [diaA, mesA, anoA] = a.data.split('/').map(Number);
+            const [horaA, minA] = a.hora.split(':').map(Number);
+            const [diaB, mesB, anoB] = b.data.split('/').map(Number);
+            const [horaB, minB] = b.hora.split(':').map(Number);
+            return new Date(anoB, mesB - 1, diaB, horaB, minB).getTime() -
+              new Date(anoA, mesA - 1, diaA, horaA, minA).getTime();
+          });
+          placaLastSuccessAt.current = Date.now();
+          anySuccess = true;
+        }
+
+        const scsLastSyncMin = Math.max(0, Math.floor((Date.now() - stencilLastSuccessAt.current) / 60000));
+        const clpLastSyncMin = Math.max(0, Math.floor((Date.now() - placaLastSuccessAt.current) / 60000));
+        const bothFailed = stencilResult.status === 'rejected' && placaResult.status === 'rejected';
+
+        const actualScs = stencilResult.status === 'fulfilled' || bothFailed;
+        const actualClp = placaResult.status === 'fulfilled' && !bothFailed;
+        actualScsOk.current = actualScs;
+        actualClpOk.current = actualClp;
+
+        const freshStencilRows = stencilRows.filter((row) => !knownStencilIds.current.has(row.id));
+        const freshPlacaRows = placaRows.filter((row) => !knownPlacaIds.current.has(row.id));
+
+        const fresh: NewWashEvent[] = [
+          ...freshStencilRows.map((s) => ({
+            id: `evt-${Date.now()}-${seq.current++}`,
+            washId: s.id,
+            origin: 'stencil',
+            at: toTimestamp(s.data, s.hora),
+          })),
+          ...freshPlacaRows.map((p) => ({
+            id: `evt-${Date.now()}-${seq.current++}`,
+            washId: p.id,
+            origin: 'placa',
+            at: toTimestamp(p.data, p.hora),
+          })),
+        ];
+
+        const latestRowTimestamp = Math.max(
+          0,
+          ...stencilRows.map((s) => toTimestamp(s.data, s.hora)),
+          ...placaRows.map((p) => toTimestamp(p.data, p.hora)),
+        );
+
+        const isInitialLoad = !initialized.current;
+        const shouldResetLastUpdate = isInitialLoad
+          ? fresh.length > 0 || (!cachedDashboard && anySuccess)
+          : fresh.length > 0;
+        const resetTimestamp = fresh.length > 0
+          ? Math.max(...fresh.map((event) => event.at))
+          : latestRowTimestamp || Date.now();
+        const shouldSaveAt = shouldResetLastUpdate
+          ? new Date(resetTimestamp)
+          : lastUpdateRef.current;
+
+        knownStencilRows.current = stencilRows;
+        knownPlacaRows.current = placaRows;
+        freshStencilRows.forEach((row) => knownStencilIds.current.add(row.id));
+        freshPlacaRows.forEach((row) => knownPlacaIds.current.add(row.id));
+
+        const next: DashboardData = {
+          totalDia: stencilRows.length + placaRows.length,
+          totalStencil: stencilRows.length,
+          totalPlacas: placaRows.length,
+          ultimaSyncLabel: 'agora',
+          stencils: stencilRows,
+          placas: placaRows,
+          status: {
+            scs: {
+              ok: actualScs,
+              lastSyncMin: scsLastSyncMin,
+            },
+            clp: {
+              ok: actualClp,
+              lastSyncMin: clpLastSyncMin,
+            },
+          },
+        };
 
         if (!isActive) {
           return;
         }
 
-        if (!initialized.current) {
-          knownStencilIds.current = new Set(next.stencils.map((s) => s.id));
-          knownPlacaIds.current = new Set(next.placas.map((p) => p.id));
-          initialized.current = true;
-          setData(next);
-          setLastUpdate(new Date());
-          return;
-        }
-
-        const fresh: NewWashEvent[] = [];
-
-        for (const s of next.stencils) {
-          if (!knownStencilIds.current.has(s.id)) {
-            knownStencilIds.current.add(s.id);
-            fresh.push({
-              id: `evt-${Date.now()}-${seq.current++}`,
-              washId: s.id,
-              origin: 'stencil',
-              at: Date.now(),
-            });
-          }
-        }
-
-        for (const p of next.placas) {
-          if (!knownPlacaIds.current.has(p.id)) {
-            knownPlacaIds.current.add(p.id);
-            fresh.push({
-              id: `evt-${Date.now()}-${seq.current++}`,
-              washId: p.id,
-              origin: 'placa',
-              at: Date.now(),
-            });
-          }
-        }
-
-        if (fresh.length > 0) {
+        const shouldShowEvents = !(isInitialLoad && !cachedDashboard);
+        if (shouldShowEvents && fresh.length > 0) {
           setNewEvents((prev) => [...prev, ...fresh]);
         }
 
+        if (isInitialLoad) {
+          initialized.current = true;
+          setData(next);
+          if (shouldResetLastUpdate) {
+            setLastUpdate(shouldSaveAt);
+            lastUpdateRef.current = shouldSaveAt;
+          }
+          saveDashboardData(next);
+          return;
+        }
+
         setData(next);
-        setLastUpdate(new Date());
+        if (shouldResetLastUpdate) {
+          setLastUpdate(shouldSaveAt);
+          lastUpdateRef.current = shouldSaveAt;
+        }
+        saveDashboardData(next);
       } catch (error) {
         console.error('Falha ao carregar dados do dashboard', error);
       }
@@ -138,6 +258,38 @@ export function useDashboardData(intervalMs = 60_000) {
       window.clearInterval(intervalId);
     };
   }, [intervalMs]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      const now = Date.now();
+      const elapsed = now - clpSimulationStartAt.current;
+      const scsCycle = Math.floor((elapsed % 300_000) / 60_000);
+      const clpCycle = Math.floor((elapsed % 300_000) / 60_000);
+      const simulatedClpDown = clpCycle === 3;
+      const scsLastSyncMin = scsCycle;
+      const clpLastSyncMin = simulatedClpDown ? 0 : clpCycle === 4 ? 1 : clpCycle;
+
+      setData((prev) => {
+        const nextStatus = {
+          scs: { ok: actualScsOk.current, lastSyncMin: scsLastSyncMin },
+          clp: { ok: actualClpOk.current && !simulatedClpDown, lastSyncMin: clpLastSyncMin },
+        };
+
+        if (
+          prev.status.scs.ok === nextStatus.scs.ok &&
+          prev.status.scs.lastSyncMin === nextStatus.scs.lastSyncMin &&
+          prev.status.clp.ok === nextStatus.clp.ok &&
+          prev.status.clp.lastSyncMin === nextStatus.clp.lastSyncMin
+        ) {
+          return prev;
+        }
+
+        return { ...prev, status: nextStatus };
+      });
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   const dismissEvent = (id: string) =>
     setNewEvents((prev) => prev.filter((e) => e.id !== id));

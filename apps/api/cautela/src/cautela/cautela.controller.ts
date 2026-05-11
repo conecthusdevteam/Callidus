@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole } from '../common/enums/user-role.enum';
@@ -48,5 +56,17 @@ export class CautelaController {
     @Body() rejectCautelaDto: RejectCautelaDto,
   ) {
     return this.cautelaService.reject(id, user, rejectCautelaDto);
+  }
+
+  @Roles(UserRole.GESTOR)
+  @Patch(':id/autorizar-saida')
+  authorizeExit(@Param('id') id: string, @CurrentUser() user: CurrentUserPayload) {
+    return this.cautelaService.authorizeExit(id, user);
+  }
+
+  @Roles(UserRole.PORTARIA)
+  @Patch(':id/permitir-saida')
+  closeAfterExit(@Param('id') id: string, @CurrentUser() user: CurrentUserPayload) {
+    return this.cautelaService.closeAfterExit(id, user);
   }
 }

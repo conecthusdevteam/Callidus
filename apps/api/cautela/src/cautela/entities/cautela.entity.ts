@@ -47,6 +47,12 @@ export class Cautela {
   @Column({ length: 150 })
   proprietarioEmail: string;
 
+  @Column({ type: 'nvarchar', length: 150, nullable: true })
+  empresa: string | null;
+
+  @Column({ type: 'nvarchar', length: 30, nullable: true })
+  documentoProprietario: string | null;
+
   @Column()
   retornoItem: boolean;
 
@@ -58,6 +64,24 @@ export class Cautela {
 
   @Column({ type: 'datetime2', nullable: true })
   respondidoEm: Date | null;
+
+  @Column({ type: 'datetime2', nullable: true })
+  aprovadoEm: Date | null;
+
+  @Column({ type: 'datetime2', nullable: true })
+  rejeitadoEm: Date | null;
+
+  @Column({ type: 'datetime2', nullable: true })
+  saidaAutorizadaEm: Date | null;
+
+  @Column({ type: 'uniqueidentifier', nullable: true })
+  saidaAutorizadaPorId: string | null;
+
+  @Column({ type: 'datetime2', nullable: true })
+  encerradoEm: Date | null;
+
+  @Column({ type: 'uniqueidentifier', nullable: true })
+  encerradoPorId: string | null;
 
   @CreateDateColumn({ type: 'datetime2' })
   criadoEm: Date;
@@ -72,6 +96,14 @@ export class Cautela {
   @ManyToOne(() => User, (user) => user.cautelasParaAnalise, { eager: false })
   @JoinColumn({ name: 'gestorId' })
   gestor: User;
+
+  @ManyToOne(() => User, { eager: false })
+  @JoinColumn({ name: 'saidaAutorizadaPorId' })
+  saidaAutorizadaPor: User | null;
+
+  @ManyToOne(() => User, { eager: false })
+  @JoinColumn({ name: 'encerradoPorId' })
+  encerradoPor: User | null;
 
   @ManyToOne(() => Sector, (sector) => sector.cautelas, { eager: false })
   @JoinColumn({ name: 'setorId' })
