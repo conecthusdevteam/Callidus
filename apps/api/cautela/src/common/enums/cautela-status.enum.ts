@@ -1,5 +1,6 @@
 export enum CautelaStatus {
   APROVADA = 'APROVADA',
+  ENCERRADA = 'ENCERRADA',
   EM_ANALISE = 'EM_ANALISE',
   REPROVADA = 'REPROVADA',
 }
