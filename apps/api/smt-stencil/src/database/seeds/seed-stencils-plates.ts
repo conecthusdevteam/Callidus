@@ -22,16 +22,32 @@ const STATUSES = [WashStatus.ACTIVE, WashStatus.INACTIVE];
 
 function randomDate(): Date {
   const now = new Date();
-  const date = new Date(now);
-  
-  date.setHours(0, 0, 0, 0);
+  const currentHour = now.getHours();
+  const maxHour = Math.min(currentHour, 21);
 
-  const hoursAgo = random(0, 23);
-  const minutesAgo = random(0, 59);
-  const secondsAgo = random(0, 59);
-  
+  if (maxHour < 11) {
+    throw new Error('Current create seeds before 7:00 AM');
+  }
+
+  const hoursAgo = random(11, maxHour);
+
+  let minutesAgo = 0;
+  let secondsAgo = 0;
+
+  if (hoursAgo === currentHour && currentHour <= 21) {
+    const currentMinutes = now.getMinutes();
+    const currentSeconds = now.getSeconds();
+    minutesAgo = random(0, currentMinutes);
+    secondsAgo = random(0, minutesAgo === currentMinutes ? currentSeconds : 59);
+  } else {
+    minutesAgo = random(0, 59);
+    secondsAgo = random(0, 59);
+  }
+
+  const date = new Date(now);
+  date.setHours(0, 0, 0, 0);
   date.setHours(hoursAgo, minutesAgo, secondsAgo);
-  
+
   return date;
 }
 
@@ -143,13 +159,13 @@ async function runSeed() {
     const plateRepo = dataSource.getRepository(Plate);
     
     // ============================================
-    // 1. SEED DE STENCILS (120 registers)
+    // 1. SEED DE STENCILS (35 registers)
     // ============================================
-    console.log('\n📦 Generate 120 Stencils...');
+    console.log('\n📦 Generate 35 Stencils...');
     let stencilsInserted = 0;
     let stencilsSkipped = 0;
     
-    for (let i = 1; i <= 120; i++) {
+    for (let i = 1; i <= 35; i++) {
       const stencilData = generateStencilData(i);
       const stencilCode = stencilData.stencilCode!;
       
@@ -171,13 +187,13 @@ async function runSeed() {
     console.log(`   ✅ Stencils: ${stencilsInserted} inserted, ${stencilsSkipped} existing`);
     
     // ============================================
-    // 2. SEED DE PLATES (120 registers)
+    // 2. SEED DE PLATES (35 registers)
     // ============================================
-    console.log('\n📦 Generate 120 Plates...');
+    console.log('\n📦 Generate 35 Plates...');
     let platesInserted = 0;
     let platesSkipped = 0;
     
-    for (let i = 1; i <= 120; i++) {
+    for (let i = 1; i <= 35; i++) {
       const plateData = generatePlateData(i);
       const serialNumber = plateData.serialNumber!;
       
@@ -207,9 +223,9 @@ async function runSeed() {
     console.log('\n📊 SEED RESUME:');
     console.log(`   Stencils: ${stencilsInserted} inserted, ${stencilsSkipped} existing.`);
     console.log(`   Plates: ${platesInserted} inserted, ${platesSkipped} existing.`);
-    console.log(`   Total de novos registros: ${stencilsInserted + platesInserted}`);
+    console.log(`   New registers total: ${stencilsInserted + platesInserted}`);
     
-    console.log('\n📈 TOTAL DATABASE:');
+    console.log('\n📈 DATABASE TOTAL:');
     console.log(`   Stencils: ${totalStencils}`);
     console.log(`   Plates: ${totalPlates}`);
     
