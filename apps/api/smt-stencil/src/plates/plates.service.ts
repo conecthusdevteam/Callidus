@@ -24,7 +24,11 @@ export class PlatesService {
   }
 
   findAll() {
-    return this.repository.find();
+    return this.repository.find({
+      order: {
+        createdAt: 'DESC',
+      },
+    });
   }
 
   findOne(id: string) {
