@@ -21,6 +21,20 @@ function statusLabel(status: string): { label: string; color: string } {
   }
 }
 
+function statusSearchTerms(cautela: Cautela, papel?: string) {
+  if (cautela.status !== "Saída Autorizada") return [cautela.status];
+  if (papel === "GESTOR") {
+    return [cautela.status, "aguardando saída", "aguardando saida"];
+  }
+  return [
+    cautela.status,
+    "atenção",
+    "atencao",
+    "ação necessária",
+    "acao necessaria",
+  ];
+}
+
 export default function Navbar() {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
@@ -129,7 +143,11 @@ export default function Navbar() {
             c.visitante?.toLowerCase().includes(q) ||
             c.gestor?.toLowerCase().includes(q) ||
             c.empresa?.toLowerCase().includes(q) ||
-            c.status.toLowerCase().includes(q)
+            statusSearchTerms(c, user?.papel).some(
+              (term) =>
+                term.toLowerCase().includes(q) ||
+                q.includes(term.toLowerCase()),
+            )
           );
         })
         .slice(0, 3)
@@ -190,7 +208,7 @@ export default function Navbar() {
               ref={inputRef}
               type="text"
               value={termo}
-              placeholder="Pesquise por nome, solicitante, Id de cautela ou status"
+              placeholder="Pesquise por nome, proprietário, Id de cautela ou status"
               className="w-full pl-9 pr-3 py-1.5 text-[13px] border border-[#D1D5DB] rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-[#2B8E37] focus:border-transparent"
               onChange={handleChange}
               onKeyDown={handleKeyDown}

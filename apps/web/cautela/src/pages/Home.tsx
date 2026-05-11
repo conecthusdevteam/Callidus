@@ -274,7 +274,7 @@ function CardCautelaPortaria({
         <div className="flex items-center gap-3 min-w-0 flex-1">
           {avatar}
           <p className="text-[18px] font-bold leading-tight text-[#404040]">
-            {cautela.visitante || "Nome do solicitante"}
+            {cautela.visitante || "Nome do proprietário"}
           </p>
         </div>
         <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-1">
@@ -714,7 +714,7 @@ export default function Home() {
           })),
           proprietarioEmail: email,
           proprietarioNome: nome,
-          documento,
+          documentoProprietario: documento,
           empresa,
           retornoItem: retornado === true,
           setorId,

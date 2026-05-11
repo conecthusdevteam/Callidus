@@ -1,19 +1,4 @@
 import type { Cautela, StatusCautela } from "../data/cautelaTypes";
-import {
-  getMockCautelas,
-  mockCreateCautela,
-  mockApproveCautela,
-  mockRejectCautela,
-  mockAuthorizeDeparture,
-  mockCloseCautela,
-} from "./mockCautelas";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// FLAG DE MOCK
-// true  → todas as operações usam localStorage (funciona entre abas)
-// false → usa o backend real
-// ─────────────────────────────────────────────────────────────────────────────
-const USE_MOCK = true;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tipos públicos
@@ -47,7 +32,7 @@ export interface CreateCautelaPayload {
   itens: { nomeItem: string; quantidade: number }[];
   proprietarioEmail: string;
   proprietarioNome: string;
-  documento: string;
+  documentoProprietario: string;
   empresa: string;
   retornoItem: boolean;
   setorId: string;
@@ -55,31 +40,38 @@ export interface CreateCautelaPayload {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Tipo interno da API real
+// Tipo interno da API
 // ─────────────────────────────────────────────────────────────────────────────
 
+type ApiCautelaStatus = "APROVADA" | "EM_ANALISE" | "REPROVADA" | "ENCERRADA";
+
 interface ApiCautela {
+  aprovadoEm: string | null;
+  badgeGestor: "AGUARDANDO_SAIDA" | null;
+  badgePortaria: "ACAO_NECESSARIA" | null;
   criadoEm: string;
-  encerradaEm: string | null;
+  documentoProprietario: string | null;
+  encerradoEm: string | null;
+  empresa: string | null;
   gestor: { nome: string } | null;
   id: string;
-  itens: { nomeItem: string; quantidade: number }[];
+  itens: { descricao?: string; nomeItem: string; quantidade: number }[];
   justificativaRejeicao: string | null;
   proprietarioEmail: string;
   proprietarioNome: string;
+  rejeitadoEm: string | null;
   respondidoEm: string | null;
+  saidaAutorizada: boolean;
+  saidaAutorizadaEm: string | null;
   setor: { nome: string } | null;
-  status:
-    | "APROVADA"
-    | "EM_ANALISE"
-    | "REPROVADA"
-    | "SAIDA_AUTORIZADA"
-    | "ENCERRADA";
+  status: ApiCautelaStatus;
+  statusVisualGestor?: ApiCautelaStatus;
+  statusVisualPortaria?: ApiCautelaStatus | "ATENCAO";
   validade: string | null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Auth — nunca mockada
+// Auth
 // ─────────────────────────────────────────────────────────────────────────────
 
 const API_URL = import.meta.env.VITE_CAUTELA_API_URL || "http://localhost:3000";
@@ -124,14 +116,12 @@ export async function getSectors() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Cautelas — TODAS mockadas quando USE_MOCK = true
+// Cautelas
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function getCautelas(params?: {
   respondidas?: boolean;
 }): Promise<Cautela[]> {
-  if (USE_MOCK) return getMockCautelas();
-
   const search = new URLSearchParams();
   if (params?.respondidas !== undefined) {
     search.set("respondidas", String(params.respondidas));
@@ -142,15 +132,9 @@ export async function getCautelas(params?: {
   return cautelas.map(mapCautela);
 }
 
-/**
- * Portaria cria cautela — mockada: persiste no localStorage.
- * Antes ia para o backend real e o card sumia no próximo polling.
- */
 export async function createCautela(
   payload: CreateCautelaPayload,
 ): Promise<Cautela> {
-  if (USE_MOCK) return mockCreateCautela(payload);
-
   const cautela = await apiRequest<ApiCautela>("/cautelas", {
     body: JSON.stringify(payload),
     method: "POST",
@@ -159,8 +143,6 @@ export async function createCautela(
 }
 
 export async function approveCautela(id: string): Promise<Cautela> {
-  if (USE_MOCK) return mockApproveCautela(id);
-
   const cautela = await apiRequest<ApiCautela>(`/cautelas/${id}/aprovar`, {
     method: "PATCH",
   });
@@ -171,8 +153,6 @@ export async function rejectCautela(
   id: string,
   justificativa: string,
 ): Promise<Cautela> {
-  if (USE_MOCK) return mockRejectCautela(id, justificativa);
-
   const cautela = await apiRequest<ApiCautela>(`/cautelas/${id}/reprovar`, {
     body: JSON.stringify({ justificativa }),
     method: "PATCH",
@@ -181,8 +161,6 @@ export async function rejectCautela(
 }
 
 export async function authorizeDeparture(id: string): Promise<Cautela> {
-  if (USE_MOCK) return mockAuthorizeDeparture(id);
-
   const cautela = await apiRequest<ApiCautela>(
     `/cautelas/${id}/autorizar-saida`,
     {
@@ -193,11 +171,12 @@ export async function authorizeDeparture(id: string): Promise<Cautela> {
 }
 
 export async function closeCautela(id: string): Promise<Cautela> {
-  if (USE_MOCK) return mockCloseCautela(id);
-
-  const cautela = await apiRequest<ApiCautela>(`/cautelas/${id}/encerrar`, {
-    method: "PATCH",
-  });
+  const cautela = await apiRequest<ApiCautela>(
+    `/cautelas/${id}/permitir-saida`,
+    {
+      method: "PATCH",
+    },
+  );
   return mapCautela(cautela);
 }
 
@@ -243,32 +222,40 @@ function mapCautela(cautela: ApiCautela): Cautela {
   return {
     aprovadoEm:
       cautela.status === "APROVADA"
-        ? formatDate(cautela.respondidoEm)
+        ? formatDate(cautela.aprovadoEm ?? cautela.respondidoEm)
         : undefined,
     data: formatDate(cautela.criadoEm),
     encerradaEm:
-      cautela.status === "ENCERRADA" && cautela.encerradaEm
-        ? formatDate(cautela.encerradaEm)
+      cautela.status === "ENCERRADA" && cautela.encerradoEm
+        ? formatDate(cautela.encerradoEm)
         : undefined,
     empresa: cautela.setor?.nome ?? "Setor não informado",
     equipamentos: cautela.itens.map((item) => ({
-      descricao: item.nomeItem,
+      descricao: item.descricao ?? item.nomeItem,
       quantidade: item.quantidade,
     })),
     gestor: cautela.gestor?.nome ?? "Gestor não informado",
     id: cautela.id,
     motivoNegativa: cautela.justificativaRejeicao ?? undefined,
-    status: mapStatus(cautela.status),
+    documento: cautela.documentoProprietario ?? undefined,
+    reprovadoEm:
+      cautela.status === "REPROVADA"
+        ? formatDate(cautela.rejeitadoEm ?? cautela.respondidoEm)
+        : undefined,
+    status: mapStatus(cautela),
     visitante: cautela.proprietarioNome,
     proprietarioEmail: cautela.proprietarioEmail,
     validade: cautela.validade ? formatDate(cautela.validade) : undefined,
   };
 }
 
-function mapStatus(status: ApiCautela["status"]): StatusCautela {
+function mapStatus(cautela: ApiCautela): StatusCautela {
+  if (cautela.saidaAutorizada || cautela.badgeGestor === "AGUARDANDO_SAIDA") {
+    return "Saída Autorizada";
+  }
+  const { status } = cautela;
   if (status === "APROVADA") return "Aprovado";
   if (status === "REPROVADA") return "Reprovado";
-  if (status === "SAIDA_AUTORIZADA") return "Saída Autorizada";
   if (status === "ENCERRADA") return "Encerrada";
   return "Em análise";
 }

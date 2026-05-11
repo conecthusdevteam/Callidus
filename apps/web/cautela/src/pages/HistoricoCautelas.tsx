@@ -209,7 +209,7 @@ export default function HistoricoCautelas({
               value={termoBusca}
               onChange={(e) => setTermoBusca(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && pesquisar()}
-              placeholder="Pesquise por nome, do solicitante, Id de cautela ou status"
+              placeholder="Pesquise por nome, do proprietário, Id de cautela ou status"
               className="w-full pl-9 pr-3 py-2 text-[13px] border border-[#D1D5DB] rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#2B8E37] focus:border-transparent"
             />
           </div>

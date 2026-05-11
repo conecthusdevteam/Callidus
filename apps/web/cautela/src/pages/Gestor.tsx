@@ -254,7 +254,7 @@ function CardCautela({
       <div className="mb-2">
         <span className="text-[13px] text-[#404040]">
           Solicitada:{" "}
-          <span className="font-bold">{cautela.gestor.toUpperCase()}</span>
+          <span className="font-bold">{cautela.visitante.toUpperCase()}</span>
         </span>
       </div>
       {isNaoLida && (
@@ -448,10 +448,8 @@ const STATUS_LABELS: Record<string, string[]> = {
   "Saída Autorizada": [
     "saída autorizada",
     "saida autorizada",
-    "atenção",
-    "atencao",
-    "ação necessária",
-    "acao necessaria",
+    "aguardando saída",
+    "aguardando saida",
   ],
   Encerrada: ["encerrada", "encerrado", "finalizada", "concluida"],
 };
