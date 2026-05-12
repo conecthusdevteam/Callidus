@@ -257,11 +257,13 @@ function CardCautela({
           <span className="font-bold">{cautela.visitante.toUpperCase()}</span>
         </span>
       </div>
-      {isNaoLida && (
-        <span className="inline-flex items-center rounded-lg px-2 py-0.5 text-[12px] font-semibold bg-[#FCE96A] text-black mb-2">
-          Nova
-        </span>
-      )}
+      <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-1">
+        {isNaoLida && (
+          <span className="inline-flex items-center rounded-lg px-2 py-0.5 text-[12px] font-semibold bg-[#FCE96A] text-black mb-2">
+            Nova
+          </span>
+        )}
+      </div>
       <hr className="border-black mb-3" />
       <p className="text-sm font-medium text-[#404040] mb-1">Cautelados:</p>
       <ul className="mb-4 space-y-0.5">

@@ -625,27 +625,32 @@ export default function Home() {
   const carregarCautelas = useCallback(async () => {
     try {
       const data = await getCautelas();
-      setCautelas(data);
-      data.forEach((c) => {
-        if (STATUS_RECEBIDOS.includes(c.status as StatusCautela)) {
-          const anterior = cautelasConhecidasRef.current.get(c.id);
-          const isNova = anterior === undefined;
-          const mudouStatus = anterior !== undefined && anterior !== c.status;
-          if (isNova || mudouStatus) {
-            setCautelasLidas((prev) => {
-              const novo = new Set(prev);
-              novo.delete(c.id);
-              return novo;
-            });
+
+      const isPrimeiraCarrega = cautelasConhecidasRef.current.size === 0;
+
+      if (!isPrimeiraCarrega) {
+        data.forEach((c) => {
+          if (STATUS_RECEBIDOS.includes(c.status as StatusCautela)) {
+            const anterior = cautelasConhecidasRef.current.get(c.id);
+            const isNova = anterior === undefined;
+            const mudouStatus = anterior !== undefined && anterior !== c.status;
+            if (isNova || mudouStatus) {
+              setCautelasLidas((prev) => {
+                const novo = new Set(prev);
+                novo.delete(c.id);
+                return novo;
+              });
+            }
           }
-        }
-      });
+        });
+      }
 
       cautelasConhecidasRef.current = new Map(
         data.map((c) => [c.id, c.status]),
       );
 
       setCautelas(data);
+
       const sel = cautelaSelecionadaRef.current;
       if (sel) {
         const atualizada = data.find((c) => c.id === sel.id);
@@ -894,13 +899,6 @@ export default function Home() {
         setActiveTab("recebidos");
         setCautelaSelecionada(null);
         setSearchTerm("");
-        setCautelasLidas((prev) => {
-          const novo = new Set(prev);
-          cautelas
-            .filter((c) => STATUS_RECEBIDOS.includes(c.status as StatusCautela))
-            .forEach((c) => novo.add(c.id));
-          return novo;
-        });
       }}
       className={`${isMobile ? "w-full h-[56px] text-[16px]" : "w-full h-[68px] text-[18px]"} font-normal rounded-t${isMobile ? "-lg" : "-xl"} transition-all relative ${
         activeTab === "recebidos"
