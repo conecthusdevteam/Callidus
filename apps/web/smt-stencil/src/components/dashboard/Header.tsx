@@ -1,5 +1,10 @@
 import menuIcon from "@/assets/menu.svg";
-import { Sheet, SheetTrigger, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetTrigger,
+  SheetContent,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { NavLink } from "@/components/NavLink";
 
 /**
