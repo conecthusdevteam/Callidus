@@ -17,12 +17,6 @@ export class CreateStencilDto {
     @IsNumber()
     addressing!: number;
 
-    @IsNumber()
-    totalWashes!: number;
-    
-    @IsString()
-    operator!: string;
-
     @IsString()
     lineName!: string;
 

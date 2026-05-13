@@ -1,4 +1,4 @@
-import { IsNumber, IsString } from "class-validator";
+import { IsNumber, IsOptional, IsString } from "class-validator";
 
 export class CreatePlateDto {
     @IsString()
@@ -10,18 +10,22 @@ export class CreatePlateDto {
     @IsString()
     blankId!: string;
 
-    @IsNumber()
-    shift!: number;
-
-    @IsNumber()
-    phase!: number;
-
-    @IsNumber()
-    totalWashes!: number;
-
-    @IsString()
-    operator!: string;
-
     @IsString()
     lineName!: string;
+
+    @IsOptional()
+    @IsString()
+    plateManufacturerId?: string;
+
+    @IsOptional()
+    @IsString()
+    country?: string;
+
+    @IsOptional()
+    @IsNumber()
+    thickness?: number;
+
+    @IsOptional()
+    @IsString()
+    addressing?: string;
 }

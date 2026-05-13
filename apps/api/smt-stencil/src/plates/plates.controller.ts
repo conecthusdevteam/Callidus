@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, HttpCode, InternalServerErrorException, NotFoundException, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, InternalServerErrorException, NotFoundException, Param, Patch, Post, Query } from '@nestjs/common';
+import { CreatePlateWashDto } from './dto/create-plate-wash.dto';
 import { CreatePlateDto } from './dto/create-plate.dto';
 import { UpdatePlateDto } from './dto/update-plate.dto';
 import { PlatesService } from './plates.service';
@@ -14,15 +15,9 @@ export class PlatesController {
   }
 
   @Get()
-  async findAll() {
+  async findAll(@Query('linha') linha?: string) {
     try {
-      const plates = await this.platesService.findAll();
-  
-      if (!plates || plates.length === 0) {
-        throw new NotFoundException('No plates found');
-      }
-  
-      return plates;
+      return this.platesService.findAll({ linha });
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
@@ -37,6 +32,14 @@ export class PlatesController {
     const plate = await this.platesService.findOne(id);
     if (!plate) throw new NotFoundException;
     return plate;
+  }
+
+  @Post(':id/lavagens')
+  @HttpCode(201)
+  async createWash(@Param('id') id: string, @Body() dto: CreatePlateWashDto) {
+    const wash = await this.platesService.createWash(id, dto);
+    if (!wash) throw new NotFoundException;
+    return wash;
   }
 
   @Patch(':id')

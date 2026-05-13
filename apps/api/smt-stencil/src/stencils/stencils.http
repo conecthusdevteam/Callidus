@@ -1,34 +1,168 @@
-@baseUrl=http://localhost:3001
-@stencilId=paste_stencil_id_here
+@baseUrl=http://localhost:5000
+@stencilId=stencil_SOypWQVWYl1XUGKRyAZyV
+@missingStencilId=stencil_missing
+@seedStencilCode=REST-STENCIL-1778695640
+@missingStencilCode=QR-INEXISTENTE
+@uniqueStencilCode=REST-STENCIL-{{$timestamp}}
 
-### Create stencil
+### Health check
+GET {{baseUrl}}/
+
+### List stencils - success
+GET {{baseUrl}}/stencils
+
+### List stencils filtered by partial QR code - success
+GET {{baseUrl}}/stencils?codigo=RE
+
+### List stencils filtered by line - success
+GET {{baseUrl}}/stencils?linha=
+
+### List stencils filtered by partial QR code and line - success
+GET {{baseUrl}}/stencils?codigo=A&linha=Linha%201
+
+### List stencils with no results - success with empty array
+GET {{baseUrl}}/stencils?codigo=SEM-RESULTADO
+
+### List available lines - success
+GET {{baseUrl}}/linhas
+
+### List stencil lines through stencils controller - success
+GET {{baseUrl}}/stencils/linhas
+
+### Get stencil by id - success
+GET {{baseUrl}}/stencils/{{stencilId}}
+
+### Get stencil by QR code - success
+GET {{baseUrl}}/stencils/codigo/{{seedStencilCode}}
+
+### Create stencil wash by stencil id - success
+# Depois rode "Get stencil by id" para ver historico_lavagens atualizado.
+POST {{baseUrl}}/stencils/{{stencilId}}/lavagens
+Content-Type: application/json
+
+{
+  "operator": "Lucas Araujo"
+}
+
+### Create stencil wash by QR code - success
+# Depois rode "Get stencil by QR code" para ver historico_lavagens atualizado.
+POST {{baseUrl}}/stencils/codigo/{{seedStencilCode}}/lavagens
+Content-Type: application/json
+
+{
+  "operator": "Maria Santos"
+}
+
+### Create stencil wash with custom date/time - success
+# Use para simular historico e intervalos fora do padrao.
+POST {{baseUrl}}/stencils/codigo/{{seedStencilCode}}/lavagens
+Content-Type: application/json
+
+{
+  "operator": "Ana Oliveira",
+  "createdAt": "2026-05-13T11:30:00.000Z"
+}
+
+### Create stencil wash for missing stencil - 404 expected
+POST {{baseUrl}}/stencils/{{missingStencilId}}/lavagens
+Content-Type: application/json
+
+{
+  "operator": "Carlos Souza"
+}
+
+### Create stencil wash with invalid body - 400 expected
+POST {{baseUrl}}/stencils/codigo/{{seedStencilCode}}/lavagens
+Content-Type: application/json
+
+{
+  "createdAt": "data-invalida"
+}
+
+### Get stencil by missing id - 404 expected
+GET {{baseUrl}}/stencils/{{missingStencilId}}
+
+### Get stencil by missing QR code - 404 expected
+GET {{baseUrl}}/stencils/codigo/{{missingStencilCode}}
+
+### Create stencil - success
+# @name createStencil
 POST {{baseUrl}}/stencils
 Content-Type: application/json
 
 {
-    "stencilCode": "D230_MAIN_V03_2F_74729",
-    "manufactureId": "43595643",
-    "country": "Brasil",
-    "thickness": 0.08,
-    "addressing": 12,
-    "totalWashes": 34,
-    "operator": "John Doe",
-    "lineName": "Manaus"
+  "stencilCode": "{{uniqueStencilCode}}",
+  "manufactureId": "MNF-REST",
+  "country": "Brasil",
+  "thickness": 0.08,
+  "addressing": 12,
+  "lineName": "Linha REST",
+  "status": "active"
 }
 
-### List stencils
-GET {{baseUrl}}/stencils
+### Create duplicated stencil - 409 expected
+POST {{baseUrl}}/stencils
+Content-Type: application/json
 
-### Get Stencil
-GET {{baseUrl}}/stencils/{{stencilId}}
+{
+  "stencilCode": "{{uniqueStencilCode}}",
+  "manufactureId": "MNF-REST",
+  "country": "Brasil",
+  "thickness": 0.08,
+  "addressing": 12,
+  "lineName": "Linha REST",
+  "status": "active"
+}
 
-### Update stencil status
+### Create stencil with missing required fields - 400 expected
+POST {{baseUrl}}/stencils
+Content-Type: application/json
+
+{
+  "stencilCode": "INVALIDO-{{$timestamp}}",
+  "country": "Brasil"
+}
+
+### Create stencil with invalid status - 400 expected
+POST {{baseUrl}}/stencils
+Content-Type: application/json
+
+{
+  "stencilCode": "INVALID-STATUS-{{$timestamp}}",
+  "manufactureId": "MNF-REST",
+  "country": "Brasil",
+  "thickness": 0.08,
+  "addressing": 12,
+  "lineName": "Linha REST",
+  "status": "paused"
+}
+
+### Update stencil status - success
 PATCH {{baseUrl}}/stencils/{{stencilId}}
 Content-Type: application/json
 
 {
-    "status": "inactive"
+  "status": "inactive"
 }
 
-### Delete stencil
+### Update missing stencil - 404 expected
+PATCH {{baseUrl}}/stencils/{{missingStencilId}}
+Content-Type: application/json
+
+{
+  "status": "inactive"
+}
+
+### Update stencil with invalid status - 400 expected
+PATCH {{baseUrl}}/stencils/{{stencilId}}
+Content-Type: application/json
+
+{
+  "status": "paused"
+}
+
+### Delete stencil - success, 204 expected
 DELETE {{baseUrl}}/stencils/{{stencilId}}
+
+### Delete missing stencil - 404 expected
+DELETE {{baseUrl}}/stencils/{{missingStencilId}}

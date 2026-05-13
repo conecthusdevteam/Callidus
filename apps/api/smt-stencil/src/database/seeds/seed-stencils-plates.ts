@@ -1,7 +1,9 @@
 import { DataSource } from 'typeorm';
 import { config } from 'dotenv';
 import { Stencil, WashStatus } from '../../stencils/entities/stencil.entity';
+import { StencilWash } from '../../stencils/entities/stencil-wash.entity';
 import { Plate } from '../../plates/entities/plate.entity';
+import { PlateWash } from '../../plates/entities/plate-wash.entity';
 
 config();
 
@@ -57,8 +59,6 @@ function generateStencilData(index: number): Partial<Stencil> {
   const country = COUNTRIES[random(0, COUNTRIES.length - 1)];
   const thickness = randomFloat(0.05, 0.15, 6);
   const addressing = random(1, 100);
-  const totalWashes = random(0, 500);
-  const operator = OPERATORS[random(0, OPERATORS.length - 1)];
   const lineName = LINE_NAMES[random(0, LINE_NAMES.length - 1)];
   const status = STATUSES[random(0, STATUSES.length - 1)];
   
@@ -68,8 +68,6 @@ function generateStencilData(index: number): Partial<Stencil> {
   stencil.country = country;
   stencil.thickness = thickness;
   stencil.addressing = addressing;
-  stencil.totalWashes = totalWashes;
-  stencil.operator = operator;
   stencil.lineName = lineName;
   stencil.status = status;
   stencil.createdAt = randomDate();
@@ -82,10 +80,6 @@ function generatePlateData(index: number): Partial<Plate> {
   const plateModel = PLATE_MODELS[random(0, PLATE_MODELS.length - 1)];
   const serialNumber = `${plateModel}-${String(index).padStart(6, '0')}`;
   const blankId = `BLANK-${random(1000, 9999)}`;
-  const shift = random(1, 3);
-  const phase = random(1, 4);
-  const totalWashes = random(0, 300);
-  const operator = OPERATORS[random(0, OPERATORS.length - 1)];
   const lineName = LINE_NAMES[random(0, LINE_NAMES.length - 1)];
   const plateManufacturerId = MANUFACTURE_IDS[random(0, MANUFACTURE_IDS.length - 1)];
   const country = COUNTRIES[random(0, COUNTRIES.length - 1)];
@@ -96,10 +90,6 @@ function generatePlateData(index: number): Partial<Plate> {
   plate.plateModel = plateModel;
   plate.serialNumber = serialNumber;
   plate.blankId = blankId;
-  plate.shift = shift;
-  plate.phase = phase;
-  plate.totalWashes = totalWashes;
-  plate.operator = operator;
   plate.lineName = lineName;
   plate.plateManufacturerId = plateManufacturerId;
   plate.country = country;
@@ -143,7 +133,7 @@ async function runSeed() {
     username: process.env.DB_USER || 'sa',
     password: process.env.DB_PASSWORD,
     database: process.env.DB_DATABASE || 'smt_stencil',
-    entities: [Stencil, Plate],
+    entities: [Stencil, StencilWash, Plate, PlateWash],
     synchronize: false,
     options: {
       encrypt: false,
@@ -234,7 +224,7 @@ async function runSeed() {
       const lastStencils = await stencilRepo.find({ take: 3, order: { createdAt: 'DESC' } });
       console.log('\n🔍 Last stencils inserted:');
       lastStencils.forEach(s => {
-        console.log(`   - ${s.stencilCode} | ${s.operator} | ${s.createdAt.toLocaleString()}`);
+        console.log(`   - ${s.stencilCode} | ${s.lineName} | ${s.createdAt.toLocaleString()}`);
       });
     }
     
@@ -242,7 +232,7 @@ async function runSeed() {
       const lastPlates = await plateRepo.find({ take: 3, order: { createdAt: 'DESC' } });
       console.log('\n🔍 Latest plates inserted:');
       lastPlates.forEach(p => {
-        console.log(`   - ${p.serialNumber} | ${p.operator} | ${p.createdAt.toLocaleString()}`);
+        console.log(`   - ${p.serialNumber} | ${p.lineName} | ${p.createdAt.toLocaleString()}`);
       });
     }
     
