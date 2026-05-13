@@ -7,218 +7,24 @@ import FormularioCautela, {
 } from "../components/FormularioCautela";
 import { ModalEncerrada } from "../components/ModalGestor";
 import { useLocation } from "react-router-dom";
+import { AvatarStatus } from "../components/AvatarStatus";
+import { BadgeStatus } from "../components/BadgeStatus";
+import { BannerStatus, JustificativaBox } from "../components/BannerStatus";
+import {
+  TabelaCautelados,
+  ListaCautelados,
+} from "../components/TabelaCautelados";
+import { matchesSearch, validarDocumento } from "../lib/cautelaUtils";
 
-// ─── Avatares ─────────────────────────────────────────────────────────────────
+const STATUS_RECEBIDOS: StatusCautela[] = [
+  "Aprovado",
+  "Reprovado",
+  "Saída Autorizada",
+  "Encerrada",
+];
 
-function AvatarAnalise() {
-  return (
-    <div className="w-12 h-12 rounded-full bg-[#FCE96A] flex items-center justify-center flex-shrink-0">
-      <svg
-        className="w-7 h-7 text-black"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={1.8}
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-        />
-      </svg>
-    </div>
-  );
-}
-
-function AvatarAtencao() {
-  return (
-    <div className="w-12 h-12 rounded-full bg-amber-100 border border-amber-400 flex items-center justify-center flex-shrink-0">
-      <svg
-        className="w-6 h-6 text-amber-600"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={2}
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
-        />
-      </svg>
-    </div>
-  );
-}
-
-function AvatarAprovado() {
-  return (
-    <div className="w-12 h-12 rounded-full bg-[#D1FAE5] border border-[#31C48D] flex items-center justify-center flex-shrink-0">
-      <svg
-        className="w-6 h-6 text-[#2B8E37]"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={1.8}
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-        />
-      </svg>
-    </div>
-  );
-}
-
-function AvatarReprovado() {
-  return (
-    <div className="w-12 h-12 rounded-full bg-[#FEE2E2] border border-[#F05252] flex items-center justify-center flex-shrink-0">
-      <svg
-        className="w-6 h-6 text-[#E02424]"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={1.8}
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-        />
-      </svg>
-    </div>
-  );
-}
-
-function AvatarEncerrada() {
-  return (
-    <div className="w-12 h-12 rounded-full bg-[#F4F4F4] border border-[#A3A3A3] flex items-center justify-center flex-shrink-0">
-      <svg
-        className="w-6 h-6 text-[#525252]"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={1.8}
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-        />
-      </svg>
-    </div>
-  );
-}
-
-// ─── Badges ───────────────────────────────────────────────────────────────────
-
-function BadgeAnalise() {
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-medium bg-[#FCE96A] text-[#111827] border border-[#FACA15]">
-      <svg
-        className="w-4 h-4"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={2}
-        viewBox="0 0 24 24"
-      >
-        <circle cx="12" cy="12" r="9" strokeWidth="2" />
-        <path d="M12 8v5" strokeWidth="2" strokeLinecap="round" />
-        <circle cx="12" cy="16" r="0.8" fill="currentColor" stroke="none" />
-      </svg>
-      Em análise
-    </span>
-  );
-}
-
-function BadgeAtencao() {
-  return (
-    <div className="flex flex-col items-end gap-1">
-      <span className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[13px] font-medium bg-amber-100 text-amber-800 border border-amber-400">
-        <svg
-          className="w-3.5 h-3.5"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2.5}
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-          />
-        </svg>
-        Atenção
-      </span>
-      <span className="inline-flex items-center rounded-lg px-2.5 py-1 text-[13px] font-medium bg-amber-400 text-amber-900">
-        Ação necessária
-      </span>
-    </div>
-  );
-}
-
-function BadgeAprovado() {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[13px] font-medium bg-[#BCF0DA] text-[#065F46] border border-[#31C48D]">
-      <svg
-        className="w-3.5 h-3.5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={2.5}
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-        />
-      </svg>
-      Aprovado
-    </span>
-  );
-}
-
-function BadgeReprovado() {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[13px] font-medium bg-[#FBD5D5] text-[#9B1C1C] border border-[#F05252]">
-      <svg
-        className="w-3.5 h-3.5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={2.5}
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-        />
-      </svg>
-      Reprovado
-    </span>
-  );
-}
-
-function BadgeEncerrada() {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[13px] font-medium bg-[#F4F4F4] text-[#525252] border border-[#A3A3A3]">
-      <svg
-        className="w-3.5 h-3.5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={2}
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-        />
-      </svg>
-      Encerrada
-    </span>
-  );
-}
+type Tab = "enviados" | "recebidos";
+type MobileView = "lista" | "detalhe";
 
 // ─── Card de cautela ──────────────────────────────────────────────────────────
 
@@ -232,33 +38,6 @@ function CardCautelaPortaria({
   onClick: () => void;
 }) {
   const status = cautela.status as StatusCautela;
-
-  const avatar =
-    status === "Saída Autorizada" ? (
-      <AvatarAtencao />
-    ) : status === "Aprovado" ? (
-      <AvatarAprovado />
-    ) : status === "Reprovado" ? (
-      <AvatarReprovado />
-    ) : status === "Encerrada" ? (
-      <AvatarEncerrada />
-    ) : (
-      <AvatarAnalise />
-    );
-
-  const badge =
-    status === "Saída Autorizada" ? (
-      <BadgeAtencao />
-    ) : status === "Aprovado" ? (
-      <BadgeAprovado />
-    ) : status === "Reprovado" ? (
-      <BadgeReprovado />
-    ) : status === "Encerrada" ? (
-      <BadgeEncerrada />
-    ) : (
-      <BadgeAnalise />
-    );
-
   const borderClass = isNaoLida
     ? "border-2 border-amber-400 bg-[#FFFBEB]"
     : status === "Saída Autorizada"
@@ -272,13 +51,29 @@ function CardCautelaPortaria({
     >
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="flex items-center gap-3 min-w-0 flex-1">
-          {avatar}
-          <p className="text-[18px] font-bold leading-tight text-[#404040]">
-            {cautela.visitante || "Nome do proprietário"}
-          </p>
+          <AvatarStatus status={status} />
+
+          <div>
+            <p className="text-[18px] font-bold leading-tight text-[#404040]">
+              {cautela.visitante || "Nome do proprietário"}
+            </p>
+
+            <p className="text-[15px] text-[#404040] mt-1">
+              Data: {cautela.data || "00/00/0000"}
+            </p>
+
+            <p className="text-[15px] text-[#404040] mt-0.5">
+              Ciente:{" "}
+              <span className="font-bold">
+                {(cautela.gestor || "").toUpperCase()}
+              </span>
+            </p>
+          </div>
         </div>
+
         <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-1">
-          {badge}
+          <BadgeStatus status={status} />
+
           {isNaoLida && (
             <span className="inline-flex items-center rounded-lg px-2 py-0.5 text-[12px] font-semibold bg-[#FCE96A] text-black mt-0.5">
               Nova
@@ -287,56 +82,31 @@ function CardCautelaPortaria({
         </div>
       </div>
 
-      <p className="text-[15px] text-[#404040] mt-1">
-        Data: {cautela.data || "00/00/0000"}
-      </p>
-      <p className="text-[15px] text-[#404040] mt-0.5">
-        Ciente:{" "}
-        <span className="font-bold">
-          {(cautela.gestor || "").toUpperCase()}
-        </span>
-      </p>
-
       <div className="border-t border-black my-3" />
 
-      <p className="text-[14px] font-medium text-[#404040] mb-1">Cautelados:</p>
-      <ul className="space-y-0.5 mb-3">
-        {cautela.equipamentos?.slice(0, 3).map((eq, i) => (
-          <li
-            key={i}
-            className="text-[14px] text-[#404040] flex items-center gap-1.5"
-          >
-            <span className="text-[#6B7280]">•</span>
-            {eq.descricao} - {eq.quantidade ?? 1}
-          </li>
-        ))}
-        {(cautela.equipamentos?.length ?? 0) > 3 && (
-          <li className="text-[12px] text-[#9CA3AF]">
-            +{cautela.equipamentos.length - 3} item(ns)
-          </li>
-        )}
-      </ul>
+      <div className="flex justify-between items-end gap-4">
+        <div className="flex-1">
+          <p className="text-[14px] font-medium text-[#404040] mb-1">
+            Cautelados:
+          </p>
 
-      <div className="flex justify-end">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onClick();
-          }}
-          className="text-[13px] px-4 py-2 bg-gray-100 rounded-lg text-[#171717] font-medium hover:underline"
-        >
-          Ver detalhes
-        </button>
+          <ListaCautelados equipamentos={cautela.equipamentos ?? []} max={3} />
+        </div>
+
+        <div className="flex-shrink-0">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onClick();
+            }}
+            className="text-[13px] px-4 py-2 bg-gray-100 rounded-lg text-[#171717] font-medium hover:underline"
+          >
+            Ver detalhes
+          </button>
+        </div>
       </div>
     </div>
   );
-}
-
-function validarDocumento(documento: string) {
-  const valor = documento.replace(/\D/g, "");
-  if (valor.length === 11) return true;
-  if (valor.length >= 7 && valor.length <= 14) return true;
-  return false;
 }
 
 // ─── Painel de detalhes ───────────────────────────────────────────────────────
@@ -354,77 +124,13 @@ function DetalhesCautelaPortaria({
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto p-6">
         <div className="mb-4">
-          {cautela.status === "Saída Autorizada" ? (
-            <div className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-amber-100 border border-amber-400 text-amber-800 text-[13px] font-medium">
-              <svg
-                className="w-4 h-4 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                />
-              </svg>
-              Atenção — Ação necessária
-            </div>
-          ) : cautela.status === "Aprovado" ? (
-            <div className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-[#BCF0DA] border border-[#31C48D] text-[#065F46] text-[13px] font-medium">
-              <svg
-                className="w-4 h-4 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              Aprovado {cautela.aprovadoEm ? `em ${cautela.aprovadoEm}` : ""}
-            </div>
-          ) : cautela.status === "Encerrada" ? (
-            <div className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-[#F4F4F4] border border-[#A3A3A3] text-[#525252] text-[13px] font-medium">
-              <svg
-                className="w-4 h-4 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                />
-              </svg>
-              Encerrada {cautela.encerradaEm ? `em ${cautela.encerradaEm}` : ""}
-            </div>
-          ) : cautela.status === "Reprovado" ? (
-            <div className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-[#FBD5D5] border border-[#F05252] text-[#9B1C1C] text-[13px] font-medium">
-              Reprovado {cautela.reprovadoEm ? `em ${cautela.reprovadoEm}` : ""}
-            </div>
-          ) : (
-            <div className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-[#FCE96A] border border-[#FACA15] text-[#111827] text-[13px] font-medium">
-              Em análise
-            </div>
-          )}
+          <BannerStatus cautela={cautela} />
         </div>
-
         {cautela.status === "Reprovado" && cautela.motivoNegativa && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-sm font-semibold text-red-700 mb-1">
-              Justificativa:
-            </p>
-            <p className="text-sm text-red-700">{cautela.motivoNegativa}</p>
+          <div className="mb-4">
+            <JustificativaBox motivo={cautela.motivoNegativa} />
           </div>
         )}
-
         <div className="mb-3">
           <p className="text-sm font-bold text-black">Id da cautela</p>
           <p className="text-sm text-gray-700 break-all">{cautela.id}</p>
@@ -469,41 +175,11 @@ function DetalhesCautelaPortaria({
             <p className="text-sm text-gray-700">{cautela.encerradaEm}</p>
           </div>
         )}
-
-        {cautela.equipamentos?.length > 0 && (
-          <div className="mb-3">
-            <p className="text-sm font-bold text-black mb-2">Cautelados:</p>
-            <table className="w-full overflow-hidden rounded-lg">
-              <thead>
-                <tr style={{ backgroundColor: "#0E9F6E" }}>
-                  <th className="px-4 py-2 text-left text-white text-sm font-bold">
-                    Descrição
-                  </th>
-                  <th className="px-4 py-2 text-center text-white text-sm font-bold">
-                    Quantidade
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {cautela.equipamentos.map((eq, i) => (
-                  <tr
-                    key={i}
-                    className="border-b border-gray-100 even:bg-[#F4F4F4]"
-                  >
-                    <td className="px-4 py-2 text-sm text-[#0A0A0A]">
-                      {eq.descricao}
-                    </td>
-                    <td className="px-4 py-2 text-center text-sm text-[#0A0A0A]">
-                      {eq.quantidade ?? "-"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <div className="mb-3">
+          <p className="text-sm font-bold text-black mb-2">Cautelados:</p>
+          <TabelaCautelados equipamentos={cautela.equipamentos ?? []} />
+        </div>
       </div>
-
       <div className="px-6 pb-6 pt-2 flex flex-col gap-2">
         {cautela.status === "Saída Autorizada" && onLiberarSaida && (
           <button
@@ -524,43 +200,43 @@ function DetalhesCautelaPortaria({
   );
 }
 
-// ─── Helpers de pesquisa ──────────────────────────────────────────────────────
+// ─── Modal wrapper ────────────────────────────────────────────────────────────
 
-const STATUS_LABELS: Record<string, string[]> = {
-  "Em análise": ["em análise", "analise", "análise", "pendente"],
-  Aprovado: ["aprovado", "aprovada"],
-  Reprovado: ["reprovado", "reprovada", "negado", "recusado"],
-  "Saída Autorizada": [
-    "saída autorizada",
-    "saida autorizada",
-    "atenção",
-    "atencao",
-    "ação necessária",
-    "acao necessaria",
-  ],
-  Encerrada: ["encerrada", "encerrado", "finalizada", "concluida"],
-};
-
-function matchesSearch(cautela: Cautela, term: string): boolean {
-  if (!term.trim()) return true;
-  const q = term.toLowerCase().trim();
-  if (cautela.id.toLowerCase().includes(q)) return true;
-  if (cautela.visitante?.toLowerCase().includes(q)) return true;
-  if (cautela.gestor?.toLowerCase().includes(q)) return true;
-  if (cautela.empresa?.toLowerCase().includes(q)) return true;
-  const variants = STATUS_LABELS[cautela.status] ?? [];
-  if (variants.some((v) => v.includes(q) || q.includes(v))) return true;
-  return false;
+function ModalOverlay({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      className="fixed inset-0 md:left-[70px] flex items-center justify-center bg-black/20 backdrop-blur-sm z-30"
+      style={{ top: "60px" }}
+    >
+      {children}
+    </div>
+  );
 }
 
-const STATUS_RECEBIDOS: StatusCautela[] = [
-  "Aprovado",
-  "Reprovado",
-  "Saída Autorizada",
-  "Encerrada",
-];
+function ContadorNaoLidas({
+  total,
+  mostrarBolinha,
+}: {
+  total: number;
+  mostrarBolinha: boolean;
+}) {
+  if (total === 0) return null;
+  return (
+    <div className="relative flex-shrink-0">
+      <div
+        className="min-w-[28px] h-[28px] px-1.5 rounded-full flex items-center justify-center text-white text-[13px] font-bold leading-none"
+        style={{ backgroundColor: "#0E9F6E" }}
+      >
+        {total > 9 ? "9+" : total}
+      </div>
+      {mostrarBolinha && (
+        <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-red-500 border-2 border-white" />
+      )}
+    </div>
+  );
+}
 
-type Tab = "enviados" | "recebidos";
+// ─── Home ─────────────────────────────────────────────────────────────────────
 
 export default function Home() {
   const { user } = useAuth();
@@ -585,6 +261,14 @@ export default function Home() {
   );
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [cautelas, setCautelas] = useState<Cautela[]>([]);
+  const [loadingCautelas, setLoadingCautelas] = useState(true);
+  const [listError, setListError] = useState("");
+  const [cautelasLidas, setCautelasLidas] = useState<Set<string>>(new Set());
+  const cautelasConhecidasRef = useRef<Map<string, string>>(new Map());
+  const cautelaSelecionadaRef = useRef<Cautela | null>(null);
+
+  // Formulário
   const [documento, setDocumento] = useState("");
   const [empresa, setEmpresa] = useState("");
   const [descricao, setDescricao] = useState("");
@@ -599,21 +283,16 @@ export default function Home() {
   const [email, setEmail] = useState("");
   const [setorId, setSetorId] = useState<string>("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const [cautelas, setCautelas] = useState<Cautela[]>([]);
-  const [loadingCautelas, setLoadingCautelas] = useState(true);
-  const [listError, setListError] = useState("");
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Modais
   const [showModal, setShowModal] = useState(false);
   const [itemParaExcluir, setItemParaExcluir] = useState<number | null>(null);
   const [showItemDeletedModal, setShowItemDeletedModal] = useState(false);
   const [modalEncerrada, setModalEncerrada] = useState(false);
-
-  const [cautelasLidas, setCautelasLidas] = useState<Set<string>>(new Set());
-  const cautelasConhecidasRef = useRef<Map<string, string>>(new Map());
-
+  const [mobileView, setMobileView] = useState<MobileView>("lista");
   const cautelasRef = useRef<Cautela[]>([]);
-  const cautelaSelecionadaRef = useRef<Cautela | null>(null);
   const painelDetalhesRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -626,7 +305,6 @@ export default function Home() {
   const carregarCautelas = useCallback(async () => {
     try {
       const data = await getCautelas();
-
       const isPrimeiraCarrega = cautelasConhecidasRef.current.size === 0;
 
       if (!isPrimeiraCarrega) {
@@ -637,9 +315,9 @@ export default function Home() {
             const mudouStatus = anterior !== undefined && anterior !== c.status;
             if (isNova || mudouStatus) {
               setCautelasLidas((prev) => {
-                const novo = new Set(prev);
-                novo.delete(c.id);
-                return novo;
+                const n = new Set(prev);
+                n.delete(c.id);
+                return n;
               });
             }
           }
@@ -649,7 +327,6 @@ export default function Home() {
       cautelasConhecidasRef.current = new Map(
         data.map((c) => [c.id, c.status]),
       );
-
       setCautelas(data);
 
       const sel = cautelaSelecionadaRef.current;
@@ -659,7 +336,6 @@ export default function Home() {
           setCautelaSelecionada(atualizada);
       }
     } catch (error) {
-      console.error("Erro ao carregar cautelas.", error);
       setCautelas([]);
       setListError(
         error instanceof Error
@@ -722,6 +398,44 @@ export default function Home() {
     if (STATUS_RECEBIDOS.includes(cautela.status as StatusCautela)) {
       setCautelasLidas((prev) => new Set([...prev, cautela.id]));
     }
+    setMobileView("detalhe");
+  }
+
+  function handleCancel() {
+    setSetorId("");
+    setNome("");
+    setEmail("");
+    setDocumento("");
+    setEmpresa("");
+    setDescricao("");
+    setQuantidade("");
+    setItems([]);
+    setRetornado(null);
+    setDataFim("");
+    setFieldErrors({});
+    setSubmitError("");
+  }
+
+  function confirmarExclusaoItem() {
+    if (itemParaExcluir === null) return;
+    setItems((prev) => prev.filter((_, i) => i !== itemParaExcluir));
+    setItemParaExcluir(null);
+    setShowItemDeletedModal(true);
+    setTimeout(() => setShowItemDeletedModal(false), 3000);
+  }
+
+  async function handleConfirmarSaida() {
+    if (!cautelaSelecionada) return;
+    try {
+      const encerrada = await closeCautela(cautelaSelecionada.id);
+      setCautelas((prev) =>
+        prev.map((c) => (c.id === encerrada.id ? encerrada : c)),
+      );
+      setCautelaSelecionada(encerrada);
+    } catch (error) {
+      console.error("Erro ao encerrar cautela.", error);
+    }
+    setModalEncerrada(true);
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -793,63 +507,23 @@ export default function Home() {
     }
   };
 
-  function handleCancel() {
-    setSetorId("");
-    setNome("");
-    setEmail("");
-    setDocumento("");
-    setEmpresa("");
-    setDescricao("");
-    setQuantidade("");
-    setItems([]);
-    setRetornado(null);
-    setDataFim("");
-    setFieldErrors({});
-    setSubmitError("");
-  }
-
-  function confirmarExclusaoItem() {
-    if (itemParaExcluir === null) return;
-    setItems((prev) => prev.filter((_, i) => i !== itemParaExcluir));
-    setItemParaExcluir(null);
-    setShowItemDeletedModal(true);
-    setTimeout(() => setShowItemDeletedModal(false), 3000);
-  }
-
-  async function handleConfirmarSaida() {
-    if (!cautelaSelecionada) return;
-    try {
-      const encerrada = await closeCautela(cautelaSelecionada.id);
-      setCautelas((prev) =>
-        prev.map((c) => (c.id === encerrada.id ? encerrada : c)),
-      );
-      setCautelaSelecionada(encerrada);
-    } catch (error) {
-      console.error("Erro ao encerrar cautela.", error);
-    }
-    setModalEncerrada(true);
-  }
-
-  // ── Filtros e contagens ───────────────────────────────────────────────────
-
-  const cautelasPorAba = cautelas.filter((c) => {
-    if (activeTab === "enviados") return c.status === "Em análise";
-    return STATUS_RECEBIDOS.includes(c.status as StatusCautela);
-  });
-
+  // ── Filtros ──
+  const cautelasPorAba = cautelas.filter((c) =>
+    activeTab === "enviados"
+      ? c.status === "Em análise"
+      : STATUS_RECEBIDOS.includes(c.status as StatusCautela),
+  );
   const pool = searchTerm.trim() ? cautelas : cautelasPorAba;
   const cautelasFiltradas = pool.filter((c) => matchesSearch(c, searchTerm));
 
-  // Cautelas em Recebidos que ainda não foram lidas
-  const cautelasNaoLidas = cautelas.filter(
+  const totalNaoLidas = cautelas.filter(
     (c) =>
       STATUS_RECEBIDOS.includes(c.status as StatusCautela) &&
       !cautelasLidas.has(c.id),
-  );
-  const totalNaoLidas = cautelasNaoLidas.length;
-  // Bolinha vermelha: há não lidas e o usuário não está na aba Recebidos
-  const mostrarBolinha = totalNaoLidas > 0 && activeTab !== "recebidos";
+  ).length;
+  const mostrarBolinha = totalNaoLidas > 0;
 
+  // ── Props formulário ──
   const formularioProps = {
     canCreateCautela,
     setorId,
@@ -881,6 +555,7 @@ export default function Home() {
     onCancel: handleCancel,
   };
 
+  // ── Sub-elementos ──
   const listaCards = (
     <div className="py-2 px-3">
       {loadingCautelas && cautelas.length === 0 && (
@@ -936,30 +611,17 @@ export default function Home() {
         setCautelaSelecionada(null);
         setSearchTerm("");
       }}
-      className={`${isMobile ? "w-full h-[56px] text-[16px]" : "w-full h-[68px] text-[18px]"} font-normal rounded-t${isMobile ? "-lg" : "-xl"} transition-all relative ${
-        activeTab === "recebidos"
-          ? "bg-[#22592A] text-white"
-          : "bg-[#C4EEC9] text-[#2B8E37]"
-      }`}
+      className={`${isMobile ? "w-full h-[56px] text-[16px]" : "w-full h-[68px] text-[18px]"} font-normal rounded-t${isMobile ? "-lg" : "-xl"} transition-all relative ${activeTab === "recebidos" ? "bg-[#22592A] text-white" : "bg-[#C4EEC9] text-[#2B8E37]"}`}
     >
       <div
         className="w-full h-full flex items-center justify-center gap-2"
         style={{ paddingLeft: "50%" }}
       >
         <span>Recebidos</span>
-        {totalNaoLidas > 0 && (
-          <div className="relative flex-shrink-0">
-            <div
-              className="min-w-[28px] h-[28px] px-1.5 rounded-full flex items-center justify-center text-white text-[13px] font-bold leading-none"
-              style={{ backgroundColor: "#0E9F6E" }}
-            >
-              {totalNaoLidas > 9 ? "9+" : totalNaoLidas}
-            </div>
-            {mostrarBolinha && (
-              <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-red-500 border-2 border-white" />
-            )}
-          </div>
-        )}
+        <ContadorNaoLidas
+          total={totalNaoLidas}
+          mostrarBolinha={mostrarBolinha}
+        />
       </div>
     </button>
   );
@@ -971,14 +633,35 @@ export default function Home() {
         setCautelaSelecionada(null);
         setSearchTerm("");
       }}
-      className={`absolute top-0 left-0 w-[50%] ${isMobile ? "h-[56px] text-[16px]" : "h-[68px] text-[18px]"} font-bold rounded-tl${isMobile ? "-lg" : "-xl"} transition-all ${
-        activeTab === "enviados"
-          ? "bg-[#22592A] text-white"
-          : "bg-[#C4EEC9] text-[#22592A]"
-      }`}
+      className={`absolute top-0 left-0 w-[50%] ${isMobile ? "h-[56px] text-[16px]" : "h-[68px] text-[18px]"} font-bold rounded-tl${isMobile ? "-lg" : "-xl"} transition-all ${activeTab === "enviados" ? "bg-[#22592A] text-white" : "bg-[#C4EEC9] text-[#22592A]"}`}
     >
       Enviados
     </button>
+  );
+
+  const formularioSection = (
+    <div className="w-full max-w-[800px] mx-auto">
+      <div className="text-center mb-4 md:mb-6">
+        <h1 className="text-xl font-bold text-black md:text-[28px] md:leading-snug">
+          Cautela para equipamentos externos
+        </h1>
+        <p className="text-xs text-black mt-1 md:text-sm md:mt-2">
+          Esta cautela funciona para qualquer tipo de equipamento
+          eletroeletrônico que venha de terceiros.
+        </p>
+        <h3 className="hidden md:block text-[18px] font-semibold text-black mt-1">
+          Notebooks, Mouses, Teclados, Etc...
+        </h3>
+      </div>
+      <div className="bg-[#F2FBF3] rounded-sm shadow-sm border border-[#22592A] p-4 md:p-8"> 
+        <FormularioCautela
+          {...formularioProps}
+          fieldErrors={fieldErrors}
+          setFieldErrors={setFieldErrors}
+          validarDocumento={validarDocumento}
+        />
+      </div>
+    </div>
   );
 
   return (
@@ -999,7 +682,6 @@ export default function Home() {
             </div>
           </div>
         </div>
-
         <div className="flex-1 overflow-y-auto flex flex-col items-center py-8 px-6 relative">
           {painelDetalhes}
           <div className="w-full max-w-[580px] text-center mb-6">
@@ -1027,62 +709,72 @@ export default function Home() {
       </div>
 
       {/* ══ MOBILE ══ */}
-      <div className="md:hidden flex flex-col pb-8">
-        <div className="relative mx-3 mt-16">
-          {abaRecebidos(true)}
-          {abaEnviados(true)}
-        </div>
-        <div className="mx-3 bg-[#E5E7EB] rounded-b-xl border border-[#E5E7EB] mb-4 max-h-72 overflow-y-auto">
-          {listaCards}
-        </div>
-        {cautelaSelecionada ? (
-          <div className="px-3 w-full">
-            <div className="bg-white border border-gray-300 rounded-lg">
-              <DetalhesCautelaPortaria
-                cautela={cautelaSelecionada}
-                onFechar={() => setCautelaSelecionada(null)}
-                onLiberarSaida={
-                  cautelaSelecionada.status === "Saída Autorizada"
-                    ? handleConfirmarSaida
-                    : undefined
-                }
-              />
+      <div className="md:hidden flex flex-col h-[calc(100vh-60px)] pt-[40px] overflow-hidden">
+        {mobileView === "lista" && (
+          <>
+            <div className="relative mx-3 mt-2 flex-shrink-0">
+              {abaRecebidos(true)}
+              {abaEnviados(true)}
             </div>
-          </div>
-        ) : activeTab === "enviados" ? (
-          <div className="px-3 w-full">
-            <div className="text-center mb-4">
-              <h1 className="text-xl font-bold text-black">
-                Cautela para equipamentos externos
-              </h1>
-              <p className="text-xs text-black mt-1">
-                Qualquer equipamento eletroeletrônico de terceiros.
-              </p>
+            <div
+              className="mx-3 bg-[#E5E7EB] rounded-t-[5px] border border-[#E5E7EB] flex-shrink-0"
+              style={{ maxHeight: "35vh" }}
+            >
+              <div className="overflow-y-auto h-full">{listaCards}</div>
             </div>
-            <div className="bg-[#F2FBF3] rounded-sm shadow-sm border border-[#22592A] p-4">
-              <FormularioCautela
-                {...formularioProps}
-                fieldErrors={fieldErrors}
-                setFieldErrors={setFieldErrors}
-                validarDocumento={validarDocumento}
-              />
+            <div className="flex-1 overflow-y-auto px-3 pb-4 pt-2">
+              {formularioSection}
             </div>
-          </div>
-        ) : (
-          <div className="px-3 text-center">
-            <p className="text-sm text-gray-500 mt-4">
-              Selecione uma cautela para ver os detalhes.
-            </p>
+          </>
+        )}
+
+        {mobileView === "detalhe" && cautelaSelecionada && (
+          <div className="flex flex-col flex-1 overflow-hidden">
+            <div className="relative flex items-center justify-center px-4 py-3 mt-2 flex-shrink-0">
+              <button
+                onClick={() => {
+                  setMobileView("lista");
+                  setCautelaSelecionada(null);
+                }}
+                className="absolute left-4 text-gray-600"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M19 12H5M5 12L12 19M5 12L12 5"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+              <span className="font-bold text-[20px] text-center">
+                Visualização de Cautela
+              </span>
+            </div>
+            <div className="flex-1 overflow-y-auto px-4 py-2">
+              <div className="bg-white rounded-sm border border-black p-6">
+                <DetalhesCautelaPortaria
+                  cautela={cautelaSelecionada}
+                  onFechar={() => {
+                    setMobileView("lista");
+                    setCautelaSelecionada(null);
+                  }}
+                  onLiberarSaida={
+                    cautelaSelecionada.status === "Saída Autorizada"
+                      ? handleConfirmarSaida
+                      : undefined
+                  }
+                />
+              </div>
+            </div>
           </div>
         )}
       </div>
 
       {/* ══ MODAIS ══ */}
       {showModal && (
-        <div
-          className="fixed inset-0 md:left-[70px] flex items-center justify-center bg-black/20 backdrop-blur-sm z-30"
-          style={{ top: "60px" }}
-        >
+        <ModalOverlay>
           <div className="bg-white rounded-2xl shadow-xl px-12 py-10 flex flex-col items-center gap-4 min-w-[320px]">
             <div
               className="w-20 h-20 rounded-3xl flex items-center justify-center"
@@ -1108,14 +800,11 @@ export default function Home() {
               Sua solicitação foi enviada ao gestor
             </p>
           </div>
-        </div>
+        </ModalOverlay>
       )}
 
       {itemParaExcluir !== null && (
-        <div
-          className="fixed inset-0 md:left-[70px] flex items-center justify-center bg-black/20 backdrop-blur-sm z-30"
-          style={{ top: "60px" }}
-        >
+        <ModalOverlay>
           <div className="bg-white rounded-2xl shadow-xl px-14 py-10 flex flex-col items-center gap-4 min-w-[320px]">
             <div
               className="w-14 h-14 rounded-2xl flex items-center justify-center"
@@ -1158,14 +847,11 @@ export default function Home() {
               </button>
             </div>
           </div>
-        </div>
+        </ModalOverlay>
       )}
 
       {showItemDeletedModal && (
-        <div
-          className="fixed inset-0 md:left-[70px] flex items-center justify-center bg-black/20 backdrop-blur-sm z-30"
-          style={{ top: "60px" }}
-        >
+        <ModalOverlay>
           <div className="bg-white rounded-2xl shadow-xl px-12 py-10 flex flex-col items-center gap-4 min-w-[320px]">
             <div
               className="w-16 h-16 rounded-2xl flex items-center justify-center"
@@ -1191,7 +877,7 @@ export default function Home() {
               O item foi EXCLUÍDO com sucesso.
             </p>
           </div>
-        </div>
+        </ModalOverlay>
       )}
 
       {modalEncerrada && (

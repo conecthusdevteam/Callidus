@@ -35,13 +35,13 @@ function BadgeStatus({ status }: { status: StatusCautela }) {
       </span>
     );
   }
-  // Encerrada
-  return (
-    <span className="inline-flex items-center gap-1 w-fit px-2 py-1 rounded-full text-[12px] font-semibold border border-[#A3A3A3] bg-[#F4F4F4] text-[#525252]">
-      <span className="w-2 h-2 rounded-full bg-[#A3A3A3]" />
-      Encerrado
-    </span>
-  );
+  if (status === "Encerrada")
+    return (
+      <span className="inline-flex items-center gap-1 w-fit px-2 py-1 rounded-full text-[12px] font-semibold border border-[#A3A3A3] bg-[#F4F4F4] text-[#525252]">
+        <span className="w-2 h-2 rounded-full bg-[#A3A3A3]" />
+        Encerrado
+      </span>
+    );
 }
 
 function formatarData(dataISO: string): { data: string; hora: string } {
@@ -361,40 +361,6 @@ export default function HistoricoCautelas({
                 cautela={cautelaSelecionada}
                 onFechar={() => setCautelaSelecionada(null)}
               />
-              {cautelaSelecionada.status === "Em análise" && (
-                <div className="px-6 pb-6 flex flex-col gap-2">
-                  <button
-                    onClick={() => {
-                      window.dispatchEvent(
-                        new CustomEvent("cautela-acao", {
-                          detail: {
-                            acao: "aprovar",
-                            id: cautelaSelecionada.id,
-                          },
-                        }),
-                      );
-                    }}
-                    className="w-full py-2.5 rounded-lg bg-[#3BB14A] text-white text-sm font-semibold hover:bg-[#22592A] transition-colors"
-                  >
-                    Aprovar
-                  </button>
-                  <button
-                    onClick={() => {
-                      window.dispatchEvent(
-                        new CustomEvent("cautela-acao", {
-                          detail: {
-                            acao: "descartar",
-                            id: cautelaSelecionada.id,
-                          },
-                        }),
-                      );
-                    }}
-                    className="w-full py-2.5 rounded-lg border border-gray-400 bg-white text-black text-sm font-medium hover:bg-gray-100 transition-colors"
-                  >
-                    Descartar
-                  </button>
-                </div>
-              )}
             </div>
           )}
         </div>
