@@ -10,8 +10,29 @@ GET {{baseUrl}}/
 ### List plates - success
 GET {{baseUrl}}/plates
 
+### Daily wash summary - success
+GET {{baseUrl}}/lavagens/resumo-dia
+
+### List recent plate washes - success
+GET {{baseUrl}}/plates/lavagens?page=1&limit=10
+
+### List plates paginated - success
+GET {{baseUrl}}/plates?page=1&limit=10
+
+### List plates filtered by model - success
+GET {{baseUrl}}/plates?modelo=PCB
+
+### List plates filtered by blank id - success
+GET {{baseUrl}}/plates?blank_id=BLANK
+
+### List plates filtered by serial - success
+GET {{baseUrl}}/plates?serial=PCB
+
 ### List plates filtered by line - success
 GET {{baseUrl}}/plates?linha=Linha%201
+
+### List plates filtered by multiple fields - success
+GET {{baseUrl}}/plates?modelo=PCB&blank_id=BLANK&serial=PCB&linha=Linha%201&page=1&limit=10
 
 ### List plates with no results - success with empty array
 GET {{baseUrl}}/plates?linha=Linha%20Inexistente

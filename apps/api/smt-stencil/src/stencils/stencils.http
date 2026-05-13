@@ -11,14 +11,35 @@ GET {{baseUrl}}/
 ### List stencils - success
 GET {{baseUrl}}/stencils
 
+### Daily wash summary - success
+GET {{baseUrl}}/lavagens/resumo-dia
+
+### List recent stencil washes - success
+GET {{baseUrl}}/stencils/lavagens?page=1&limit=10
+
+### List recent stencil washes with attention only - success
+GET {{baseUrl}}/stencils/lavagens?page=1&limit=10&attentionOnly=true
+
+### List stencils paginated - success
+GET {{baseUrl}}/stencils?page=1&limit=10
+
 ### List stencils filtered by partial QR code - success
 GET {{baseUrl}}/stencils?codigo=RE
+
+### List stencils filtered by manufacturer - success
+GET {{baseUrl}}/stencils?id_fabricante=MNF
+
+### List stencils filtered by country - success
+GET {{baseUrl}}/stencils?pais_origem=Brasil
+
+### List stencils filtered by status - success
+GET {{baseUrl}}/stencils?status=active
 
 ### List stencils filtered by line - success
 GET {{baseUrl}}/stencils?linha=
 
-### List stencils filtered by partial QR code and line - success
-GET {{baseUrl}}/stencils?codigo=A&linha=Linha%201
+### List stencils filtered by multiple fields - success
+GET {{baseUrl}}/stencils?codigo=A&id_fabricante=MNF&status=active&linha=Linha%201&page=1&limit=10
 
 ### List stencils with no results - success with empty array
 GET {{baseUrl}}/stencils?codigo=SEM-RESULTADO

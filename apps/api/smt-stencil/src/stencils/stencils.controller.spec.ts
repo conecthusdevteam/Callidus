@@ -7,12 +7,15 @@ jest.mock('nanoid', () => ({
 }));
 
 describe('StencilsController', () => {
-  function makeController(serviceOverrides: Partial<Record<keyof StencilsService, jest.Mock>> = {}) {
+  function makeController(
+    serviceOverrides: Partial<Record<keyof StencilsService, jest.Mock>> = {},
+  ) {
     const service = {
       create: jest.fn(),
       findAll: jest.fn(),
       findOne: jest.fn(),
       findDetailByStencilCode: jest.fn(),
+      findRecentWashes: jest.fn(),
       createWash: jest.fn(),
       createWashByStencilCode: jest.fn(),
       findLines: jest.fn(),
@@ -32,8 +35,41 @@ describe('StencilsController', () => {
       findAll: jest.fn().mockResolvedValue([]),
     });
 
-    await expect(controller.findAll('A-019', 'Linha 1')).resolves.toEqual([]);
-    expect(service.findAll).toHaveBeenCalledWith({ codigo: 'A-019', linha: 'Linha 1' });
+    await expect(
+      controller.findAll(
+        'A-019',
+        'MNF',
+        'Brasil',
+        'active',
+        'Linha 1',
+        '2',
+        '15',
+      ),
+    ).resolves.toEqual([]);
+    expect(service.findAll).toHaveBeenCalledWith({
+      codigo: 'A-019',
+      id_fabricante: 'MNF',
+      pais_origem: 'Brasil',
+      status: 'active',
+      linha: 'Linha 1',
+      page: 2,
+      limit: 15,
+    });
+  });
+
+  it('passes recent wash filters to the service', () => {
+    const { controller, service } = makeController({
+      findRecentWashes: jest.fn().mockReturnValue({ items: [] }),
+    });
+
+    expect(controller.findRecentWashes('1', '10', 'true')).toEqual({
+      items: [],
+    });
+    expect(service.findRecentWashes).toHaveBeenCalledWith({
+      page: 1,
+      limit: 10,
+      attentionOnly: true,
+    });
   });
 
   it('returns stencil detail by id', async () => {
@@ -50,7 +86,9 @@ describe('StencilsController', () => {
       findOne: jest.fn().mockResolvedValue(null),
     });
 
-    await expect(controller.findOne('missing')).rejects.toBeInstanceOf(NotFoundException);
+    await expect(controller.findOne('missing')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
   });
 
   it('returns stencil detail by QR code', async () => {
@@ -67,7 +105,9 @@ describe('StencilsController', () => {
       findDetailByStencilCode: jest.fn().mockResolvedValue(null),
     });
 
-    await expect(controller.findByCode('missing')).rejects.toBeInstanceOf(NotFoundException);
+    await expect(controller.findByCode('missing')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
   });
 
   it('creates wash by stencil id', async () => {
@@ -76,8 +116,12 @@ describe('StencilsController', () => {
       createWash: jest.fn().mockResolvedValue(wash),
     });
 
-    await expect(controller.createWash('stencil_1', { operator: 'Carlos Souza' })).resolves.toBe(wash);
-    expect(service.createWash).toHaveBeenCalledWith('stencil_1', { operator: 'Carlos Souza' });
+    await expect(
+      controller.createWash('stencil_1', { operator: 'Carlos Souza' }),
+    ).resolves.toBe(wash);
+    expect(service.createWash).toHaveBeenCalledWith('stencil_1', {
+      operator: 'Carlos Souza',
+    });
   });
 
   it('creates wash by stencil QR code', async () => {
@@ -86,8 +130,12 @@ describe('StencilsController', () => {
       createWashByStencilCode: jest.fn().mockResolvedValue(wash),
     });
 
-    await expect(controller.createWashByCode('A-019', { operator: 'Carlos Souza' })).resolves.toBe(wash);
-    expect(service.createWashByStencilCode).toHaveBeenCalledWith('A-019', { operator: 'Carlos Souza' });
+    await expect(
+      controller.createWashByCode('A-019', { operator: 'Carlos Souza' }),
+    ).resolves.toBe(wash);
+    expect(service.createWashByStencilCode).toHaveBeenCalledWith('A-019', {
+      operator: 'Carlos Souza',
+    });
   });
 
   it('throws not found when creating wash for missing stencil', async () => {
@@ -96,8 +144,12 @@ describe('StencilsController', () => {
       createWashByStencilCode: jest.fn().mockResolvedValue(null),
     });
 
-    await expect(controller.createWash('missing', { operator: 'Carlos Souza' })).rejects.toBeInstanceOf(NotFoundException);
-    await expect(controller.createWashByCode('missing', { operator: 'Carlos Souza' })).rejects.toBeInstanceOf(NotFoundException);
+    await expect(
+      controller.createWash('missing', { operator: 'Carlos Souza' }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    await expect(
+      controller.createWashByCode('missing', { operator: 'Carlos Souza' }),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('throws not found when updating or deleting missing stencil', async () => {
@@ -106,7 +158,11 @@ describe('StencilsController', () => {
       remove: jest.fn().mockResolvedValue(null),
     });
 
-    await expect(controller.update('missing', {})).rejects.toBeInstanceOf(NotFoundException);
-    await expect(controller.remove('missing')).rejects.toBeInstanceOf(NotFoundException);
+    await expect(controller.update('missing', {})).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    await expect(controller.remove('missing')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
   });
 });

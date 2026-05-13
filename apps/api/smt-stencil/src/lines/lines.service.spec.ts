@@ -9,7 +9,9 @@ jest.mock('nanoid', () => ({
 
 describe('LinesService', () => {
   function makeRepository(lines: string[]) {
-    const getRawMany = jest.fn().mockResolvedValue(lines.map((linha) => ({ linha })));
+    const getRawMany = jest
+      .fn()
+      .mockResolvedValue(lines.map((linha) => ({ linha })));
 
     return {
       createQueryBuilder: jest.fn().mockReturnValue({
@@ -21,13 +23,17 @@ describe('LinesService', () => {
   }
 
   it('returns unique sorted lines from stencils and plates', async () => {
-    const stencilRepository = makeRepository(['Linha 2', 'Linha 1']) as unknown as Repository<Stencil>;
-    const plateRepository = makeRepository(['Linha 1', 'Linha 3']) as unknown as Repository<Plate>;
-
-    await expect(new LinesService(stencilRepository, plateRepository).findAll()).resolves.toEqual([
-      'Linha 1',
+    const stencilRepository = makeRepository([
       'Linha 2',
+      'Linha 1',
+    ]) as unknown as Repository<Stencil>;
+    const plateRepository = makeRepository([
+      'Linha 1',
       'Linha 3',
-    ]);
+    ]) as unknown as Repository<Plate>;
+
+    await expect(
+      new LinesService(stencilRepository, plateRepository).findAll(),
+    ).resolves.toEqual(['Linha 1', 'Linha 2', 'Linha 3']);
   });
 });
