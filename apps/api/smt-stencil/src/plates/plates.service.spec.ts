@@ -9,7 +9,9 @@ jest.mock('nanoid', () => ({
 }));
 
 describe('PlatesService', () => {
-  function makeRepository(overrides: Partial<Record<keyof Repository<Plate>, jest.Mock>> = {}) {
+  function makeRepository(
+    overrides: Partial<Record<keyof Repository<Plate>, jest.Mock>> = {},
+  ) {
     return {
       create: jest.fn((dto) => dto),
       save: jest.fn(async (entity) => ({ id: 'plate_saved', ...entity })),
@@ -22,7 +24,9 @@ describe('PlatesService', () => {
     } as unknown as jest.Mocked<Repository<Plate>>;
   }
 
-  function makeWashRepository(overrides: Partial<Record<keyof Repository<PlateWash>, jest.Mock>> = {}) {
+  function makeWashRepository(
+    overrides: Partial<Record<keyof Repository<PlateWash>, jest.Mock>> = {},
+  ) {
     return {
       create: jest.fn((dto) => dto),
       save: jest.fn(async (entity) => ({ id: 'plate_wash_saved', ...entity })),
@@ -90,16 +94,18 @@ describe('PlatesService', () => {
       findOne: jest.fn().mockResolvedValue(makePlate()),
     });
 
-    await expect(makeService(repository).create({
-      plateModel: 'PCB-1000',
-      serialNumber: 'PCB-1000-000001',
-      blankId: 'BLANK-1001',
-      lineName: 'Linha 1',
-    })).rejects.toBeInstanceOf(ConflictException);
+    await expect(
+      makeService(repository).create({
+        plateModel: 'PCB-1000',
+        serialNumber: 'PCB-1000-000001',
+        blankId: 'BLANK-1001',
+        lineName: 'Linha 1',
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
     expect(repository.save).not.toHaveBeenCalled();
   });
 
-  it('lists plate summaries filtered by line', async () => {
+  it('lists plate summaries filtered by all supported fields', async () => {
     const repository = makeRepository({
       find: jest.fn().mockResolvedValue([
         makePlate({
@@ -111,21 +117,58 @@ describe('PlatesService', () => {
       ]),
     });
 
-    const result = await makeService(repository).findAll({ linha: 'Linha 1' });
+    const result = await makeService(repository).findAll({
+      modelo: 'PCB',
+      blank_id: 'BLANK',
+      serial: '000001',
+      linha: 'Linha 1',
+    });
 
-    expect(repository.find).toHaveBeenCalledWith(expect.objectContaining({
-      where: { lineName: 'Linha 1' },
-      relations: { washes: true },
-      order: { createdAt: 'DESC' },
-    }));
+    expect(repository.find).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          plateModel: expect.any(Object),
+          blankId: expect.any(Object),
+          serialNumber: expect.any(Object),
+          lineName: 'Linha 1',
+        }),
+        relations: { washes: true },
+        order: { createdAt: 'DESC' },
+      }),
+    );
     expect(result).toEqual([
       expect.objectContaining({
         modelo: 'PCB-1000',
         serial: 'PCB-1000-000001',
         total_lavagens: 2,
         ultima_lavagem: new Date('2026-05-10T08:00:00.000Z'),
+        ultima_lavagem_detalhe: expect.objectContaining({
+          id: 'wash_2',
+          operador: 'Maria Santos',
+        }),
       }),
     ]);
+  });
+
+  it('returns paginated plate summaries when page or limit is provided', async () => {
+    const repository = makeRepository({
+      find: jest
+        .fn()
+        .mockResolvedValue([
+          makePlate({ id: 'plate_1' }),
+          makePlate({ id: 'plate_2' }),
+        ]),
+    });
+
+    await expect(
+      makeService(repository).findAll({ page: 1, limit: 1 }),
+    ).resolves.toMatchObject({
+      items: [expect.objectContaining({ id: 'plate_1' })],
+      page: 1,
+      limit: 1,
+      total: 2,
+      total_pages: 2,
+    });
   });
 
   it('returns plate detail with history ordered by newest wash', async () => {
@@ -147,7 +190,43 @@ describe('PlatesService', () => {
       total_lavagens: 3,
       ultima_lavagem: new Date('2026-05-10T16:00:00.000Z'),
     });
-    expect(result?.historico_lavagens.map((wash) => wash.id)).toEqual(['wash_3', 'wash_2', 'wash_1']);
+    expect(result?.historico_lavagens.map((wash) => wash.id)).toEqual([
+      'wash_3',
+      'wash_2',
+      'wash_1',
+    ]);
+  });
+
+  it('returns recent plate washes paginated and ordered by newest wash', async () => {
+    const repository = makeRepository({
+      find: jest.fn().mockResolvedValue([
+        makePlate({
+          washes: [
+            makeWash('wash_1', '2026-05-10T00:00:00.000Z'),
+            makeWash('wash_2', '2026-05-10T08:00:00.000Z'),
+          ],
+        }),
+      ]),
+    });
+
+    await expect(
+      makeService(repository).findRecentWashes({ page: 1, limit: 10 }),
+    ).resolves.toMatchObject({
+      items: [
+        expect.objectContaining({
+          id: 'wash_2',
+          plate_id: 'plate_1',
+          modelo: 'PCB-1000',
+          serial: 'PCB-1000-000001',
+          blank_id: 'BLANK-1001',
+        }),
+        expect.objectContaining({ id: 'wash_1' }),
+      ],
+      page: 1,
+      limit: 10,
+      total: 2,
+      total_pages: 1,
+    });
   });
 
   it('returns empty history for plate without washes', async () => {
@@ -155,7 +234,9 @@ describe('PlatesService', () => {
       findOne: jest.fn().mockResolvedValue(makePlate()),
     });
 
-    await expect(makeService(repository).findOne('plate_1')).resolves.toMatchObject({
+    await expect(
+      makeService(repository).findOne('plate_1'),
+    ).resolves.toMatchObject({
       total_lavagens: 0,
       ultima_lavagem: null,
       historico_lavagens: [],
@@ -167,7 +248,9 @@ describe('PlatesService', () => {
       findOne: jest.fn().mockResolvedValue(null),
     });
 
-    await expect(makeService(repository).findOne('missing')).resolves.toBeNull();
+    await expect(
+      makeService(repository).findOne('missing'),
+    ).resolves.toBeNull();
   });
 
   it('creates a plate wash by plate id', async () => {
@@ -177,11 +260,13 @@ describe('PlatesService', () => {
     });
     const washRepository = makeWashRepository();
 
-    await expect(makeService(repository, washRepository).createWash(plate.id, {
-      operator: 'Maria Santos',
-      shift: 2,
-      phase: 1,
-    })).resolves.toMatchObject({
+    await expect(
+      makeService(repository, washRepository).createWash(plate.id, {
+        operator: 'Maria Santos',
+        shift: 2,
+        phase: 1,
+      }),
+    ).resolves.toMatchObject({
       id: 'plate_wash_saved',
       plateId: plate.id,
       operator: 'Maria Santos',
@@ -201,11 +286,13 @@ describe('PlatesService', () => {
       findOneBy: jest.fn().mockResolvedValue(null),
     });
 
-    await expect(makeService(repository).createWash('missing', {
-      operator: 'Maria Santos',
-      shift: 2,
-      phase: 1,
-    })).resolves.toBeNull();
+    await expect(
+      makeService(repository).createWash('missing', {
+        operator: 'Maria Santos',
+        shift: 2,
+        phase: 1,
+      }),
+    ).resolves.toBeNull();
   });
 
   it('updates and removes existing plate', async () => {
@@ -215,7 +302,9 @@ describe('PlatesService', () => {
     });
     const service = makeService(repository);
 
-    await expect(service.update(existing.id, { lineName: 'Linha 2' })).resolves.toMatchObject({
+    await expect(
+      service.update(existing.id, { lineName: 'Linha 2' }),
+    ).resolves.toMatchObject({
       lineName: 'Linha 2',
     });
     await expect(service.remove(existing.id)).resolves.toBe(existing);
@@ -227,7 +316,9 @@ describe('PlatesService', () => {
     });
     const service = makeService(repository);
 
-    await expect(service.update('missing', { lineName: 'Linha 2' })).resolves.toBeNull();
+    await expect(
+      service.update('missing', { lineName: 'Linha 2' }),
+    ).resolves.toBeNull();
     await expect(service.remove('missing')).resolves.toBeNull();
   });
 });

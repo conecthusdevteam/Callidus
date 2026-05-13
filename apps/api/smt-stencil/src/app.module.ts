@@ -4,18 +4,19 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { LinesModule } from './lines/lines.module';
-import { Plate } from './plates/entities/plate.entity';
 import { PlateWash } from './plates/entities/plate-wash.entity';
+import { Plate } from './plates/entities/plate.entity';
 import { PlatesModule } from './plates/plates.module';
-import { Stencil } from './stencils/entities/stencil.entity';
 import { StencilWash } from './stencils/entities/stencil-wash.entity';
+import { Stencil } from './stencils/entities/stencil.entity';
 import { StencilsModule } from './stencils/stencils.module';
+import { WashesModule } from './washes/washes.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env'
+      envFilePath: '.env',
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
@@ -33,14 +34,15 @@ import { StencilsModule } from './stencils/stencils.module';
           encrypt: false,
           trustServerCertificate: true,
           enableArithAbort: true,
-        }
-      })
+        },
+      }),
     }),
     StencilsModule,
     PlatesModule,
-    LinesModule
+    LinesModule,
+    WashesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}

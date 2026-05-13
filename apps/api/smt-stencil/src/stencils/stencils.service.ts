@@ -4,7 +4,7 @@ import { Like, Repository } from 'typeorm';
 import { CreateStencilWashDto } from './dto/create-stencil-wash.dto';
 import { CreateStencilDto } from './dto/create-stencil.dto';
 import { UpdateStencilDto } from './dto/update-stencil.dto';
-import { Stencil } from './entities/stencil.entity';
+import { Stencil, WashStatus } from './entities/stencil.entity';
 import { StencilWash } from './entities/stencil-wash.entity';
 
 const MANAUS_TIME_ZONE = 'America/Manaus';
@@ -21,9 +21,26 @@ type StencilWashHistoryItem = {
 type StencilMetrics = {
   total_lavagens: number;
   ultima_lavagem: Date | null;
+  ultima_lavagem_detalhe: StencilWashHistoryItem | null;
   intervalo_medio: number | null;
   possui_anomalia: boolean;
   historico_lavagens: StencilWashHistoryItem[];
+};
+
+type StencilFilters = {
+  codigo?: string;
+  id_fabricante?: string;
+  pais_origem?: string;
+  status?: string;
+  linha?: string;
+  page?: number;
+  limit?: number;
+};
+
+type RecentStencilWashFilters = {
+  page?: number;
+  limit?: number;
+  attentionOnly?: boolean;
 };
 
 @Injectable()
@@ -32,8 +49,8 @@ export class StencilsService {
     @InjectRepository(Stencil)
     private readonly repository: Repository<Stencil>,
     @InjectRepository(StencilWash)
-    private readonly washRepository: Repository<StencilWash>
-  ) { }
+    private readonly washRepository: Repository<StencilWash>,
+  ) {}
 
   async create(dto: CreateStencilDto) {
     const existingStencil = await this.findByStencilCode(dto.stencilCode);
@@ -46,10 +63,19 @@ export class StencilsService {
     return this.repository.save(stencil);
   }
 
-  async findAll(filters?: { codigo?: string; linha?: string }) {
+  async findAll(filters?: StencilFilters) {
     const stencils = await this.repository.find({
       where: {
-        ...(filters?.codigo ? { stencilCode: Like(`%${filters.codigo}%`) } : {}),
+        ...(filters?.codigo
+          ? { stencilCode: Like(`%${filters.codigo}%`) }
+          : {}),
+        ...(filters?.id_fabricante
+          ? { manufactureId: Like(`%${filters.id_fabricante}%`) }
+          : {}),
+        ...(filters?.pais_origem
+          ? { country: Like(`%${filters.pais_origem}%`) }
+          : {}),
+        ...(filters?.status ? { status: filters.status as WashStatus } : {}),
         ...(filters?.linha ? { lineName: filters.linha } : {}),
       },
       relations: {
@@ -60,7 +86,9 @@ export class StencilsService {
       },
     });
 
-    return stencils.map((stencil) => this.toSummary(stencil));
+    const items = stencils.map((stencil) => this.toSummary(stencil));
+
+    return this.paginateIfRequested(items, filters?.page, filters?.limit);
   }
 
   async findOne(id: string) {
@@ -106,11 +134,45 @@ export class StencilsService {
     return this.washRepository.save(wash);
   }
 
-  async createWashByStencilCode(stencilCode: string, dto: CreateStencilWashDto) {
+  async createWashByStencilCode(
+    stencilCode: string,
+    dto: CreateStencilWashDto,
+  ) {
     const stencil = await this.repository.findOneBy({ stencilCode });
     if (!stencil) return null;
 
     return this.createWash(stencil.id, dto);
+  }
+
+  async findRecentWashes(filters?: RecentStencilWashFilters) {
+    const stencils = await this.repository.find({
+      relations: {
+        washes: true,
+      },
+    });
+
+    const items = stencils
+      .flatMap((stencil) => {
+        const metrics = this.calculateMetrics(stencil.washes ?? []);
+
+        return metrics.historico_lavagens.map((wash) => ({
+          id: wash.id,
+          stencil_id: stencil.id,
+          created_at: wash.created_at,
+          codigo: stencil.stencilCode,
+          enderecamento: String(stencil.addressing).padStart(3, '0'),
+          status: stencil.status,
+          linha: stencil.lineName,
+          operador: wash.operador,
+          intervalo_desde_lavagem_anterior:
+            wash.intervalo_desde_lavagem_anterior,
+          fora_do_padrao: wash.fora_do_padrao,
+        }));
+      })
+      .filter((wash) => !filters?.attentionOnly || wash.fora_do_padrao)
+      .sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
+
+    return this.paginate(items, filters?.page, filters?.limit);
   }
 
   async findLines() {
@@ -152,6 +214,7 @@ export class StencilsService {
       updated_at: stencil.updatedAt,
       total_lavagens: metrics.total_lavagens,
       ultima_lavagem: metrics.ultima_lavagem,
+      ultima_lavagem_detalhe: metrics.ultima_lavagem_detalhe,
       intervalo_medio: metrics.intervalo_medio,
       possui_anomalia: metrics.possui_anomalia,
     };
@@ -167,24 +230,33 @@ export class StencilsService {
   }
 
   private calculateMetrics(washes: StencilWash[]): StencilMetrics {
-    const orderedAsc = [...washes].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    const orderedAsc = [...washes].sort(
+      (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
+    );
     const intervals = orderedAsc
       .map((wash, index) => {
         if (index === 0) return null;
-        return this.diffMinutes(wash.createdAt, orderedAsc[index - 1].createdAt);
+        return this.diffMinutes(
+          wash.createdAt,
+          orderedAsc[index - 1].createdAt,
+        );
       })
       .filter((value): value is number => value !== null);
 
-    const average = intervals.length > 0
-      ? Math.round(intervals.reduce((sum, value) => sum + value, 0) / intervals.length)
-      : null;
+    const average =
+      intervals.length > 0
+        ? Math.round(
+            intervals.reduce((sum, value) => sum + value, 0) / intervals.length,
+          )
+        : null;
 
     const washesByManausDay = this.countWashesByManausDay(orderedAsc);
 
     const historyAsc = orderedAsc.map((wash, index) => {
-      const interval = index === 0
-        ? null
-        : this.diffMinutes(wash.createdAt, orderedAsc[index - 1].createdAt);
+      const interval =
+        index === 0
+          ? null
+          : this.diffMinutes(wash.createdAt, orderedAsc[index - 1].createdAt);
 
       return {
         id: wash.id,
@@ -200,6 +272,7 @@ export class StencilsService {
     return {
       total_lavagens: orderedAsc.length,
       ultima_lavagem: orderedAsc.at(-1)?.createdAt ?? null,
+      ultima_lavagem_detalhe: historico_lavagens[0] ?? null,
       intervalo_medio: average,
       possui_anomalia: historico_lavagens.some((wash) => wash.fora_do_padrao),
       historico_lavagens,
@@ -212,8 +285,11 @@ export class StencilsService {
 
   private isAnomaly(createdAt: Date, washesByManausDay: Map<string, number>) {
     const manausParts = this.getManausDateParts(createdAt);
-    const hasMoreThanOneWashInDay = (washesByManausDay.get(manausParts.dayKey) ?? 0) > 1;
-    const isOutsideReservedHours = !RESERVED_WASH_HOURS.includes(manausParts.hour);
+    const hasMoreThanOneWashInDay =
+      (washesByManausDay.get(manausParts.dayKey) ?? 0) > 1;
+    const isOutsideReservedHours = !RESERVED_WASH_HOURS.includes(
+      manausParts.hour,
+    );
 
     return hasMoreThanOneWashInDay || isOutsideReservedHours;
   }
@@ -236,11 +312,33 @@ export class StencilsService {
       hour12: false,
     }).formatToParts(date);
 
-    const value = (type: string) => parts.find((part) => part.type === type)?.value ?? '';
+    const value = (type: string) =>
+      parts.find((part) => part.type === type)?.value ?? '';
 
     return {
       dayKey: `${value('year')}-${value('month')}-${value('day')}`,
       hour: Number(value('hour')),
+    };
+  }
+
+  private paginateIfRequested<T>(items: T[], page?: number, limit?: number) {
+    if (!page && !limit) return items;
+    return this.paginate(items, page, limit);
+  }
+
+  private paginate<T>(items: T[], page = 1, limit = 20) {
+    const safePage = Math.max(1, Number(page) || 1);
+    const safeLimit = Math.max(1, Math.min(100, Number(limit) || 20));
+    const total = items.length;
+    const total_pages = Math.max(1, Math.ceil(total / safeLimit));
+    const start = (safePage - 1) * safeLimit;
+
+    return {
+      items: items.slice(start, start + safeLimit),
+      page: safePage,
+      limit: safeLimit,
+      total,
+      total_pages,
     };
   }
 }
