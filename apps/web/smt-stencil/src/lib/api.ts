@@ -1,71 +1,60 @@
-/**
- * Cliente HTTP para consumir a API
- */
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+async function apiRequest<T>(endpoint: string): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    headers: { "Content-Type": "application/json" },
+  });
 
-export interface ApiResponse<T> {
-  data: T;
-  status: number;
-}
-
-async function apiRequest<T>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<T> {
-  const url = `${API_BASE_URL}${endpoint}`;
-
-  try {
-    const response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-      ...options,
-    });
-
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status} ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error(`API request failed for ${endpoint}:`, error);
-    throw error;
+  if (response.status === 404) {
+    return [] as unknown as T;
   }
+
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json();
 }
 
-// Endpoints para Stencils
 export const stencilsApi = {
-  getAll: () => apiRequest('/stencils'),
-  getById: (id: string) => apiRequest(`/stencils/${id}`),
-  create: (data: unknown) => apiRequest('/stencils', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  }),
-  update: (id: string, data: unknown) => apiRequest(`/stencils/${id}`, {
-    method: 'PATCH',
-    body: JSON.stringify(data),
-  }),
-  delete: (id: string) => apiRequest(`/stencils/${id}`, {
-    method: 'DELETE',
-  }),
+  getAll: () => apiRequest<ApiStencil[]>("/stencils"),
 };
 
-// Endpoints para Plates
 export const platesApi = {
-  getAll: () => apiRequest('/plates'),
-  getById: (id: string) => apiRequest(`/plates/${id}`),
-  create: (data: unknown) => apiRequest('/plates', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  }),
-  update: (id: string, data: unknown) => apiRequest(`/plates/${id}`, {
-    method: 'PATCH',
-    body: JSON.stringify(data),
-  }),
-  delete: (id: string) => apiRequest(`/plates/${id}`, {
-    method: 'DELETE',
-  }),
+  getAll: () => apiRequest<ApiPlate[]>("/plates"),
 };
+
+// ── Shapes exatos que o back entrega ────────────────────────────────────────
+
+export interface ApiStencil {
+  id: string;
+  stencilCode: string;
+  manufactureId: string;
+  country: string;
+  thickness: number;
+  addressing: number;
+  totalWashes: number;
+  operator: string;
+  lineName: string;
+  status: "active" | "inactive";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ApiPlate {
+  id: string;
+  plateModel: string;
+  serialNumber: string;
+  blankId: string;
+  shift: number;
+  phase: number;
+  totalWashes: number;
+  operator: string;
+  lineName: string;
+  plateManufacturerId?: string;
+  country?: string;
+  thickness?: number;
+  addressing?: string;
+  createdAt: string;
+  updatedAt: string;
+}
