@@ -1,5 +1,6 @@
 import { nanoid } from 'nanoid';
-import { BeforeInsert, Column, CreateDateColumn, Entity, PrimaryColumn, UpdateDateColumn } from "typeorm";
+import { BeforeInsert, Column, CreateDateColumn, Entity, OneToMany, PrimaryColumn, UpdateDateColumn } from "typeorm";
+import { StencilWash } from './stencil-wash.entity';
 
 export enum WashStatus {
     ACTIVE = 'active',
@@ -11,28 +12,22 @@ export class Stencil {
     @PrimaryColumn()
     id!: string;
 
-    @Column()
+    @Column({ name: 'codigo', unique: true })
     stencilCode!: string;
 
-    @Column()
+    @Column({ name: 'id_fabricante' })
     manufactureId!: string;
 
-    @Column()
+    @Column({ name: 'pais_origem' })
     country!: string;
 
-    @Column('decimal', { precision: 6, scale: 4 })
+    @Column('decimal', { name: 'espessura', precision: 6, scale: 4 })
     thickness!: number;
 
-    @Column()
+    @Column({ name: 'enderecamento' })
     addressing!: number;
 
-    @Column()
-    totalWashes!: number;
-
-    @Column()
-    operator!: string;
-
-    @Column()
+    @Column({ name: 'linha' })
     lineName!: string;
 
     @Column({
@@ -42,10 +37,13 @@ export class Stencil {
     })
     status!: WashStatus;
 
-    @CreateDateColumn()
+    @OneToMany(() => StencilWash, (wash) => wash.stencil)
+    washes!: StencilWash[];
+
+    @CreateDateColumn({ name: 'created_at' })
     createdAt!: Date;
 
-    @UpdateDateColumn()
+    @UpdateDateColumn({ name: 'updated_at' })
     updatedAt!: Date;
 
     @BeforeInsert()

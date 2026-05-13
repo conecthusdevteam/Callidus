@@ -1,51 +1,43 @@
 import { nanoid } from 'nanoid';
-import { BeforeInsert, Column, CreateDateColumn, Entity, PrimaryColumn, UpdateDateColumn } from "typeorm";
+import { BeforeInsert, Column, CreateDateColumn, Entity, OneToMany, PrimaryColumn, UpdateDateColumn } from "typeorm";
+import { PlateWash } from './plate-wash.entity';
 
 @Entity('plates')
 export class Plate {
     @PrimaryColumn()
     id!: string;
 
-    @Column()
+    @Column({ name: 'modelo' })
     plateModel!: string;
 
-    @Column()
+    @Column({ name: 'serial', unique: true })
     serialNumber!: string;
 
-    @Column()
+    @Column({ name: 'blank_id' })
     blankId!: string;
 
-    @Column()
-    shift!: number;
-
-    @Column()
-    phase!: number;
-
-    @Column()
-    totalWashes!: number;
-
-    @Column()
-    operator!: string;
-
-    @Column()
+    @Column({ name: 'linha' })
     lineName!: string;
 
-    @Column({ nullable: true })
+    @Column({ name: 'id_fabricante', nullable: true })
     plateManufacturerId?: string;
 
-    @Column({ nullable: true })
+    @Column({ name: 'pais_origem', nullable: true })
     country?: string;
 
-    @Column({ type: 'decimal', precision: 5, scale: 3, nullable: true })
+    @Column({ name: 'espessura', type: 'decimal', precision: 5, scale: 3, nullable: true })
     thickness?: number;
 
-    @Column({ nullable: true })
+    @Column({ name: 'enderecamento', nullable: true })
     addressing?: string;
 
-    @CreateDateColumn()
+    @OneToMany(() => PlateWash, (wash) => wash.plate)
+    washes!: PlateWash[];
+
+    @CreateDateColumn({ name: 'created_at' })
     createdAt!: Date;
 
-    @UpdateDateColumn()
+    @UpdateDateColumn({ name: 'updated_at' })
     updatedAt!: Date;
 
     @BeforeInsert()

@@ -1,4 +1,5 @@
-  import { Body, Controller, Delete, Get, HttpCode, HttpException, InternalServerErrorException, NotFoundException, Param, Patch, Post } from '@nestjs/common';
+  import { Body, Controller, Delete, Get, HttpCode, HttpException, InternalServerErrorException, NotFoundException, Param, Patch, Post, Query } from '@nestjs/common';
+import { CreateStencilWashDto } from './dto/create-stencil-wash.dto';
 import { CreateStencilDto } from './dto/create-stencil.dto';
 import { UpdateStencilDto } from './dto/update-stencil.dto';
 import { StencilsService } from './stencils.service';
@@ -14,15 +15,9 @@ export class StencilsController {
   }
 
   @Get()
-  async findAll() {
+  async findAll(@Query('codigo') codigo?: string, @Query('linha') linha?: string) {
     try {
-      const stencils = await this.stencilsService.findAll();
-  
-      if (!stencils || stencils.length === 0) {
-        throw new NotFoundException('No stencils found');
-      }
-  
-      return stencils;
+      return this.stencilsService.findAll({ codigo, linha });
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;
@@ -30,6 +25,34 @@ export class StencilsController {
 
       throw new InternalServerErrorException('Error when searching for stencils.');
     }
+  }
+
+  @Get('linhas')
+  findLines() {
+    return this.stencilsService.findLines();
+  }
+
+  @Get('codigo/:codigo')
+  async findByCode(@Param('codigo') codigo: string) {
+    const stencil = await this.stencilsService.findDetailByStencilCode(codigo);
+    if (!stencil) throw new NotFoundException;
+    return stencil;
+  }
+
+  @Post(':id/lavagens')
+  @HttpCode(201)
+  async createWash(@Param('id') id: string, @Body() dto: CreateStencilWashDto) {
+    const wash = await this.stencilsService.createWash(id, dto);
+    if (!wash) throw new NotFoundException;
+    return wash;
+  }
+
+  @Post('codigo/:codigo/lavagens')
+  @HttpCode(201)
+  async createWashByCode(@Param('codigo') codigo: string, @Body() dto: CreateStencilWashDto) {
+    const wash = await this.stencilsService.createWashByStencilCode(codigo, dto);
+    if (!wash) throw new NotFoundException;
+    return wash;
   }
 
   @Get(':id')
