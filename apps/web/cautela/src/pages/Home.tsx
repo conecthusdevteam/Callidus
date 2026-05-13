@@ -614,6 +614,7 @@ export default function Home() {
 
   const cautelasRef = useRef<Cautela[]>([]);
   const cautelaSelecionadaRef = useRef<Cautela | null>(null);
+  const painelDetalhesRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     cautelasRef.current = cautelas;
@@ -698,6 +699,24 @@ export default function Home() {
     return () => window.removeEventListener("cautela-search", onSearch);
   }, []);
 
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        cautelaSelecionada &&
+        painelDetalhesRef.current &&
+        !painelDetalhesRef.current.contains(event.target as Node)
+      ) {
+        setCautelaSelecionada(null);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [cautelaSelecionada]);
+
   function marcarComoLida(cautela: Cautela) {
     setCautelaSelecionada((prev) => (prev?.id === cautela.id ? null : cautela));
     if (STATUS_RECEBIDOS.includes(cautela.status as StatusCautela)) {
@@ -710,7 +729,11 @@ export default function Home() {
     const newErrors: FieldErrors = {};
     setSubmitError("");
     if (!setorId) newErrors.setor = "Selecione um setor.";
-    if (!nome.trim()) newErrors.nome = "O campo Proprietário é obrigatório.";
+    if (!nome.trim()) {
+      newErrors.nome = "O campo Proprietário é obrigatório.";
+    } else if (nome.trim().length < 3) {
+      newErrors.nome = "O nome deve ter no mínimo 3 caracteres.";
+    }
     if (!documento.trim())
       newErrors.documento = "O campo Documento é obrigatório.";
     if (!empresa.trim()) newErrors.empresa = "O campo Empresa é obrigatório.";
@@ -719,7 +742,17 @@ export default function Home() {
       newErrors.email = "Use apenas e-mail institucional.";
     if (!validarDocumento(documento))
       newErrors.documento = "Informe um CPF ou identidade válida";
-    if (items.length === 0) newErrors.items = "Adicione pelo menos um item.";
+    if (!descricao.trim()) {
+      newErrors.descricao = "A descrição do material é obrigatória.";
+    } else if (descricao.trim().length < 3) {
+      newErrors.descricao = "A descrição deve ter no mínimo 3 caracteres.";
+    }
+
+    if (!quantidade) {
+      newErrors.quantidade = "A quantidade é obrigatória.";
+    } else if (Number(quantidade) <= 0) {
+      newErrors.quantidade = "A quantidade deve ser maior que 0.";
+    }
     if (retornado === null)
       newErrors.retornado = "Selecione se o item será retornado.";
     if (retornado === true && !dataFim)
@@ -880,7 +913,10 @@ export default function Home() {
   );
 
   const painelDetalhes = cautelaSelecionada ? (
-    <div className="absolute top-4 left-0 w-[380px] bg-white border border-gray-200 rounded-xl shadow-2xl z-10 max-h-[90%] overflow-y-auto">
+    <div
+      ref={painelDetalhesRef}
+      className="fixed top-22 left-[630px] w-[380px] bg-white border border-gray-200 rounded-xl shadow-2xl z-10 max-h-[90%] overflow-y-auto"
+    >
       <DetalhesCautelaPortaria
         cautela={cautelaSelecionada}
         onFechar={() => setCautelaSelecionada(null)}
@@ -980,7 +1016,12 @@ export default function Home() {
             </h3>
           </div>
           <div className="w-full max-w-[650px] bg-[#F2FBF3] rounded-sm shadow-sm border border-[#22592A] p-8">
-            <FormularioCautela {...formularioProps} />
+            <FormularioCautela
+              {...formularioProps}
+              fieldErrors={fieldErrors}
+              setFieldErrors={setFieldErrors}
+              validarDocumento={validarDocumento}
+            />
           </div>
         </div>
       </div>
@@ -1019,7 +1060,12 @@ export default function Home() {
               </p>
             </div>
             <div className="bg-[#F2FBF3] rounded-sm shadow-sm border border-[#22592A] p-4">
-              <FormularioCautela {...formularioProps} />
+              <FormularioCautela
+                {...formularioProps}
+                fieldErrors={fieldErrors}
+                setFieldErrors={setFieldErrors}
+                validarDocumento={validarDocumento}
+              />
             </div>
           </div>
         ) : (
