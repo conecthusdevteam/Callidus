@@ -9,7 +9,9 @@ jest.mock('nanoid', () => ({
 }));
 
 describe('StencilsService', () => {
-  function makeRepository(overrides: Partial<Record<keyof Repository<Stencil>, jest.Mock>> = {}) {
+  function makeRepository(
+    overrides: Partial<Record<keyof Repository<Stencil>, jest.Mock>> = {},
+  ) {
     return {
       create: jest.fn((dto) => dto),
       save: jest.fn(async (entity) => ({ id: 'stencil_saved', ...entity })),
@@ -23,10 +25,15 @@ describe('StencilsService', () => {
     } as unknown as jest.Mocked<Repository<Stencil>>;
   }
 
-  function makeWashRepository(overrides: Partial<Record<keyof Repository<StencilWash>, jest.Mock>> = {}) {
+  function makeWashRepository(
+    overrides: Partial<Record<keyof Repository<StencilWash>, jest.Mock>> = {},
+  ) {
     return {
       create: jest.fn((dto) => dto),
-      save: jest.fn(async (entity) => ({ id: 'stencil_wash_saved', ...entity })),
+      save: jest.fn(async (entity) => ({
+        id: 'stencil_wash_saved',
+        ...entity,
+      })),
       ...overrides,
     } as unknown as jest.Mocked<Repository<StencilWash>>;
   }
@@ -99,14 +106,16 @@ describe('StencilsService', () => {
       findOne: jest.fn().mockResolvedValue(makeStencil()),
     });
 
-    await expect(makeService(repository).create({
-      stencilCode: 'A-019',
-      manufactureId: 'MNF-001',
-      country: 'Brasil',
-      thickness: 0.12,
-      addressing: 19,
-      lineName: 'Linha 1',
-    })).rejects.toBeInstanceOf(ConflictException);
+    await expect(
+      makeService(repository).create({
+        stencilCode: 'A-019',
+        manufactureId: 'MNF-001',
+        country: 'Brasil',
+        thickness: 0.12,
+        addressing: 19,
+        lineName: 'Linha 1',
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
     expect(repository.save).not.toHaveBeenCalled();
   });
 
@@ -122,24 +131,54 @@ describe('StencilsService', () => {
       ]),
     });
 
-    const result = await makeService(repository).findAll({ codigo: 'A-0', linha: 'Linha 1' });
+    const result = await makeService(repository).findAll({
+      codigo: 'A-0',
+      linha: 'Linha 1',
+    });
 
-    expect(repository.find).toHaveBeenCalledWith(expect.objectContaining({
-      where: expect.objectContaining({
-        stencilCode: expect.any(Object),
-        lineName: 'Linha 1',
+    expect(repository.find).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          stencilCode: expect.any(Object),
+          lineName: 'Linha 1',
+        }),
+        relations: { washes: true },
+        order: { createdAt: 'DESC' },
       }),
-      relations: { washes: true },
-      order: { createdAt: 'DESC' },
-    }));
+    );
     expect(result).toEqual([
       expect.objectContaining({
         codigo: 'A-019',
         total_lavagens: 2,
         intervalo_medio: 480,
         possui_anomalia: true,
+        ultima_lavagem_detalhe: expect.objectContaining({
+          id: 'wash_2',
+          operador: 'Carlos Souza',
+        }),
       }),
     ]);
+  });
+
+  it('returns paginated stencil summaries when page or limit is provided', async () => {
+    const repository = makeRepository({
+      find: jest
+        .fn()
+        .mockResolvedValue([
+          makeStencil({ id: 'stencil_1' }),
+          makeStencil({ id: 'stencil_2' }),
+        ]),
+    });
+
+    await expect(
+      makeService(repository).findAll({ page: 1, limit: 1 }),
+    ).resolves.toMatchObject({
+      items: [expect.objectContaining({ id: 'stencil_1' })],
+      page: 1,
+      limit: 1,
+      total: 2,
+      total_pages: 2,
+    });
   });
 
   it('returns stencil history ordered by newest wash and calculates intervals and anomaly', async () => {
@@ -186,9 +225,11 @@ describe('StencilsService', () => {
   });
 
   it('does not mark anomaly when stencil has one wash in Manaus reserved hours', async () => {
-    const result = await makeServiceWithStencil(makeStencil({
-      washes: [makeWash('wash_1', '2026-05-10T15:30:00.000Z')],
-    })).findOne('stencil_1');
+    const result = await makeServiceWithStencil(
+      makeStencil({
+        washes: [makeWash('wash_1', '2026-05-10T15:30:00.000Z')],
+      }),
+    ).findOne('stencil_1');
 
     expect(result).toMatchObject({
       possui_anomalia: false,
@@ -200,9 +241,11 @@ describe('StencilsService', () => {
   });
 
   it('marks anomaly when stencil wash happens outside Manaus reserved hours', async () => {
-    const result = await makeServiceWithStencil(makeStencil({
-      washes: [makeWash('wash_1', '2026-05-10T14:30:00.000Z')],
-    })).findOne('stencil_1');
+    const result = await makeServiceWithStencil(
+      makeStencil({
+        washes: [makeWash('wash_1', '2026-05-10T14:30:00.000Z')],
+      }),
+    ).findOne('stencil_1');
 
     expect(result).toMatchObject({
       possui_anomalia: true,
@@ -214,12 +257,14 @@ describe('StencilsService', () => {
   });
 
   it('marks anomaly when stencil has more than one wash in the same Manaus day', async () => {
-    const result = await makeServiceWithStencil(makeStencil({
-      washes: [
-        makeWash('wash_1', '2026-05-10T15:30:00.000Z'),
-        makeWash('wash_2', '2026-05-10T20:30:00.000Z'),
-      ],
-    })).findOne('stencil_1');
+    const result = await makeServiceWithStencil(
+      makeStencil({
+        washes: [
+          makeWash('wash_1', '2026-05-10T15:30:00.000Z'),
+          makeWash('wash_2', '2026-05-10T20:30:00.000Z'),
+        ],
+      }),
+    ).findOne('stencil_1');
 
     expect(result).toMatchObject({
       possui_anomalia: true,
@@ -231,7 +276,8 @@ describe('StencilsService', () => {
   });
 
   it('returns null metrics for stencil without washes', async () => {
-    const result = await makeServiceWithStencil(makeStencil()).findOne('stencil_1');
+    const result =
+      await makeServiceWithStencil(makeStencil()).findOne('stencil_1');
 
     expect(result).toMatchObject({
       total_lavagens: 0,
@@ -242,10 +288,50 @@ describe('StencilsService', () => {
     });
   });
 
+  it('returns recent stencil washes paginated and filters attention only', async () => {
+    const repository = makeRepository({
+      find: jest.fn().mockResolvedValue([
+        makeStencil({
+          washes: [
+            makeWash('wash_1', '2026-05-10T15:30:00.000Z'),
+            makeWash('wash_2', '2026-05-10T20:30:00.000Z'),
+          ],
+        }),
+      ]),
+    });
+
+    await expect(
+      makeService(repository).findRecentWashes({
+        page: 1,
+        limit: 10,
+        attentionOnly: true,
+      }),
+    ).resolves.toMatchObject({
+      items: [
+        expect.objectContaining({
+          id: 'wash_2',
+          stencil_id: 'stencil_1',
+          codigo: 'A-019',
+          fora_do_padrao: true,
+        }),
+        expect.objectContaining({
+          id: 'wash_1',
+          fora_do_padrao: true,
+        }),
+      ],
+      page: 1,
+      limit: 10,
+      total: 2,
+      total_pages: 1,
+    });
+  });
+
   it('returns null metrics for stencil with one wash', async () => {
-    const result = await makeServiceWithStencil(makeStencil({
-      washes: [makeWash('wash_1', '2026-05-10T15:30:00.000Z')],
-    })).findOne('stencil_1');
+    const result = await makeServiceWithStencil(
+      makeStencil({
+        washes: [makeWash('wash_1', '2026-05-10T15:30:00.000Z')],
+      }),
+    ).findOne('stencil_1');
 
     expect(result).toMatchObject({
       total_lavagens: 1,
@@ -263,8 +349,12 @@ describe('StencilsService', () => {
       findOne: jest.fn().mockResolvedValue(null),
     });
 
-    await expect(makeService(repository).findOne('missing')).resolves.toBeNull();
-    await expect(makeService(repository).findDetailByStencilCode('missing')).resolves.toBeNull();
+    await expect(
+      makeService(repository).findOne('missing'),
+    ).resolves.toBeNull();
+    await expect(
+      makeService(repository).findDetailByStencilCode('missing'),
+    ).resolves.toBeNull();
   });
 
   it('creates a stencil wash by stencil id', async () => {
@@ -274,10 +364,12 @@ describe('StencilsService', () => {
     });
     const washRepository = makeWashRepository();
 
-    await expect(makeService(repository, washRepository).createWash(stencil.id, {
-      operator: 'Carlos Souza',
-      createdAt: '2026-05-13T10:30:00.000Z',
-    })).resolves.toMatchObject({
+    await expect(
+      makeService(repository, washRepository).createWash(stencil.id, {
+        operator: 'Carlos Souza',
+        createdAt: '2026-05-13T10:30:00.000Z',
+      }),
+    ).resolves.toMatchObject({
       id: 'stencil_wash_saved',
       stencilId: stencil.id,
       operator: 'Carlos Souza',
@@ -293,19 +385,24 @@ describe('StencilsService', () => {
   it('creates a stencil wash by QR code', async () => {
     const stencil = makeStencil();
     const repository = makeRepository({
-      findOneBy: jest.fn()
+      findOneBy: jest
+        .fn()
         .mockResolvedValueOnce(stencil)
         .mockResolvedValueOnce(stencil),
     });
 
-    await expect(makeService(repository).createWashByStencilCode(stencil.stencilCode, {
-      operator: 'Carlos Souza',
-    })).resolves.toMatchObject({
+    await expect(
+      makeService(repository).createWashByStencilCode(stencil.stencilCode, {
+        operator: 'Carlos Souza',
+      }),
+    ).resolves.toMatchObject({
       id: 'stencil_wash_saved',
       stencilId: stencil.id,
       operator: 'Carlos Souza',
     });
-    expect(repository.findOneBy).toHaveBeenNthCalledWith(1, { stencilCode: stencil.stencilCode });
+    expect(repository.findOneBy).toHaveBeenNthCalledWith(1, {
+      stencilCode: stencil.stencilCode,
+    });
     expect(repository.findOneBy).toHaveBeenNthCalledWith(2, { id: stencil.id });
   });
 
@@ -314,12 +411,16 @@ describe('StencilsService', () => {
       findOneBy: jest.fn().mockResolvedValue(null),
     });
 
-    await expect(makeService(repository).createWash('missing', {
-      operator: 'Carlos Souza',
-    })).resolves.toBeNull();
-    await expect(makeService(repository).createWashByStencilCode('missing', {
-      operator: 'Carlos Souza',
-    })).resolves.toBeNull();
+    await expect(
+      makeService(repository).createWash('missing', {
+        operator: 'Carlos Souza',
+      }),
+    ).resolves.toBeNull();
+    await expect(
+      makeService(repository).createWashByStencilCode('missing', {
+        operator: 'Carlos Souza',
+      }),
+    ).resolves.toBeNull();
   });
 
   it('updates and removes existing stencil', async () => {
@@ -329,7 +430,9 @@ describe('StencilsService', () => {
     });
     const service = makeService(repository);
 
-    await expect(service.update(existing.id, { status: WashStatus.INACTIVE })).resolves.toMatchObject({
+    await expect(
+      service.update(existing.id, { status: WashStatus.INACTIVE }),
+    ).resolves.toMatchObject({
       status: WashStatus.INACTIVE,
     });
     await expect(service.remove(existing.id)).resolves.toBe(existing);
@@ -341,18 +444,25 @@ describe('StencilsService', () => {
     });
     const service = makeService(repository);
 
-    await expect(service.update('missing', { status: WashStatus.INACTIVE })).resolves.toBeNull();
+    await expect(
+      service.update('missing', { status: WashStatus.INACTIVE }),
+    ).resolves.toBeNull();
     await expect(service.remove('missing')).resolves.toBeNull();
   });
 
   it('lists available stencil lines', async () => {
-    const getRawMany = jest.fn().mockResolvedValue([{ linha: 'Linha 1' }, { linha: 'Linha 2' }]);
+    const getRawMany = jest
+      .fn()
+      .mockResolvedValue([{ linha: 'Linha 1' }, { linha: 'Linha 2' }]);
     const orderBy = jest.fn().mockReturnValue({ getRawMany });
     const select = jest.fn().mockReturnValue({ orderBy });
     const repository = makeRepository({
       createQueryBuilder: jest.fn().mockReturnValue({ select }),
     });
 
-    await expect(makeService(repository).findLines()).resolves.toEqual(['Linha 1', 'Linha 2']);
+    await expect(makeService(repository).findLines()).resolves.toEqual([
+      'Linha 1',
+      'Linha 2',
+    ]);
   });
 });

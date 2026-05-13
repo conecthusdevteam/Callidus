@@ -1,26 +1,26 @@
-import { IsEnum, IsNumber, IsOptional, IsString } from "class-validator";
-import { WashStatus } from "../entities/stencil.entity";
+import { IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
+import { WashStatus } from '../entities/stencil.entity';
 
 export class CreateStencilDto {
-    @IsString()
-    stencilCode!: string;
+  @IsString()
+  stencilCode!: string;
 
-    @IsString()
-    manufactureId!: string;
+  @IsString()
+  manufactureId!: string;
 
-    @IsString()
-    country!: string;
+  @IsString()
+  country!: string;
 
-    @IsNumber()
-    thickness!: number;
+  @IsNumber()
+  thickness!: number;
 
-    @IsNumber()
-    addressing!: number;
+  @IsNumber()
+  addressing!: number;
 
-    @IsString()
-    lineName!: string;
+  @IsString()
+  lineName!: string;
 
-    @IsOptional()
-    @IsEnum(WashStatus)
-    status?: WashStatus
+  @IsOptional()
+  @IsEnum(WashStatus)
+  status?: WashStatus;
 }

@@ -7,7 +7,13 @@ import { Stencil, WashStatus } from '../../stencils/entities/stencil.entity';
 
 config();
 
-const OPERATORS = ['Carlos Souza', 'Maria Santos', 'Ana Oliveira', 'Pedro Costa', 'Lucia Ferreira'];
+const OPERATORS = [
+  'Carlos Souza',
+  'Maria Santos',
+  'Ana Oliveira',
+  'Pedro Costa',
+  'Lucia Ferreira',
+];
 
 const STENCILS = [
   {
@@ -120,41 +126,53 @@ async function runSeed() {
     const plateWashRepo = dataSource.getRepository(PlateWash);
 
     for (const seed of STENCILS) {
-      let stencil = await stencilRepo.findOne({ where: { stencilCode: seed.stencilCode } });
+      let stencil = await stencilRepo.findOne({
+        where: { stencilCode: seed.stencilCode },
+      });
 
       if (!stencil) {
         stencil = await stencilRepo.save(stencilRepo.create(seed));
       }
 
-      const existingWashes = await stencilWashRepo.count({ where: { stencilId: stencil.id } });
+      const existingWashes = await stencilWashRepo.count({
+        where: { stencilId: stencil.id },
+      });
       if (existingWashes === 0) {
         for (const [index, hoursAgo] of seed.washHoursAgo.entries()) {
-          await stencilWashRepo.save(stencilWashRepo.create({
-            stencilId: stencil.id,
-            operator: OPERATORS[index % OPERATORS.length],
-            createdAt: dateHoursAgo(hoursAgo),
-          }));
+          await stencilWashRepo.save(
+            stencilWashRepo.create({
+              stencilId: stencil.id,
+              operator: OPERATORS[index % OPERATORS.length],
+              createdAt: dateHoursAgo(hoursAgo),
+            }),
+          );
         }
       }
     }
 
     for (const seed of PLATES) {
-      let plate = await plateRepo.findOne({ where: { serialNumber: seed.serialNumber } });
+      let plate = await plateRepo.findOne({
+        where: { serialNumber: seed.serialNumber },
+      });
 
       if (!plate) {
         plate = await plateRepo.save(plateRepo.create(seed));
       }
 
-      const existingWashes = await plateWashRepo.count({ where: { plateId: plate.id } });
+      const existingWashes = await plateWashRepo.count({
+        where: { plateId: plate.id },
+      });
       if (existingWashes === 0) {
         for (const [index, hoursAgo] of seed.washHoursAgo.entries()) {
-          await plateWashRepo.save(plateWashRepo.create({
-            plateId: plate.id,
-            operator: OPERATORS[index % OPERATORS.length],
-            shift: (index % 3) + 1,
-            phase: (index % 2) + 1,
-            createdAt: dateHoursAgo(hoursAgo),
-          }));
+          await plateWashRepo.save(
+            plateWashRepo.create({
+              plateId: plate.id,
+              operator: OPERATORS[index % OPERATORS.length],
+              shift: (index % 3) + 1,
+              phase: (index % 2) + 1,
+              createdAt: dateHoursAgo(hoursAgo),
+            }),
+          );
         }
       }
     }

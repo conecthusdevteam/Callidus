@@ -1,5 +1,14 @@
 import { nanoid } from 'nanoid';
-import { BeforeInsert, Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
+import {
+  BeforeInsert,
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  PrimaryColumn,
+} from 'typeorm';
 import { Stencil } from './stencil.entity';
 
 @Entity('lavagens_stencil')
@@ -11,7 +20,9 @@ export class StencilWash {
   @Column({ name: 'stencil_id' })
   stencilId!: string;
 
-  @ManyToOne(() => Stencil, (stencil) => stencil.washes, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Stencil, (stencil) => stencil.washes, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'stencil_id' })
   stencil!: Stencil;
 

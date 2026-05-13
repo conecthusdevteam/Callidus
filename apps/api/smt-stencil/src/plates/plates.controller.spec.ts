@@ -7,11 +7,14 @@ jest.mock('nanoid', () => ({
 }));
 
 describe('PlatesController', () => {
-  function makeController(serviceOverrides: Partial<Record<keyof PlatesService, jest.Mock>> = {}) {
+  function makeController(
+    serviceOverrides: Partial<Record<keyof PlatesService, jest.Mock>> = {},
+  ) {
     const service = {
       create: jest.fn(),
       findAll: jest.fn(),
       findOne: jest.fn(),
+      findRecentWashes: jest.fn(),
       createWash: jest.fn(),
       update: jest.fn(),
       remove: jest.fn(),
@@ -24,13 +27,34 @@ describe('PlatesController', () => {
     };
   }
 
-  it('passes line filter to the service', async () => {
+  it('passes filters to the service', async () => {
     const { controller, service } = makeController({
       findAll: jest.fn().mockResolvedValue([]),
     });
 
-    await expect(controller.findAll('Linha 1')).resolves.toEqual([]);
-    expect(service.findAll).toHaveBeenCalledWith({ linha: 'Linha 1' });
+    await expect(
+      controller.findAll('PCB', 'BLANK', 'SERIAL', 'Linha 1', '2', '15'),
+    ).resolves.toEqual([]);
+    expect(service.findAll).toHaveBeenCalledWith({
+      modelo: 'PCB',
+      blank_id: 'BLANK',
+      serial: 'SERIAL',
+      linha: 'Linha 1',
+      page: 2,
+      limit: 15,
+    });
+  });
+
+  it('passes recent wash filters to the service', () => {
+    const { controller, service } = makeController({
+      findRecentWashes: jest.fn().mockReturnValue({ items: [] }),
+    });
+
+    expect(controller.findRecentWashes('1', '10')).toEqual({ items: [] });
+    expect(service.findRecentWashes).toHaveBeenCalledWith({
+      page: 1,
+      limit: 10,
+    });
   });
 
   it('returns plate detail by id', async () => {
@@ -47,7 +71,9 @@ describe('PlatesController', () => {
       findOne: jest.fn().mockResolvedValue(null),
     });
 
-    await expect(controller.findOne('missing')).rejects.toBeInstanceOf(NotFoundException);
+    await expect(controller.findOne('missing')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
   });
 
   it('creates wash by plate id', async () => {
@@ -56,11 +82,13 @@ describe('PlatesController', () => {
       createWash: jest.fn().mockResolvedValue(wash),
     });
 
-    await expect(controller.createWash('plate_1', {
-      operator: 'Maria Santos',
-      shift: 2,
-      phase: 1,
-    })).resolves.toBe(wash);
+    await expect(
+      controller.createWash('plate_1', {
+        operator: 'Maria Santos',
+        shift: 2,
+        phase: 1,
+      }),
+    ).resolves.toBe(wash);
     expect(service.createWash).toHaveBeenCalledWith('plate_1', {
       operator: 'Maria Santos',
       shift: 2,
@@ -73,11 +101,13 @@ describe('PlatesController', () => {
       createWash: jest.fn().mockResolvedValue(null),
     });
 
-    await expect(controller.createWash('missing', {
-      operator: 'Maria Santos',
-      shift: 2,
-      phase: 1,
-    })).rejects.toBeInstanceOf(NotFoundException);
+    await expect(
+      controller.createWash('missing', {
+        operator: 'Maria Santos',
+        shift: 2,
+        phase: 1,
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('throws not found when updating or deleting missing plate', async () => {
@@ -86,7 +116,11 @@ describe('PlatesController', () => {
       remove: jest.fn().mockResolvedValue(null),
     });
 
-    await expect(controller.update('missing', {})).rejects.toBeInstanceOf(NotFoundException);
-    await expect(controller.remove('missing')).rejects.toBeInstanceOf(NotFoundException);
+    await expect(controller.update('missing', {})).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    await expect(controller.remove('missing')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
   });
 });

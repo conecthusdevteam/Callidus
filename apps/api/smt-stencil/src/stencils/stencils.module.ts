@@ -10,4 +10,4 @@ import { StencilsService } from './stencils.service';
   controllers: [StencilsController],
   providers: [StencilsService],
 })
-export class StencilsModule { }
+export class StencilsModule {}
