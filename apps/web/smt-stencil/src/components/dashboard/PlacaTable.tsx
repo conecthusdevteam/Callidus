@@ -18,11 +18,11 @@ export function PlacaTable({
   onToggleSort,
 }: Props) {
   return (
-    <div className="overflow-hidden rounded-lg border bg-card">
-      <table className="w-full text-base font-normal">
-        <thead>
+    <div className="h-full flex flex-col">
+      <table className="w-full text-lg font-normal">
+        <thead className="sticky top-0 z-10">
           <tr className="bg-primary text-primary-foreground">
-            <th className="table-head-cell px-4 py-2 text-left">
+            <th className="table-head-cell px-4 py-3 text-left">
               <button
                 type="button"
                 onClick={onToggleSort}
@@ -37,35 +37,40 @@ export function PlacaTable({
                 />
               </button>
             </th>
-            <th className="table-head-cell px-4 py-2 text-left">Hora</th>
-            <th className="table-head-cell px-4 py-2 text-left">Turno</th>
-            <th className="table-head-cell px-4 py-2 text-left">Modelo</th>
-            <th className="table-head-cell px-4 py-2 text-left">Fase</th>
-            <th className="table-head-cell px-4 py-2 text-left">Linha</th>
+            <th className="table-head-cell px-4 py-3 text-left">Hora</th>
+            <th className="table-head-cell px-4 py-3 text-left">Turno</th>
+            <th className="table-head-cell px-4 py-3 text-left">Modelo</th>
+            <th className="table-head-cell px-4 py-3 text-left">Fase</th>
+            <th className="table-head-cell px-4 py-3 text-left">Linha</th>
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => {
+          {rows.map((row, index) => {
             const selected = row.id === selectedId;
+            const isEven = index % 2 === 0;
             return (
               <tr
                 key={row.id}
                 onClick={() => onSelect(row)}
                 className={cn(
-                  "cursor-pointer border-t border-border transition-colors",
-                  selected ? "bg-row-selected" : "hover:bg-row-stripe",
+                  "cursor-pointer transition-colors",
+                  selected
+                    ? "bg-row-selected"
+                    : isEven
+                      ? "bg-white"
+                      : "bg-[#E5E5E5]",
                 )}
               >
-                <td className="px-4 py-2 tabular text-foreground">
+                <td className="px-4 py-4 tabular text-foreground">
                   {row.data}
                 </td>
-                <td className="px-4 py-2 tabular text-foreground">
+                <td className="px-4 py-4 tabular text-foreground">
                   {row.hora}
                 </td>
-                <td className="px-4 py-2 text-foreground">{row.turno}</td>
-                <td className="px-4 py-2 text-foreground">{row.modelo}</td>
-                <td className="px-4 py-2 text-foreground">{row.fase}</td>
-                <td className="px-4 py-2 text-foreground">{row.linha}</td>
+                <td className="px-4 py-4 text-foreground">{row.turno}</td>
+                <td className="px-4 py-4 text-foreground">{row.modelo}</td>
+                <td className="px-4 py-4 text-foreground">{row.fase}</td>
+                <td className="px-4 py-4 text-foreground">{row.linha}</td>
               </tr>
             );
           })}
