@@ -17,15 +17,15 @@ export class LinesService {
     const [stencilRows, plateRows] = await Promise.all([
       this.stencilRepository
         .createQueryBuilder('stencil')
-        .select('DISTINCT stencil.lineName', 'linha')
-        .getRawMany<{ linha: string }>(),
+        .select('DISTINCT stencil.lineName')
+        .getRawMany<{ line: string }>(),
       this.plateRepository
         .createQueryBuilder('plate')
-        .select('DISTINCT plate.lineName', 'linha')
-        .getRawMany<{ linha: string }>(),
+        .select('DISTINCT plate.lineName')
+        .getRawMany<{ line: string }>(),
     ]);
 
-    return [...new Set([...stencilRows, ...plateRows].map((row) => row.linha))]
+    return [...new Set([...stencilRows, ...plateRows].map((row) => row.line))]
       .filter(Boolean)
       .sort((a, b) => a.localeCompare(b));
   }

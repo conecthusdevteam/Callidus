@@ -57,7 +57,7 @@ describe('PlatesService', () => {
       plateModel: 'PCB-1000',
       serialNumber: 'PCB-1000-000001',
       blankId: 'BLANK-1001',
-      lineName: 'Linha 1',
+      lineName: 'Line 1',
       plateManufacturerId: 'MNF-101',
       country: 'Brasil',
       thickness: 0.09,
@@ -78,7 +78,7 @@ describe('PlatesService', () => {
       plateModel: 'PCB-1000',
       serialNumber: 'PCB-1000-000001',
       blankId: 'BLANK-1001',
-      lineName: 'Linha 1',
+      lineName: 'Line 1',
     };
 
     await expect(makeService(repository).create(dto)).resolves.toMatchObject({
@@ -99,7 +99,7 @@ describe('PlatesService', () => {
         plateModel: 'PCB-1000',
         serialNumber: 'PCB-1000-000001',
         blankId: 'BLANK-1001',
-        lineName: 'Linha 1',
+        lineName: 'Line 1',
       }),
     ).rejects.toBeInstanceOf(ConflictException);
     expect(repository.save).not.toHaveBeenCalled();
@@ -118,10 +118,10 @@ describe('PlatesService', () => {
     });
 
     const result = await makeService(repository).findAll({
-      modelo: 'PCB',
+      plate_model: 'PCB',
       blank_id: 'BLANK',
       serial: '000001',
-      linha: 'Linha 1',
+      line: 'Line 1',
     });
 
     expect(repository.find).toHaveBeenCalledWith(
@@ -130,7 +130,7 @@ describe('PlatesService', () => {
           plateModel: expect.any(Object),
           blankId: expect.any(Object),
           serialNumber: expect.any(Object),
-          lineName: 'Linha 1',
+          lineName: 'Line 1',
         }),
         relations: { washes: true },
         order: { createdAt: 'DESC' },
@@ -138,13 +138,13 @@ describe('PlatesService', () => {
     );
     expect(result).toEqual([
       expect.objectContaining({
-        modelo: 'PCB-1000',
+        plate_model: 'PCB-1000',
         serial: 'PCB-1000-000001',
-        total_lavagens: 2,
-        ultima_lavagem: new Date('2026-05-10T08:00:00.000Z'),
-        ultima_lavagem_detalhe: expect.objectContaining({
+      total_washes: 2,
+        last_wash: new Date('2026-05-10T08:00:00.000Z'),
+        last_wash_details: expect.objectContaining({
           id: 'wash_2',
-          operador: 'Maria Santos',
+          operator: 'Maria Santos',
         }),
       }),
     ]);
@@ -187,10 +187,10 @@ describe('PlatesService', () => {
 
     expect(result).toMatchObject({
       id: 'plate_1',
-      total_lavagens: 3,
-      ultima_lavagem: new Date('2026-05-10T16:00:00.000Z'),
+      total_washes: 3,
+      last_wash: new Date('2026-05-10T16:00:00.000Z'),
     });
-    expect(result?.historico_lavagens.map((wash) => wash.id)).toEqual([
+    expect(result?.washes_history.map((wash) => wash.id)).toEqual([
       'wash_3',
       'wash_2',
       'wash_1',
@@ -216,7 +216,7 @@ describe('PlatesService', () => {
         expect.objectContaining({
           id: 'wash_2',
           plate_id: 'plate_1',
-          modelo: 'PCB-1000',
+          plate_model: 'PCB-1000',
           serial: 'PCB-1000-000001',
           blank_id: 'BLANK-1001',
         }),
@@ -237,9 +237,9 @@ describe('PlatesService', () => {
     await expect(
       makeService(repository).findOne('plate_1'),
     ).resolves.toMatchObject({
-      total_lavagens: 0,
-      ultima_lavagem: null,
-      historico_lavagens: [],
+      total_washes: 0,
+      last_wash: null,
+      washes_history: [],
     });
   });
 
@@ -303,9 +303,9 @@ describe('PlatesService', () => {
     const service = makeService(repository);
 
     await expect(
-      service.update(existing.id, { lineName: 'Linha 2' }),
+      service.update(existing.id, { lineName: 'Line 2' }),
     ).resolves.toMatchObject({
-      lineName: 'Linha 2',
+      lineName: 'Line 2',
     });
     await expect(service.remove(existing.id)).resolves.toBe(existing);
   });
@@ -317,7 +317,7 @@ describe('PlatesService', () => {
     const service = makeService(repository);
 
     await expect(
-      service.update('missing', { lineName: 'Linha 2' }),
+      service.update('missing', { lineName: 'Line 2' }),
     ).resolves.toBeNull();
     await expect(service.remove('missing')).resolves.toBeNull();
   });

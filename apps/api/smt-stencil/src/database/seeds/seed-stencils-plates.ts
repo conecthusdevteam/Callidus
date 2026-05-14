@@ -24,16 +24,6 @@ const COUNTRIES = [
   'México',
   'Vietnã',
 ];
-const OPERATORS = [
-  'João Silva',
-  'Maria Santos',
-  'Carlos Souza',
-  'Ana Oliveira',
-  'Pedro Costa',
-  'Lucia Ferreira',
-  'Roberto Almeida',
-  'Fernanda Lima',
-];
 const LINE_NAMES = [
   'Manaus',
   'Manacapuru',

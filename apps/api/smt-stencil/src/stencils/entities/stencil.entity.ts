@@ -20,22 +20,22 @@ export class Stencil {
   @PrimaryColumn()
   id!: string;
 
-  @Column({ name: 'codigo', unique: true })
+  @Column({ unique: true })
   stencilCode!: string;
 
-  @Column({ name: 'id_fabricante' })
+  @Column()
   manufactureId!: string;
 
-  @Column({ name: 'pais_origem' })
+  @Column()
   country!: string;
 
-  @Column('decimal', { name: 'espessura', precision: 6, scale: 4 })
+  @Column('decimal', { precision: 6, scale: 4 })
   thickness!: number;
 
-  @Column({ name: 'enderecamento' })
+  @Column()
   addressing!: number;
 
-  @Column({ name: 'linha' })
+  @Column()
   lineName!: string;
 
   @Column({
@@ -48,14 +48,14 @@ export class Stencil {
   @OneToMany(() => StencilWash, (wash) => wash.stencil)
   washes!: StencilWash[];
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn()
   createdAt!: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn()
   updatedAt!: Date;
 
   @BeforeInsert()
   generateId() {
-    this.id = `stencil_${nanoid()}`;
+    this.id = `st_${nanoid()}`;
   }
 }

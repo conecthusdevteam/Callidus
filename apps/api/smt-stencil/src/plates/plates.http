@@ -11,16 +11,16 @@ GET {{baseUrl}}/
 GET {{baseUrl}}/plates
 
 ### Daily wash summary - success
-GET {{baseUrl}}/lavagens/resumo-dia
+GET {{baseUrl}}/washes/daily-summary
 
 ### List recent plate washes - success
-GET {{baseUrl}}/plates/lavagens?page=1&limit=10
+GET {{baseUrl}}/plates/washes?page=1&limit=10
 
 ### List plates paginated - success
 GET {{baseUrl}}/plates?page=1&limit=10
 
 ### List plates filtered by model - success
-GET {{baseUrl}}/plates?modelo=PCB
+GET {{baseUrl}}/plates?plate_model=PCB
 
 ### List plates filtered by blank id - success
 GET {{baseUrl}}/plates?blank_id=BLANK
@@ -29,23 +29,23 @@ GET {{baseUrl}}/plates?blank_id=BLANK
 GET {{baseUrl}}/plates?serial=PCB
 
 ### List plates filtered by line - success
-GET {{baseUrl}}/plates?linha=Linha%201
+GET {{baseUrl}}/plates?line=Linha%201
 
 ### List plates filtered by multiple fields - success
-GET {{baseUrl}}/plates?modelo=PCB&blank_id=BLANK&serial=PCB&linha=Linha%201&page=1&limit=10
+GET {{baseUrl}}/plates?plate_model=PCB&blank_id=BLANK&serial=PCB&line=Linha%201&page=1&limit=10
 
 ### List plates with no results - success with empty array
-GET {{baseUrl}}/plates?linha=Linha%20Inexistente
+GET {{baseUrl}}/plates?line=Linha%20Inexistente
 
 ### List available lines - success
-GET {{baseUrl}}/linhas
+GET {{baseUrl}}/lines
 
 ### Get plate by id - success
 GET {{baseUrl}}/plates/{{plateId}}
 
 ### Create plate wash by plate id - success
 # Depois rode "Get plate by id" para ver historico_lavagens atualizado.
-POST {{baseUrl}}/plates/{{plateId}}/lavagens
+POST {{baseUrl}}/plates/{{plateId}}/washes
 Content-Type: application/json
 
 {

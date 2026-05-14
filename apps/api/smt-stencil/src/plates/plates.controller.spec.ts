@@ -36,10 +36,10 @@ describe('PlatesController', () => {
       controller.findAll('PCB', 'BLANK', 'SERIAL', 'Linha 1', '2', '15'),
     ).resolves.toEqual([]);
     expect(service.findAll).toHaveBeenCalledWith({
-      modelo: 'PCB',
+      plate_model: 'PCB',
       blank_id: 'BLANK',
       serial: 'SERIAL',
-      linha: 'Linha 1',
+      line: 'Linha 1',
       page: 2,
       limit: 15,
     });
