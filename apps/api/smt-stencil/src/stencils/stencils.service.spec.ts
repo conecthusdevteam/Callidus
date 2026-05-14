@@ -69,7 +69,7 @@ describe('StencilsService', () => {
       country: 'Brasil',
       thickness: 0.12,
       addressing: 19,
-      lineName: 'Linha 1',
+      lineName: 'Line 1',
       status: WashStatus.ACTIVE,
       createdAt: new Date('2026-05-10T00:00:00.000Z'),
       updatedAt: new Date('2026-05-10T00:00:00.000Z'),
@@ -89,7 +89,7 @@ describe('StencilsService', () => {
       country: 'Brasil',
       thickness: 0.12,
       addressing: 19,
-      lineName: 'Linha 1',
+      lineName: 'Line 1',
       status: WashStatus.ACTIVE,
     };
 
@@ -113,7 +113,7 @@ describe('StencilsService', () => {
         country: 'Brasil',
         thickness: 0.12,
         addressing: 19,
-        lineName: 'Linha 1',
+        lineName: 'Line 1',
       }),
     ).rejects.toBeInstanceOf(ConflictException);
     expect(repository.save).not.toHaveBeenCalled();
@@ -132,15 +132,15 @@ describe('StencilsService', () => {
     });
 
     const result = await makeService(repository).findAll({
-      codigo: 'A-0',
-      linha: 'Linha 1',
+      stencilCode: 'A-0',
+      lineName: 'Line 1',
     });
 
     expect(repository.find).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
           stencilCode: expect.any(Object),
-          lineName: 'Linha 1',
+          lineName: 'Line 1',
         }),
         relations: { washes: true },
         order: { createdAt: 'DESC' },
@@ -148,13 +148,13 @@ describe('StencilsService', () => {
     );
     expect(result).toEqual([
       expect.objectContaining({
-        codigo: 'A-019',
-        total_lavagens: 2,
-        intervalo_medio: 480,
-        possui_anomalia: true,
-        ultima_lavagem_detalhe: expect.objectContaining({
+        stencilCode: 'A-019',
+        total_washes: 2,
+        mid_range: 480,
+        anomaly: true,
+        last_wash_details: expect.objectContaining({
           id: 'wash_2',
-          operador: 'Carlos Souza',
+          operator: 'Carlos Souza',
         }),
       }),
     ]);
@@ -200,27 +200,27 @@ describe('StencilsService', () => {
 
     expect(result).toMatchObject({
       id: 'stencil_1',
-      codigo: 'A-020',
-      total_lavagens: 5,
-      intervalo_medio: 780,
-      possui_anomalia: true,
+      stencilCode: 'A-020',
+      total_washes: 5,
+      mid_range: 780,
+      anomaly: true,
     });
-    expect(result?.historico_lavagens.map((wash) => wash.id)).toEqual([
+    expect(result?.washes_history.map((wash) => wash.id)).toEqual([
       'wash_5',
       'wash_4',
       'wash_3',
       'wash_2',
       'wash_1',
     ]);
-    expect(result?.historico_lavagens[0]).toMatchObject({
+    expect(result?.washes_history[0]).toMatchObject({
       id: 'wash_5',
-      intervalo_desde_lavagem_anterior: 1680,
-      fora_do_padrao: true,
+      previous_wash_interval: 1680,
+      non_standard: true,
     });
-    expect(result?.historico_lavagens.at(-1)).toMatchObject({
+    expect(result?.washes_history.at(-1)).toMatchObject({
       id: 'wash_1',
-      intervalo_desde_lavagem_anterior: null,
-      fora_do_padrao: true,
+      previous_wash_interval: null,
+      non_standard: true,
     });
   });
 
@@ -232,11 +232,11 @@ describe('StencilsService', () => {
     ).findOne('stencil_1');
 
     expect(result).toMatchObject({
-      possui_anomalia: false,
+      anomaly: false,
     });
-    expect(result?.historico_lavagens[0]).toMatchObject({
+    expect(result?.washes_history[0]).toMatchObject({
       id: 'wash_1',
-      fora_do_padrao: false,
+      non_standard: false,
     });
   });
 
@@ -248,11 +248,11 @@ describe('StencilsService', () => {
     ).findOne('stencil_1');
 
     expect(result).toMatchObject({
-      possui_anomalia: true,
+      anomaly: true,
     });
-    expect(result?.historico_lavagens[0]).toMatchObject({
+    expect(result?.washes_history[0]).toMatchObject({
       id: 'wash_1',
-      fora_do_padrao: true,
+      non_standard: true,
     });
   });
 
@@ -267,11 +267,11 @@ describe('StencilsService', () => {
     ).findOne('stencil_1');
 
     expect(result).toMatchObject({
-      possui_anomalia: true,
+      anomaly: true,
     });
-    expect(result?.historico_lavagens).toEqual([
-      expect.objectContaining({ id: 'wash_2', fora_do_padrao: true }),
-      expect.objectContaining({ id: 'wash_1', fora_do_padrao: true }),
+    expect(result?.washes_history).toEqual([
+      expect.objectContaining({ id: 'wash_2', non_standard: true }),
+      expect.objectContaining({ id: 'wash_1', non_standard: true }),
     ]);
   });
 
@@ -280,11 +280,11 @@ describe('StencilsService', () => {
       await makeServiceWithStencil(makeStencil()).findOne('stencil_1');
 
     expect(result).toMatchObject({
-      total_lavagens: 0,
-      ultima_lavagem: null,
-      intervalo_medio: null,
-      possui_anomalia: false,
-      historico_lavagens: [],
+      total_washes: 0,
+      last_wash: null,
+      mid_range: null,
+      anomaly: false,
+      washes_history: [],
     });
   });
 
@@ -311,12 +311,12 @@ describe('StencilsService', () => {
         expect.objectContaining({
           id: 'wash_2',
           stencil_id: 'stencil_1',
-          codigo: 'A-019',
-          fora_do_padrao: true,
+          stencil_code: 'A-019',
+          non_standard: true,
         }),
         expect.objectContaining({
           id: 'wash_1',
-          fora_do_padrao: true,
+          non_standard: true,
         }),
       ],
       page: 1,
@@ -334,13 +334,13 @@ describe('StencilsService', () => {
     ).findOne('stencil_1');
 
     expect(result).toMatchObject({
-      total_lavagens: 1,
-      intervalo_medio: null,
-      possui_anomalia: false,
+      total_washes: 1,
+      mid_range: null,
+      anomaly: false,
     });
-    expect(result?.historico_lavagens[0]).toMatchObject({
-      intervalo_desde_lavagem_anterior: null,
-      fora_do_padrao: false,
+    expect(result?.washes_history[0]).toMatchObject({
+      previous_wash_interval: null,
+      non_standard: false,
     });
   });
 
@@ -453,7 +453,7 @@ describe('StencilsService', () => {
   it('lists available stencil lines', async () => {
     const getRawMany = jest
       .fn()
-      .mockResolvedValue([{ linha: 'Linha 1' }, { linha: 'Linha 2' }]);
+      .mockResolvedValue([{ lineName: 'Line 1' }, { lineName: 'Line 2' }]);
     const orderBy = jest.fn().mockReturnValue({ getRawMany });
     const select = jest.fn().mockReturnValue({ orderBy });
     const repository = makeRepository({
@@ -461,8 +461,8 @@ describe('StencilsService', () => {
     });
 
     await expect(makeService(repository).findLines()).resolves.toEqual([
-      'Linha 1',
-      'Linha 2',
+      'Line 1',
+      'Line 2',
     ]);
   });
 });

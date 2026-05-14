@@ -28,9 +28,9 @@ describe('WashesService', () => {
         plateWashRepository,
       ).getDailySummary(),
     ).resolves.toMatchObject({
-      total_lavagens: 36,
-      total_stencil: 24,
-      total_placas: 12,
+      total_washes: 36,
+      total_stencils: 24,
+      total_plates: 12,
     });
     expect(stencilWashRepository.count).toHaveBeenCalledWith({
       where: { createdAt: expect.any(Object) },

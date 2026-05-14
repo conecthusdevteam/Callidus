@@ -19,16 +19,16 @@ export class WashesService {
   async getDailySummary() {
     const { dayKey, startUtc, endUtc } = this.getManausDayRange(new Date());
     const range = Between(startUtc, endUtc);
-    const [total_stencil, total_placas] = await Promise.all([
+    const [total_stencils, total_plates] = await Promise.all([
       this.stencilWashRepository.count({ where: { createdAt: range } }),
       this.plateWashRepository.count({ where: { createdAt: range } }),
     ]);
 
     return {
       data: dayKey,
-      total_lavagens: total_stencil + total_placas,
-      total_stencil,
-      total_placas,
+      total_washes: total_stencils + total_plates,
+      total_stencils,
+      total_plates,
     };
   }
 
