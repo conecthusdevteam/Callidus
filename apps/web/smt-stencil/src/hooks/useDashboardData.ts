@@ -52,7 +52,7 @@ function sortDesc<T extends { data: string; hora: string }>(rows: T[]): T[] {
 
 // ── Estado inicial ───────────────────────────────────────────────────────────
 
-const INITIAL: DashboardData = {
+const EMPTY: DashboardData = {
   totalDia: 0,
   totalStencil: 0,
   totalPlacas: 0,
@@ -64,23 +64,33 @@ const INITIAL: DashboardData = {
   },
 };
 
+function safeSet(ids: unknown): Set<string> {
+  try {
+    if (Array.isArray(ids)) return new Set<string>(ids as string[]);
+  } catch {
+    // ignore
+  }
+  return new Set<string>();
+}
+
 // ── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useDashboardData(intervalMs = 60_000) {
   const cached = loadCache();
-  const [data, setData] = useState<DashboardData>(cached ?? INITIAL);
+
+  const [data, setData] = useState<DashboardData>(cached ?? EMPTY);
   const [lastUpdate, setLastUpdate] = useState<Date>(() => new Date());
   const [newEvents, setNewEvents] = useState<NewWashEvent[]>([]);
 
-  const knownStencilIds = useRef<Set<string>>(
-    new Set((cached?.stencils ?? []).map((s) => s.id)),
-  );
-  const knownPlacaIds = useRef<Set<string>>(
-    new Set((cached?.placas ?? []).map((p) => p.id)),
-  );
-
   const lastStencilRows = useRef<StencilWash[]>(cached?.stencils ?? []);
   const lastPlacaRows = useRef<PlacaWash[]>(cached?.placas ?? []);
+
+  const knownStencilIds = useRef<Set<string>>(
+    safeSet((cached?.stencils ?? []).map((s) => s.id)),
+  );
+  const knownPlacaIds = useRef<Set<string>>(
+    safeSet((cached?.placas ?? []).map((p) => p.id)),
+  );
 
   const sgsLastOkAt = useRef<number>(Date.now());
   const clpLastOkAt = useRef<number>(Date.now());
@@ -100,28 +110,26 @@ export function useDashboardData(intervalMs = 60_000) {
       if (!active) return;
 
       // ── SGS (stencils) ───────────────────────────────────────────────────
-      let stencilRows = lastStencilRows.current;
       const sgsOk = sgsResult.status === "fulfilled";
-
       if (sgsOk) {
-        stencilRows = sortDesc(
+        const fresh = sortDesc(
           (sgsResult.value as ApiStencil[]).map(mapStencilApiToWash),
         );
         sgsLastOkAt.current = Date.now();
-        lastStencilRows.current = stencilRows;
+        lastStencilRows.current = fresh;
       }
+      const stencilRows = lastStencilRows.current;
 
       // ── CLP (plates) ─────────────────────────────────────────────────────
-      let placaRows = lastPlacaRows.current;
       const clpOk = clpResult.status === "fulfilled";
-
       if (clpOk) {
-        placaRows = sortDesc(
+        const fresh = sortDesc(
           (clpResult.value as ApiPlate[]).map(mapPlateApiToWash),
         );
         clpLastOkAt.current = Date.now();
-        lastPlacaRows.current = placaRows;
+        lastPlacaRows.current = fresh;
       }
+      const placaRows = lastPlacaRows.current;
 
       // ── Detecção de novos registros (AC-2 / AC-3) ────────────────────────
       const freshStencils = stencilRows.filter(
@@ -131,7 +139,7 @@ export function useDashboardData(intervalMs = 60_000) {
         (r) => !knownPlacaIds.current.has(r.id),
       );
 
-      const fresh: NewWashEvent[] = [
+      const freshEvents: NewWashEvent[] = [
         ...freshStencils.map((s) => ({
           id: `evt-${Date.now()}-${seq.current++}`,
           washId: s.id,
@@ -146,8 +154,14 @@ export function useDashboardData(intervalMs = 60_000) {
         })),
       ];
 
-      freshStencils.forEach((r) => knownStencilIds.current.add(r.id));
-      freshPlacas.forEach((r) => knownPlacaIds.current.add(r.id));
+      freshStencils.forEach((r) => {
+        if (knownStencilIds.current instanceof Set)
+          knownStencilIds.current.add(r.id);
+      });
+      freshPlacas.forEach((r) => {
+        if (knownPlacaIds.current instanceof Set)
+          knownPlacaIds.current.add(r.id);
+      });
 
       // ── Status dos sistemas (RN-5 / RP-04) ──────────────────────────────
       const now = Date.now();
@@ -169,11 +183,14 @@ export function useDashboardData(intervalMs = 60_000) {
       setData(next);
       saveCache(next);
 
-      if (initialized.current && fresh.length > 0) {
-        setNewEvents((prev) => [...prev, ...fresh]);
-        const latestAt = Math.max(...fresh.map((e) => e.at));
-        setLastUpdate(new Date(latestAt));
-      } else if (!initialized.current) {
+      // ── Atualiza lastUpdate ───────────────────────────────────────────────
+      if (initialized.current) {
+        if (freshEvents.length > 0) {
+          const latestAt = Math.max(...freshEvents.map((e) => e.at));
+          setLastUpdate(new Date(latestAt));
+          setNewEvents((prev) => [...prev, ...freshEvents]);
+        }
+      } else {
         initialized.current = true;
         if (stencilRows.length > 0 || placaRows.length > 0) {
           const latestAt = Math.max(
