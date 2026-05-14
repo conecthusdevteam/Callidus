@@ -67,9 +67,7 @@ const EMPTY: DashboardData = {
 function safeSet(ids: unknown): Set<string> {
   try {
     if (Array.isArray(ids)) return new Set<string>(ids as string[]);
-  } catch {
-    // ignore
-  }
+  } catch {}
   return new Set<string>();
 }
 
@@ -80,6 +78,15 @@ export function useDashboardData(intervalMs = 60_000) {
 
   const [data, setData] = useState<DashboardData>(cached ?? EMPTY);
   const [lastUpdate, setLastUpdate] = useState<Date>(() => new Date());
+  const [lastFetch, setLastFetch] = useState<Date>(() => {
+    try {
+      const stored = window.localStorage.getItem("smt-last-fetch");
+      if (stored) return new Date(Number(stored));
+    } catch {
+      /* ignore */
+    }
+    return new Date();
+  });
   const [newEvents, setNewEvents] = useState<NewWashEvent[]>([]);
 
   const lastStencilRows = useRef<StencilWash[]>(cached?.stencils ?? []);
@@ -168,10 +175,20 @@ export function useDashboardData(intervalMs = 60_000) {
       const sgsLastSyncMin = Math.floor((now - sgsLastOkAt.current) / 60_000);
       const clpLastSyncMin = Math.floor((now - clpLastOkAt.current) / 60_000);
 
+      // ── Totais do dia (apenas registros de hoje) ─────────────────────────
+      const todayStr = (() => {
+        const d = new Date();
+        const dia = String(d.getDate()).padStart(2, "0");
+        const mes = String(d.getMonth() + 1).padStart(2, "0");
+        return `${dia}/${mes}/${d.getFullYear()}`;
+      })();
+      const stencilsHoje = stencilRows.filter((r) => r.data === todayStr);
+      const placasHoje = placaRows.filter((r) => r.data === todayStr);
+
       const next: DashboardData = {
-        totalDia: stencilRows.length + placaRows.length,
-        totalStencil: stencilRows.length,
-        totalPlacas: placaRows.length,
+        totalDia: stencilsHoje.length + placasHoje.length,
+        totalStencil: stencilsHoje.length,
+        totalPlacas: placasHoje.length,
         stencils: stencilRows,
         placas: placaRows,
         status: {
@@ -183,11 +200,21 @@ export function useDashboardData(intervalMs = 60_000) {
       setData(next);
       saveCache(next);
 
-      // ── Atualiza lastUpdate ───────────────────────────────────────────────
+      // ── Atualiza lastUpdate e lastFetch ───────────────────────────────────
       if (initialized.current) {
         if (freshEvents.length > 0) {
           const latestAt = Math.max(...freshEvents.map((e) => e.at));
           setLastUpdate(new Date(latestAt));
+          const fetchedAt = new Date();
+          setLastFetch(fetchedAt);
+          try {
+            window.localStorage.setItem(
+              "smt-last-fetch",
+              String(fetchedAt.getTime()),
+            );
+          } catch {
+            /* ignore */
+          }
           setNewEvents((prev) => [...prev, ...freshEvents]);
         }
       } else {
@@ -214,5 +241,5 @@ export function useDashboardData(intervalMs = 60_000) {
   const dismissEvent = (id: string) =>
     setNewEvents((prev) => prev.filter((e) => e.id !== id));
 
-  return { data, lastUpdate, newEvents, dismissEvent };
+  return { data, lastUpdate, lastFetch, newEvents, dismissEvent };
 }

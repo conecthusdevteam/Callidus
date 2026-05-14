@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Header } from "@/components/dashboard/Header";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { KpiCard } from "@/components/dashboard/KpiCard";
@@ -21,10 +21,15 @@ import {
 
 const PAGE_SIZE = 9;
 
-function formatSyncLabel(lastUpdate: Date): string {
-  const diffMin = Math.floor((Date.now() - lastUpdate.getTime()) / 60_000);
-  if (diffMin < 1) return "agora";
-  return `há ${diffMin} min`;
+function formatCronometro(lastUpdate: Date): string {
+  const diff = Math.max(
+    0,
+    Math.floor((Date.now() - lastUpdate.getTime()) / 1000),
+  );
+  const h = Math.floor(diff / 3600);
+  const m = Math.floor((diff % 3600) / 60);
+  const s = diff % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
 function toTimestamp(data: string, hora: string): number {
@@ -45,8 +50,8 @@ function sortByDate<T extends { data: string; hora: string }>(
 }
 
 const Index = () => {
-  const { data, lastUpdate, newEvents, dismissEvent } =
-    useDashboardData(60_000);
+  const { data, lastUpdate, lastFetch, newEvents, dismissEvent } =
+    useDashboardData(20_000);
 
   const [tab, setTab] = useState<"stencil" | "placas">("stencil");
   const [showAttention, setShowAttention] = useState(false);
@@ -66,16 +71,30 @@ const Index = () => {
     stencil: "desc",
     placas: "desc",
   });
-  const [syncLabel, setSyncLabel] = useState(() => formatSyncLabel(lastUpdate));
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Fecha o painel ao clicar fora dele
+  useEffect(() => {
+    if (!selected) return;
+    function handleClick(e: MouseEvent) {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+        setSelected(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [selected]);
+
+  const [syncLabel, setSyncLabel] = useState(() => formatCronometro(lastFetch));
 
   useEffect(() => {
-    setSyncLabel(formatSyncLabel(lastUpdate));
+    setSyncLabel(formatCronometro(lastFetch));
     const id = window.setInterval(
-      () => setSyncLabel(formatSyncLabel(lastUpdate)),
-      60_000,
+      () => setSyncLabel(formatCronometro(lastFetch)),
+      1_000,
     );
     return () => window.clearInterval(id);
-  }, [lastUpdate]);
+  }, [lastFetch]);
 
   useEffect(() => {
     setStencilPage(1);
@@ -334,7 +353,10 @@ const Index = () => {
 
               {/* Card flutuante de detalhes — sobrepõe os placeholders quando há seleção */}
               {selected && (
-                <div className="absolute w-[350px] inset-0 overflow-y-auto rounded-xl">
+                <div
+                  ref={panelRef}
+                  className="absolute w-[350px] inset-0 overflow-y-auto rounded-xl"
+                >
                   <DetailsPanel
                     item={selected}
                     onClose={() => setSelected(null)}
