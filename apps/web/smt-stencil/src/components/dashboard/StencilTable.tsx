@@ -26,9 +26,9 @@ export function StencilTable({
   onToggleSort,
 }: Props) {
   return (
-    <div className="relative overflow-visible rounded-lg border bg-card">
-      <table className="w-full text-base font-normal">
-        <thead>
+    <div className="h-full flex flex-col">
+      <table className="w-full text-lg font-normal">
+        <thead className="sticky top-0 z-10">
           <tr className="bg-table-head text-table-head-foreground">
             <th className="table-head-cell px-4 py-2 text-left">
               <button
@@ -67,20 +67,20 @@ export function StencilTable({
                   !attention && !selected && "hover:bg-row-stripe",
                 )}
               >
-                <td className="px-4 py-2 tabular text-foreground">
+                <td className="px-4 py-3 tabular text-foreground">
                   {row.data}
                 </td>
-                <td className="px-4 py-2 tabular text-foreground">
+                <td className="px-4 py-3 tabular text-foreground">
                   {row.hora}
                 </td>
-                <td className="px-4 py-2 text-foreground">{row.codigo}</td>
-                <td className="px-4 py-2 tabular text-foreground">
+                <td className="px-4 py-3 text-foreground">{row.codigo}</td>
+                <td className="px-4 py-3 tabular text-foreground">
                   {row.enderecamento}
                 </td>
-                <td className="px-4 py-2">
+                <td className="px-4 py-3">
                   <StatusPill status={row.motivo} />
                 </td>
-                <td className="px-4 py-2 text-foreground">
+                <td className="px-4 py-3 text-foreground">
                   <div className="flex items-center justify-between gap-2">
                     <span>{row.linha}</span>
                     {attention && (

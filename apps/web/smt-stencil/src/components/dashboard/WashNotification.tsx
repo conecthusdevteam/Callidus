@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CircleAlert, X } from "lucide-react";
 import type { WashOrigin } from "@/data/mockWashes";
 
@@ -10,25 +10,19 @@ export interface WashNotificationItem {
 interface Props {
   notifications: WashNotificationItem[];
   onDismiss: (id: string) => void;
-  /** Tempo (ms) até auto-dismiss. Default 6000. */
   autoDismissMs?: number;
-  /** Se true, renderiza inline na interface em vez de fixed no topo. */
   isInline?: boolean;
-  /** Aba atual para filtrar notificações. */
   currentTab?: "stencil" | "placas";
 }
 
-/**
- * Notificação de novo registro de lavagem (img1).
- * - Fundo #D1E7DD, borda #A3CFBB (1px), texto #2B8E37 (Geist Medium 14px)
- * - Largura fixa 535px, altura 40px, raio 4px, padding 8px/16px
- * - Mensagem por origem:
- *   - stencil → "Lavagem de stencil registrada."
- *   - placa  → "Lavagem de placa registrada."
- */
-export function WashNotification({ notifications, onDismiss, autoDismissMs = 6000, isInline = false, currentTab }: Props) {
-  // Filtrar notificações baseado na aba atual
-  const filteredNotifications = currentTab
+export function WashNotification({
+  notifications,
+  onDismiss,
+  autoDismissMs = 10_000,
+  isInline = false,
+  currentTab,
+}: Props) {
+  const filtered = currentTab
     ? notifications.filter((n) => {
         if (currentTab === "stencil") return n.origin === "stencil";
         if (currentTab === "placas") return n.origin === "placa";
@@ -36,39 +30,38 @@ export function WashNotification({ notifications, onDismiss, autoDismissMs = 600
       })
     : notifications;
 
-  if (filteredNotifications.length === 0) return null;
+  const current = filtered[0] ?? null;
+
+  if (!current) return null;
 
   if (isInline) {
     return (
-      <div className="flex flex-col gap-2">
-        {filteredNotifications.map((n) => (
-          <InlineNotificationItem
-            key={n.id}
-            item={n}
-            onDismiss={onDismiss}
-          />
-        ))}
-      </div>
+      <InlineNotificationItem
+        key={current.id}
+        item={current}
+        onDismiss={onDismiss}
+        autoDismissMs={autoDismissMs}
+      />
     );
   }
 
   return (
     <div
-      className="fixed right-6 top-20 z-50 flex flex-col gap-2"
+      className="fixed right-6 top-20 z-50"
       role="region"
       aria-label="Notificações de novas lavagens"
     >
-      {filteredNotifications.map((n) => (
-        <NotificationItem
-          key={n.id}
-          item={n}
-          onDismiss={onDismiss}
-          autoDismissMs={autoDismissMs}
-        />
-      ))}
+      <NotificationItem
+        key={current.id}
+        item={current}
+        onDismiss={onDismiss}
+        autoDismissMs={autoDismissMs}
+      />
     </div>
   );
 }
+
+// ── Item fixo (canto superior direito) ───────────────────────────────────────
 
 function NotificationItem({
   item,
@@ -80,15 +73,22 @@ function NotificationItem({
   autoDismissMs: number;
 }) {
   const [visible, setVisible] = useState(false);
+  const onDismissRef = useRef(onDismiss);
+  useEffect(() => {
+    onDismissRef.current = onDismiss;
+  }, [onDismiss]);
 
   useEffect(() => {
     const inId = window.setTimeout(() => setVisible(true), 10);
-    const outId = window.setTimeout(() => onDismiss(item.id), autoDismissMs);
+    const outId = window.setTimeout(
+      () => onDismissRef.current(item.id),
+      autoDismissMs,
+    );
     return () => {
       window.clearTimeout(inId);
       window.clearTimeout(outId);
     };
-  }, [item.id, autoDismissMs, onDismiss]);
+  }, [item.id, autoDismissMs]);
 
   const message =
     item.origin === "stencil"
@@ -124,7 +124,7 @@ function NotificationItem({
       <button
         type="button"
         aria-label="Fechar notificação"
-        onClick={() => onDismiss(item.id)}
+        onClick={() => onDismissRef.current(item.id)}
         className="ml-2 inline-flex h-5 w-5 items-center justify-center opacity-70 hover:opacity-100"
       >
         <X className="h-4 w-4" />
@@ -133,13 +133,35 @@ function NotificationItem({
   );
 }
 
+// ── Item inline (barra de controles) ─────────────────────────────────────────
+
 function InlineNotificationItem({
   item,
   onDismiss,
+  autoDismissMs,
 }: {
   item: WashNotificationItem;
   onDismiss: (id: string) => void;
+  autoDismissMs: number;
 }) {
+  const [visible, setVisible] = useState(false);
+  const onDismissRef = useRef(onDismiss);
+  useEffect(() => {
+    onDismissRef.current = onDismiss;
+  }, [onDismiss]);
+
+  useEffect(() => {
+    const inId = window.setTimeout(() => setVisible(true), 10);
+    const outId = window.setTimeout(
+      () => onDismissRef.current(item.id),
+      autoDismissMs,
+    );
+    return () => {
+      window.clearTimeout(inId);
+      window.clearTimeout(outId);
+    };
+  }, [item.id, autoDismissMs]);
+
   const isStencil = item.origin === "stencil";
   const message = isStencil
     ? "Lavagem de stencil registrada."
@@ -167,17 +189,24 @@ function InlineNotificationItem({
         fontWeight: 500,
         fontSize: 14,
         gap: 8,
+        opacity: visible ? 1 : 0,
+        transform: visible ? "translateY(0)" : "translateY(-8px)",
+        transition: "opacity 200ms ease, transform 200ms ease",
       }}
       className="flex items-center justify-between shadow-card"
     >
       <span className="flex items-center gap-2">
-        <CircleAlert className="h-5 w-5" aria-hidden style={{ color: iconColor }} />
+        <CircleAlert
+          className="h-5 w-5"
+          aria-hidden
+          style={{ color: iconColor }}
+        />
         {message}
       </span>
       <button
         type="button"
         aria-label="Fechar notificação"
-        onClick={() => onDismiss(item.id)}
+        onClick={() => onDismissRef.current(item.id)}
         className="ml-2 inline-flex h-5 w-5 items-center justify-center opacity-70 hover:opacity-100"
       >
         <X className="h-4 w-4" />
