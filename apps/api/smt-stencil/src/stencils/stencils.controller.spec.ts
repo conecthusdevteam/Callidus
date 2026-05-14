@@ -41,17 +41,17 @@ describe('StencilsController', () => {
         'MNF',
         'Brasil',
         'active',
-        'Linha 1',
+        'Line 1',
         '2',
         '15',
       ),
     ).resolves.toEqual([]);
     expect(service.findAll).toHaveBeenCalledWith({
-      codigo: 'A-019',
-      id_fabricante: 'MNF',
-      pais_origem: 'Brasil',
+      stencilCode: 'A-019',
+      manufactureId: 'MNF',
+      country: 'Brasil',
       status: 'active',
-      linha: 'Linha 1',
+      lineName: 'Line 1',
       page: 2,
       limit: 15,
     });
@@ -73,7 +73,7 @@ describe('StencilsController', () => {
   });
 
   it('returns stencil detail by id', async () => {
-    const detail = { id: 'stencil_1', codigo: 'A-019' };
+    const detail = { id: 'stencil_1', stencilCode: 'A-019' };
     const { controller } = makeController({
       findOne: jest.fn().mockResolvedValue(detail),
     });
@@ -92,7 +92,7 @@ describe('StencilsController', () => {
   });
 
   it('returns stencil detail by QR code', async () => {
-    const detail = { id: 'stencil_1', codigo: 'A-019' };
+    const detail = { id: 'stencil_1', stencilCode: 'A-019' };
     const { controller } = makeController({
       findDetailByStencilCode: jest.fn().mockResolvedValue(detail),
     });

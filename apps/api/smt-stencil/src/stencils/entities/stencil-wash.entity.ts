@@ -11,29 +11,29 @@ import {
 } from 'typeorm';
 import { Stencil } from './stencil.entity';
 
-@Entity('lavagens_stencil')
+@Entity('stencil_washes')
 @Index(['stencilId', 'createdAt'])
 export class StencilWash {
   @PrimaryColumn()
   id!: string;
 
-  @Column({ name: 'stencil_id' })
+  @Column()
   stencilId!: string;
 
   @ManyToOne(() => Stencil, (stencil) => stencil.washes, {
     onDelete: 'CASCADE',
   })
-  @JoinColumn({ name: 'stencil_id' })
+  @JoinColumn()
   stencil!: Stencil;
 
-  @Column({ name: 'operador' })
+  @Column()
   operator!: string;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn()
   createdAt!: Date;
 
   @BeforeInsert()
   generateId() {
-    this.id = `stencil_wash_${nanoid()}`;
+    this.id = `st_wsh_${nanoid()}`;
   }
 }

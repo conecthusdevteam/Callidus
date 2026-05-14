@@ -28,19 +28,19 @@ export class PlatesController {
 
   @Get()
   async findAll(
-    @Query('modelo') modelo?: string,
+@Query('plate_model') plate_model?: string,
     @Query('blank_id') blank_id?: string,
     @Query('serial') serial?: string,
-    @Query('linha') linha?: string,
+    @Query('line') line?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
     try {
       return this.platesService.findAll({
-        modelo,
+        plate_model: plate_model,
         blank_id,
         serial,
-        linha,
+        line: line,
         page: page ? Number(page) : undefined,
         limit: limit ? Number(limit) : undefined,
       });
@@ -55,7 +55,7 @@ export class PlatesController {
     }
   }
 
-  @Get('lavagens')
+  @Get('washes')
   findRecentWashes(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
@@ -73,7 +73,7 @@ export class PlatesController {
     return plate;
   }
 
-  @Post(':id/lavagens')
+  @Post(':id/washes')
   @HttpCode(201)
   async createWash(@Param('id') id: string, @Body() dto: CreatePlateWashDto) {
     const wash = await this.platesService.createWash(id, dto);

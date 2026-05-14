@@ -12,53 +12,53 @@ GET {{baseUrl}}/
 GET {{baseUrl}}/stencils
 
 ### Daily wash summary - success
-GET {{baseUrl}}/lavagens/resumo-dia
+GET {{baseUrl}}/washes/daily-summary
 
 ### List recent stencil washes - success
-GET {{baseUrl}}/stencils/lavagens?page=1&limit=10
+GET {{baseUrl}}/stencils/washes?page=1&limit=10
 
 ### List recent stencil washes with attention only - success
-GET {{baseUrl}}/stencils/lavagens?page=1&limit=10&attentionOnly=true
+GET {{baseUrl}}/stencils/washes?page=1&limit=10&attentionOnly=true
 
 ### List stencils paginated - success
 GET {{baseUrl}}/stencils?page=1&limit=10
 
 ### List stencils filtered by partial QR code - success
-GET {{baseUrl}}/stencils?codigo=RE
+GET {{baseUrl}}/stencils?stencilCode=RE
 
 ### List stencils filtered by manufacturer - success
-GET {{baseUrl}}/stencils?id_fabricante=MNF
+GET {{baseUrl}}/stencils?manufactureId=MNF
 
 ### List stencils filtered by country - success
-GET {{baseUrl}}/stencils?pais_origem=Brasil
+GET {{baseUrl}}/stencils?country=Brasil
 
 ### List stencils filtered by status - success
 GET {{baseUrl}}/stencils?status=active
 
 ### List stencils filtered by line - success
-GET {{baseUrl}}/stencils?linha=
+GET {{baseUrl}}/stencils?lineName=
 
 ### List stencils filtered by multiple fields - success
-GET {{baseUrl}}/stencils?codigo=A&id_fabricante=MNF&status=active&linha=Linha%201&page=1&limit=10
+GET {{baseUrl}}/stencils?stencilCode=A&id_fabricante=MNF&status=active&lineName=Linha%201&page=1&limit=10
 
 ### List stencils with no results - success with empty array
-GET {{baseUrl}}/stencils?codigo=SEM-RESULTADO
+GET {{baseUrl}}/stencils?stencilCode=SEM-RESULTADO
 
 ### List available lines - success
-GET {{baseUrl}}/linhas
+GET {{baseUrl}}/lines
 
 ### List stencil lines through stencils controller - success
-GET {{baseUrl}}/stencils/linhas
+GET {{baseUrl}}/stencils/lines
 
 ### Get stencil by id - success
 GET {{baseUrl}}/stencils/{{stencilId}}
 
 ### Get stencil by QR code - success
-GET {{baseUrl}}/stencils/codigo/{{seedStencilCode}}
+GET {{baseUrl}}/stencils/stencilCode/{{seedStencilCode}}
 
 ### Create stencil wash by stencil id - success
 # Depois rode "Get stencil by id" para ver historico_lavagens atualizado.
-POST {{baseUrl}}/stencils/{{stencilId}}/lavagens
+POST {{baseUrl}}/stencils/{{stencilId}}/washes
 Content-Type: application/json
 
 {
@@ -67,7 +67,7 @@ Content-Type: application/json
 
 ### Create stencil wash by QR code - success
 # Depois rode "Get stencil by QR code" para ver historico_lavagens atualizado.
-POST {{baseUrl}}/stencils/codigo/{{seedStencilCode}}/lavagens
+POST {{baseUrl}}/stencils/stencilCode/{{seedStencilCode}}/washes
 Content-Type: application/json
 
 {
@@ -76,7 +76,7 @@ Content-Type: application/json
 
 ### Create stencil wash with custom date/time - success
 # Use para simular historico e intervalos fora do padrao.
-POST {{baseUrl}}/stencils/codigo/{{seedStencilCode}}/lavagens
+POST {{baseUrl}}/stencils/stencilCode/{{seedStencilCode}}/washes
 Content-Type: application/json
 
 {
@@ -85,7 +85,7 @@ Content-Type: application/json
 }
 
 ### Create stencil wash for missing stencil - 404 expected
-POST {{baseUrl}}/stencils/{{missingStencilId}}/lavagens
+POST {{baseUrl}}/stencils/{{missingStencilId}}/washes
 Content-Type: application/json
 
 {
@@ -93,7 +93,7 @@ Content-Type: application/json
 }
 
 ### Create stencil wash with invalid body - 400 expected
-POST {{baseUrl}}/stencils/codigo/{{seedStencilCode}}/lavagens
+POST {{baseUrl}}/stencils/stencilCode/{{seedStencilCode}}/washes
 Content-Type: application/json
 
 {
@@ -104,7 +104,7 @@ Content-Type: application/json
 GET {{baseUrl}}/stencils/{{missingStencilId}}
 
 ### Get stencil by missing QR code - 404 expected
-GET {{baseUrl}}/stencils/codigo/{{missingStencilCode}}
+GET {{baseUrl}}/stencils/stencilCode/{{missingStencilCode}}
 
 ### Create stencil - success
 # @name createStencil

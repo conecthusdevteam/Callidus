@@ -11,33 +11,33 @@ import {
 } from 'typeorm';
 import { Plate } from './plate.entity';
 
-@Entity('lavagens_placa')
+@Entity('plate_washes')
 @Index(['plateId', 'createdAt'])
 export class PlateWash {
   @PrimaryColumn()
   id!: string;
 
-  @Column({ name: 'placa_id' })
+  @Column()
   plateId!: string;
 
   @ManyToOne(() => Plate, (plate) => plate.washes, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'placa_id' })
+  @JoinColumn()
   plate!: Plate;
 
-  @Column({ name: 'operador' })
+  @Column()
   operator!: string;
 
-  @Column({ name: 'turno' })
+  @Column()
   shift!: number;
 
-  @Column({ name: 'fase' })
+  @Column()
   phase!: number;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn()
   createdAt!: Date;
 
   @BeforeInsert()
   generateId() {
-    this.id = `plate_wash_${nanoid()}`;
+    this.id = `p_wsh_${nanoid()}`;
   }
 }

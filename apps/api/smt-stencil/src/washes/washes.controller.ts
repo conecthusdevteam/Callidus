@@ -1,11 +1,11 @@
 import { Controller, Get } from '@nestjs/common';
 import { WashesService } from './washes.service';
 
-@Controller('lavagens')
+@Controller('washes')
 export class WashesController {
   constructor(private readonly washesService: WashesService) {}
 
-  @Get('resumo-dia')
+  @Get('daily-summary')
   getDailySummary() {
     return this.washesService.getDailySummary();
   }

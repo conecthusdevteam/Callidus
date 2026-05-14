@@ -29,21 +29,21 @@ export class StencilsController {
 
   @Get()
   async findAll(
-    @Query('codigo') codigo?: string,
-    @Query('id_fabricante') id_fabricante?: string,
-    @Query('pais_origem') pais_origem?: string,
+    @Query('stencilCode') stencilCode?: string,
+    @Query('manufactureId') manufactureId?: string,
+    @Query('country') country?: string,
     @Query('status') status?: string,
-    @Query('linha') linha?: string,
+    @Query('lineName') lineName?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
     try {
       return this.stencilsService.findAll({
-        codigo,
-        id_fabricante,
-        pais_origem,
+        stencilCode,
+        manufactureId,
+        country,
         status,
-        linha,
+        lineName: lineName,
         page: page ? Number(page) : undefined,
         limit: limit ? Number(limit) : undefined,
       });
@@ -58,12 +58,12 @@ export class StencilsController {
     }
   }
 
-  @Get('linhas')
+  @Get('lines')
   findLines() {
     return this.stencilsService.findLines();
   }
 
-  @Get('lavagens')
+  @Get('washes')
   findRecentWashes(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
@@ -76,14 +76,14 @@ export class StencilsController {
     });
   }
 
-  @Get('codigo/:codigo')
-  async findByCode(@Param('codigo') codigo: string) {
-    const stencil = await this.stencilsService.findDetailByStencilCode(codigo);
+  @Get('stencilCode/:stencilCode')
+  async findByCode(@Param('stencilCode') stencilCode: string) {
+    const stencil = await this.stencilsService.findDetailByStencilCode(stencilCode);
     if (!stencil) throw new NotFoundException();
     return stencil;
   }
 
-  @Post(':id/lavagens')
+  @Post(':id/washes')
   @HttpCode(201)
   async createWash(@Param('id') id: string, @Body() dto: CreateStencilWashDto) {
     const wash = await this.stencilsService.createWash(id, dto);
@@ -91,14 +91,14 @@ export class StencilsController {
     return wash;
   }
 
-  @Post('codigo/:codigo/lavagens')
+  @Post('stencilCode/:stencilCode/washes')
   @HttpCode(201)
-  async createWashByCode(
-    @Param('codigo') codigo: string,
+async createWashByCode(
+    @Param('stencilCode') stencilCode: string,
     @Body() dto: CreateStencilWashDto,
   ) {
     const wash = await this.stencilsService.createWashByStencilCode(
-      codigo,
+      stencilCode,
       dto,
     );
     if (!wash) throw new NotFoundException();

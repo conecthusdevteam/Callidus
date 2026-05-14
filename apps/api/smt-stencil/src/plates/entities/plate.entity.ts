@@ -15,26 +15,25 @@ export class Plate {
   @PrimaryColumn()
   id!: string;
 
-  @Column({ name: 'modelo' })
+  @Column()
   plateModel!: string;
 
-  @Column({ name: 'serial', unique: true })
+  @Column({ unique: true })
   serialNumber!: string;
 
-  @Column({ name: 'blank_id' })
+  @Column()
   blankId!: string;
 
-  @Column({ name: 'linha' })
+  @Column()
   lineName!: string;
 
-  @Column({ name: 'id_fabricante', nullable: true })
+  @Column({ nullable: true })
   plateManufacturerId?: string;
 
-  @Column({ name: 'pais_origem', nullable: true })
+  @Column({ nullable: true })
   country?: string;
 
   @Column({
-    name: 'espessura',
     type: 'decimal',
     precision: 5,
     scale: 3,
@@ -42,20 +41,20 @@ export class Plate {
   })
   thickness?: number;
 
-  @Column({ name: 'enderecamento', nullable: true })
+  @Column({ nullable: true })
   addressing?: string;
 
   @OneToMany(() => PlateWash, (wash) => wash.plate)
   washes!: PlateWash[];
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn()
   createdAt!: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn()
   updatedAt!: Date;
 
   @BeforeInsert()
   generateId() {
-    this.id = `plate_${nanoid()}`;
+    this.id = `p_${nanoid()}`;
   }
 }

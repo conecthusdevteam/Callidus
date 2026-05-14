@@ -9,17 +9,17 @@ import { PlateWash } from './entities/plate-wash.entity';
 
 type PlateWashHistoryItem = {
   id: string;
-  operador: string;
-  turno: number;
-  fase: number;
+  operator: string;
+  shift: number;
+  phase: number;
   created_at: Date;
 };
 
 type PlateFilters = {
-  modelo?: string;
+  plate_model?: string;
   blank_id?: string;
   serial?: string;
-  linha?: string;
+  line?: string;
   page?: number;
   limit?: number;
 };
@@ -52,14 +52,14 @@ export class PlatesService {
   async findAll(filters?: PlateFilters) {
     const plates = await this.repository.find({
       where: {
-        ...(filters?.modelo ? { plateModel: Like(`%${filters.modelo}%`) } : {}),
+        ...(filters?.plate_model ? { plateModel: Like(`%${filters.plate_model}%`) } : {}),
         ...(filters?.blank_id
           ? { blankId: Like(`%${filters.blank_id}%`) }
           : {}),
         ...(filters?.serial
           ? { serialNumber: Like(`%${filters.serial}%`) }
           : {}),
-        ...(filters?.linha ? { lineName: filters.linha } : {}),
+        ...(filters?.line ? { lineName: filters.line } : {}),
       },
       relations: {
         washes: true,
@@ -114,13 +114,13 @@ export class PlatesService {
           id: wash.id,
           plate_id: plate.id,
           created_at: wash.createdAt,
-          turno: wash.shift,
-          modelo: plate.plateModel,
-          fase: wash.phase,
-          linha: plate.lineName,
+          shift: wash.shift,
+          plate_model: plate.plateModel,
+          phase: wash.phase,
+          line: plate.lineName,
           serial: plate.serialNumber,
           blank_id: plate.blankId,
-          operador: wash.operator,
+          operator: wash.operator,
         })),
       )
       .sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
@@ -151,27 +151,27 @@ export class PlatesService {
 
     return {
       id: plate.id,
-      modelo: plate.plateModel,
+      plate_model: plate.plateModel,
       serial: plate.serialNumber,
       blank_id: plate.blankId,
-      linha: plate.lineName,
-      id_fabricante: plate.plateManufacturerId ?? null,
-      pais_origem: plate.country ?? null,
-      espessura:
+      line: plate.lineName,
+      manufacturer_id: plate.plateManufacturerId ?? null,
+      origin_country: plate.country ?? null,
+      thickness:
         plate.thickness === undefined || plate.thickness === null
           ? null
           : Number(plate.thickness),
-      enderecamento: plate.addressing ?? null,
+      addressing: plate.addressing ?? null,
       created_at: plate.createdAt,
       updated_at: plate.updatedAt,
-      total_lavagens: orderedWashes.length,
-      ultima_lavagem: lastWash?.createdAt ?? null,
-      ultima_lavagem_detalhe: lastWash
+      total_washes: orderedWashes.length,
+      last_wash: lastWash?.createdAt ?? null,
+      last_wash_details: lastWash
         ? {
             id: lastWash.id,
-            operador: lastWash.operator,
-            turno: lastWash.shift,
-            fase: lastWash.phase,
+            operator: lastWash.operator,
+            shift: lastWash.shift,
+            phase: lastWash.phase,
             created_at: lastWash.createdAt,
           }
         : null,
@@ -181,12 +181,12 @@ export class PlatesService {
   private toDetail(plate: Plate) {
     return {
       ...this.toSummary(plate),
-      historico_lavagens: this.sortWashesDesc(plate.washes ?? []).map(
+      washes_history: this.sortWashesDesc(plate.washes ?? []).map(
         (wash): PlateWashHistoryItem => ({
           id: wash.id,
-          operador: wash.operator,
-          turno: wash.shift,
-          fase: wash.phase,
+          operator: wash.operator,
+          shift: wash.shift,
+          phase: wash.phase,
           created_at: wash.createdAt,
         }),
       ),

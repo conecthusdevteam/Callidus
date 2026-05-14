@@ -12,27 +12,27 @@ const RESERVED_WASH_HOURS = [11, 16];
 
 type StencilWashHistoryItem = {
   id: string;
-  operador: string;
+  operator: string;
   created_at: Date;
-  intervalo_desde_lavagem_anterior: number | null;
-  fora_do_padrao: boolean;
+  previous_wash_interval: number | null;
+  non_standard: boolean;
 };
 
 type StencilMetrics = {
-  total_lavagens: number;
-  ultima_lavagem: Date | null;
-  ultima_lavagem_detalhe: StencilWashHistoryItem | null;
-  intervalo_medio: number | null;
-  possui_anomalia: boolean;
-  historico_lavagens: StencilWashHistoryItem[];
+  total_washes: number;
+  last_wash: Date | null;
+  last_wash_details: StencilWashHistoryItem | null;
+  mid_range: number | null;
+  anomaly: boolean;
+  washes_history: StencilWashHistoryItem[];
 };
 
 type StencilFilters = {
-  codigo?: string;
-  id_fabricante?: string;
-  pais_origem?: string;
+  stencilCode?: string;
+  manufactureId?: string;
+  country?: string;
   status?: string;
-  linha?: string;
+  lineName?: string;
   page?: number;
   limit?: number;
 };
@@ -66,17 +66,17 @@ export class StencilsService {
   async findAll(filters?: StencilFilters) {
     const stencils = await this.repository.find({
       where: {
-        ...(filters?.codigo
-          ? { stencilCode: Like(`%${filters.codigo}%`) }
+        ...(filters?.stencilCode
+          ? { stencilCode: Like(`%${filters.stencilCode}%`) }
           : {}),
-        ...(filters?.id_fabricante
-          ? { manufactureId: Like(`%${filters.id_fabricante}%`) }
+        ...(filters?.manufactureId
+          ? { manufactureId: Like(`%${filters.manufactureId}%`) }
           : {}),
-        ...(filters?.pais_origem
-          ? { country: Like(`%${filters.pais_origem}%`) }
+        ...(filters?.country
+          ? { country: Like(`%${filters.country}%`) }
           : {}),
         ...(filters?.status ? { status: filters.status as WashStatus } : {}),
-        ...(filters?.linha ? { lineName: filters.linha } : {}),
+        ...(filters?.lineName ? { lineName: filters.lineName } : {}),
       },
       relations: {
         washes: true,
@@ -155,21 +155,20 @@ export class StencilsService {
       .flatMap((stencil) => {
         const metrics = this.calculateMetrics(stencil.washes ?? []);
 
-        return metrics.historico_lavagens.map((wash) => ({
+        return metrics.washes_history.map((wash) => ({
           id: wash.id,
           stencil_id: stencil.id,
           created_at: wash.created_at,
-          codigo: stencil.stencilCode,
-          enderecamento: String(stencil.addressing).padStart(3, '0'),
+          stencil_code: stencil.stencilCode,
+          addressing: String(stencil.addressing).padStart(3, '0'),
           status: stencil.status,
-          linha: stencil.lineName,
-          operador: wash.operador,
-          intervalo_desde_lavagem_anterior:
-            wash.intervalo_desde_lavagem_anterior,
-          fora_do_padrao: wash.fora_do_padrao,
+          line_name: stencil.lineName,
+          operator: wash.operator,
+          previous_wash_interval: wash.previous_wash_interval,
+          non_standard: wash.non_standard,
         }));
       })
-      .filter((wash) => !filters?.attentionOnly || wash.fora_do_padrao)
+      .filter((wash) => !filters?.attentionOnly || wash.non_standard)
       .sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
 
     return this.paginate(items, filters?.page, filters?.limit);
@@ -178,11 +177,11 @@ export class StencilsService {
   async findLines() {
     const rows = await this.repository
       .createQueryBuilder('stencil')
-      .select('DISTINCT stencil.lineName', 'linha')
+      .select('DISTINCT stencil.lineName')
       .orderBy('stencil.lineName', 'ASC')
-      .getRawMany<{ linha: string }>();
+      .getRawMany<{ lineName: string }>();
 
-    return rows.map((row) => row.linha);
+    return rows.map((row) => row.lineName);
   }
 
   async update(id: string, dto: UpdateStencilDto) {
@@ -203,20 +202,20 @@ export class StencilsService {
 
     return {
       id: stencil.id,
-      codigo: stencil.stencilCode,
-      id_fabricante: stencil.manufactureId,
-      pais_origem: stencil.country,
-      espessura: Number(stencil.thickness),
-      enderecamento: stencil.addressing,
+      stencilCode: stencil.stencilCode,
+      manufacture_id: stencil.manufactureId,
+      country: stencil.country,
+      thickness: Number(stencil.thickness),
+      eddressing: stencil.addressing,
       status: stencil.status,
-      linha: stencil.lineName,
+      line_name: stencil.lineName,
       created_at: stencil.createdAt,
       updated_at: stencil.updatedAt,
-      total_lavagens: metrics.total_lavagens,
-      ultima_lavagem: metrics.ultima_lavagem,
-      ultima_lavagem_detalhe: metrics.ultima_lavagem_detalhe,
-      intervalo_medio: metrics.intervalo_medio,
-      possui_anomalia: metrics.possui_anomalia,
+      total_washes: metrics.total_washes,
+      last_wash: metrics.last_wash,
+      last_wash_details: metrics.last_wash_details,
+      mid_range: metrics.mid_range,
+      anomaly: metrics.anomaly,
     };
   }
 
@@ -225,7 +224,7 @@ export class StencilsService {
 
     return {
       ...this.toSummary(stencil),
-      historico_lavagens: metrics.historico_lavagens,
+      washes_history: metrics.washes_history,
     };
   }
 
@@ -260,22 +259,22 @@ export class StencilsService {
 
       return {
         id: wash.id,
-        operador: wash.operator,
+        operator: wash.operator,
         created_at: wash.createdAt,
-        intervalo_desde_lavagem_anterior: interval,
-        fora_do_padrao: this.isAnomaly(wash.createdAt, washesByManausDay),
+        previous_wash_interval: interval,
+        non_standard: this.isAnomaly(wash.createdAt, washesByManausDay),
       };
     });
 
-    const historico_lavagens = historyAsc.reverse();
+    const washes_history = historyAsc.reverse();
 
     return {
-      total_lavagens: orderedAsc.length,
-      ultima_lavagem: orderedAsc.at(-1)?.createdAt ?? null,
-      ultima_lavagem_detalhe: historico_lavagens[0] ?? null,
-      intervalo_medio: average,
-      possui_anomalia: historico_lavagens.some((wash) => wash.fora_do_padrao),
-      historico_lavagens,
+      total_washes: orderedAsc.length,
+      last_wash: orderedAsc.at(-1)?.createdAt ?? null,
+      last_wash_details: washes_history[0] ?? null,
+      mid_range: average,
+      anomaly: washes_history.some((wash) => wash.non_standard),
+      washes_history,
     };
   }
 
