@@ -77,6 +77,19 @@ function Layout() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="*"
+          element={
+            user ? (
+              <Navigate
+                to={user.papel === "GESTOR" ? "/gestor" : "/"}
+                replace
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
       </Routes>
     </>
   );
