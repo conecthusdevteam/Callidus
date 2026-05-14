@@ -9,7 +9,7 @@ import type { SystemStatus } from "@/data/mockWashes";
  */
 export function SystemStatusCard({ status }: { status: SystemStatus }) {
   const items = [
-    { label: "SGS", ok: status.scs.ok, mins: status.scs.lastSyncMin },
+    { label: "SGS", ok: status.sgs.ok, mins: status.sgs.lastSyncMin },
     { label: "CLP", ok: status.clp.ok, mins: status.clp.lastSyncMin },
   ];
 
