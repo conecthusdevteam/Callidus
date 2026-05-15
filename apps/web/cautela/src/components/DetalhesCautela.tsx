@@ -1,9 +1,3 @@
-/**
- * DetalhesCautela.tsx
- *
- * Painel de detalhes de uma cautela — reutilizável em Home, Gestor e HistoricoCautelas.
- */
-
 import type { Cautela } from "../data/cautelaTypes";
 
 interface DetalhesCautelaProps {
@@ -100,7 +94,7 @@ export default function DetalhesCautela({
         </div>
         <div className="mb-3">
           <p className="text-sm font-bold text-black">Setor:</p>
-          <p className="text-sm text-gray-700">{cautela.empresa || "-"}</p>
+          <p className="text-sm text-gray-700">{cautela.setorId || "-"}</p>
         </div>
         <div className="mb-3">
           <p className="text-sm font-bold text-black">Data e hora de entrada</p>
@@ -109,6 +103,14 @@ export default function DetalhesCautela({
         <div className="mb-3">
           <p className="text-sm font-bold text-black">Proprietário</p>
           <p className="text-sm text-gray-700">{cautela.visitante || "-"}</p>
+        </div>
+        <div className="mb-3">
+          <p className="text-sm font-bold text-black">Documento</p>
+          <p className="text-sm text-gray-700">{cautela.documento || "-"}</p>
+        </div>
+        <div className="mb-3">
+          <p className="text-sm font-bold text-black">Empresa</p>
+          <p className="text-sm text-gray-700">{cautela.empresa || "-"}</p>
         </div>
         {cautela.proprietarioEmail && (
           <div className="mb-3">
