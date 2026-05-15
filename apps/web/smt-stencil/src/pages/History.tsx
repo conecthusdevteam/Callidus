@@ -2,6 +2,8 @@ import { Header } from "@/components/dashboard/Header";
 import { Pagination } from "@/components/dashboard/Pagination";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Button } from "@/components/ui/button";
+import { ArrowUpDown } from "lucide-react";
+import { StatusPill } from "../components/dashboard/StatusPill";
 import {
   Dialog,
   DialogContent,
@@ -105,7 +107,7 @@ function Field({
 }) {
   return (
     <div className="space-y-1">
-      <Label className="text-[11px] font-medium text-muted-foreground">
+      <Label className="text-[13px] font-medium text-muted-foreground">
         {label}
       </Label>
       {children}
@@ -165,7 +167,7 @@ function StencilFiltersForm({
   onSearch: () => void;
 }) {
   return (
-    <div className="grid items-end gap-3 lg:grid-cols-[1.45fr_1fr_1fr_1fr_1fr_auto]">
+    <div className="grid items-end gap-4 lg:grid-cols-[1.45fr_1fr_1fr_1fr_1fr_auto]">
       <Field label="Código">
         <Input
           value={filters.codigo}
@@ -327,27 +329,31 @@ function StencilTable({
 }) {
   return (
     <div className="min-h-0 overflow-auto rounded-t-md">
-      <table className="w-full min-w-[900px] border-collapse text-[13px]">
+      <table className="w-full min-w-[600px] border-collapse text-[13px]">
         <thead className="sticky top-0 z-10">
           <tr className="bg-[#1d55d8] text-left text-white">
-            <th className="w-[110px] px-3 py-2 font-bold">
+            <th className="w-[160px] px-2 py-1.5 font-bold">
               <button
                 type="button"
                 onClick={onToggleSort}
-                className="flex items-center gap-2"
+                className="table-head-cell w-full flex items-center justify-between text-left"
               >
-                Data
-                <span className="text-[14px]">
-                  {sort === "asc" ? "↑" : "↓"}
-                </span>
+                <span>Data</span>
+
+                <ArrowUpDown
+                  className={cn(
+                    "h-4 w-4 transition-transform",
+                    sort === "asc" && "rotate-180",
+                  )}
+                />
               </button>
             </th>
-            <th className="w-[90px] px-3 py-2 font-bold">Hora</th>
-            <th className="px-3 py-2 font-bold">Código</th>
-            <th className="w-[120px] px-3 py-2 font-bold">Endereç.</th>
-            <th className="w-[130px] px-3 py-2 font-bold">Status</th>
-            <th className="w-[170px] px-3 py-2 font-bold">Linha</th>
-            <th className="w-[130px] px-3 py-2 font-bold" />
+            <th className="table-head-cell px-4 text-left">Hora</th>
+            <th className="table-head-cell px-4 text-left">Código</th>
+            <th className="table-head-cell px-4 text-left">Endereç.</th>
+            <th className="table-head-cell px-4 text-left">Status</th>
+            <th className="table-head-cell px-4 text-left">Linha</th>
+            <th className="table-head-cell px-4 text-left" />
           </tr>
         </thead>
         <tbody>
@@ -355,30 +361,31 @@ function StencilTable({
             <tr
               key={row.id}
               className={cn(
-                index % 2 === 0 ? "bg-white" : "bg-[#eeeeee]",
+                index % 2 === 0 ? "bg-white" : "bg-[#E5E5E5]",
                 row.non_standard && "bg-red-50 shadow-[inset_4px_0_0_#ef4444]",
               )}
             >
-              <td className="px-3 py-3 tabular">{formatDate(row.created_at)}</td>
-              <td className="px-3 py-3 tabular">{formatTime(row.created_at)}</td>
-              <td className="px-3 py-3 font-medium">{row.stencil_code}</td>
-              <td className="px-3 py-3 tabular">
+              <td className="px-4 py-4 text-[16px] tabular text-foreground">
+                {formatDate(row.created_at)}
+              </td>
+              <td className="px-4 py-4 text-[16px] tabular text-foreground">
+                {formatTime(row.created_at)}
+              </td>
+              <td className="px-4 py-4 text-[16px] tabular text-foreground">
+                {row.stencil_code}
+              </td>
+              <td className="px-4 py-4 text-[16px] tabular text-foreground">
                 {String(row.addressing ?? "").padStart(3, "0")}
               </td>
-              <td className="px-3 py-3">
-                <span
-                  className={cn(
-                    "inline-flex rounded-full border px-2 py-0.5 text-[12px] font-semibold",
-                    row.status === "active"
-                      ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-                      : "border-red-300 bg-red-50 text-red-700",
-                  )}
-                >
-                  {row.status === "active" ? "Ativo" : "Inativo"}
-                </span>
+              <td className="px-4 py-4 text-[16px] tabular text-foreground">
+                <StatusPill
+                  status={row.status === "active" ? "Ativo" : "Inativo"}
+                />
               </td>
-              <td className="px-3 py-3">{row.line_name}</td>
-              <td className="px-3 py-2 text-right">
+              <td className="px-4 py-4 text-[16px] tabular text-foreground">
+                {row.line_name}
+              </td>
+              <td className="px-3 py-2 text-center">
                 <ConsultButton onClick={() => onConsult(row)} />
               </td>
             </tr>
@@ -412,23 +419,27 @@ function PlateTable({
 }) {
   return (
     <div className="min-h-0 overflow-auto rounded-t-md">
-      <table className="w-full min-w-[860px] border-collapse text-[13px]">
+      <table className="w-full min-w-[860px] border-collapse text-lg font-normal">
         <thead className="sticky top-0 z-10">
           <tr className="bg-[#0fa468] text-left text-white">
-            <th className="w-[110px] px-3 py-2 font-bold">
+            <th className="w-[160px] px-2 py-1.5 font-bold">
               <button
                 type="button"
                 onClick={onToggleSort}
-                className="flex items-center gap-2"
+                className="table-head-cell w-full flex items-center justify-between text-left"
               >
-                Data
-                <span className="text-[14px]">
-                  {sort === "asc" ? "↑" : "↓"}
-                </span>
+                <span>Data</span>
+
+                <ArrowUpDown
+                  className={cn(
+                    "h-4 w-4 transition-transform",
+                    sort === "asc" && "rotate-180",
+                  )}
+                />
               </button>
             </th>
             <th className="w-[90px] px-3 py-2 font-bold">Hora</th>
-            <th className="px-3 py-2 font-bold">Modelo</th>
+            <th className="w-[70px] px-3 py-2 font-bold">Modelo</th>
             <th className="w-[150px] px-3 py-2 font-bold">Serial</th>
             <th className="w-[150px] px-3 py-2 font-bold">Blank ID</th>
             <th className="w-[170px] px-3 py-2 font-bold">Linha solicitante</th>
@@ -439,15 +450,19 @@ function PlateTable({
           {rows.map((row, index) => (
             <tr
               key={row.id}
-              className={index % 2 === 0 ? "bg-white" : "bg-[#eeeeee]"}
+              className={index % 2 === 0 ? "bg-white" : "bg-[#E5E5E5]"}
             >
-              <td className="px-3 py-3 tabular">{formatDate(row.created_at)}</td>
-              <td className="px-3 py-3 tabular">{formatTime(row.created_at)}</td>
+              <td className="px-3 py-3 tabular">
+                {formatDate(row.created_at)}
+              </td>
+              <td className="px-3 py-3 tabular">
+                {formatTime(row.created_at)}
+              </td>
               <td className="px-3 py-3 font-medium">{row.plate_model}</td>
               <td className="px-3 py-3 tabular">{row.serial}</td>
               <td className="px-3 py-3 tabular">{row.blank_id}</td>
               <td className="px-3 py-3">{row.line}</td>
-              <td className="px-3 py-2 text-right">
+              <td className="px-3 py-2 text-center">
                 <ConsultButton onClick={() => onConsult(row)} />
               </td>
             </tr>
@@ -534,10 +549,11 @@ function StencilDetailsModal({
                   <p className="mb-3 text-[12px] font-medium text-muted-foreground">
                     Dados da lavagem
                   </p>
-                  <div className="grid grid-cols-4 gap-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <DetailMetric
                       label="ID Lavagem"
                       value={detail.id}
+                      className="col-span-3"
                     />
                     <DetailMetric
                       label="Data"
@@ -621,10 +637,11 @@ function PlateDetailsModal({
                 <p className="mb-3 text-[12px] font-medium text-muted-foreground">
                   Dados da lavagem
                 </p>
-                <div className="grid grid-cols-5 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <DetailMetric
                     label="ID Lavagem"
                     value={detail.id}
+                    className="col-span-3"
                   />
                   <DetailMetric
                     label="Data"
@@ -634,10 +651,7 @@ function PlateDetailsModal({
                     label="Hora"
                     value={formatTime(detail.created_at)}
                   />
-                  <DetailMetric
-                    label="Turno"
-                    value={detail.shift}
-                  />
+                  <DetailMetric label="Turno" value={detail.shift} />
                   <DetailMetric
                     label="Operador de Lavagem"
                     value={detail.operator || "-"}
@@ -669,8 +683,9 @@ const History = () => {
   const [platePage, setPlatePage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [selectedStencil, setSelectedStencil] =
-    useState<ApiStencil | null>(null);
+  const [selectedStencil, setSelectedStencil] = useState<ApiStencil | null>(
+    null,
+  );
   const [selectedPlate, setSelectedPlate] = useState<ApiPlate | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailType, setDetailType] = useState<AssetType | null>(null);
@@ -683,7 +698,10 @@ const History = () => {
     () => sortByWashDate(plates, sort),
     [plates, sort],
   );
-  const stencilPages = Math.max(1, Math.ceil(sortedStencils.length / PAGE_SIZE));
+  const stencilPages = Math.max(
+    1,
+    Math.ceil(sortedStencils.length / PAGE_SIZE),
+  );
   const platePages = Math.max(1, Math.ceil(sortedPlates.length / PAGE_SIZE));
   const stencilRows = useMemo(
     () =>
@@ -756,12 +774,12 @@ const History = () => {
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Header />
 
-        <main className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-3 overflow-hidden px-4 py-3">
+        <main className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-3 overflow-hidden px-4 pr-[310px] py-3">
           <section className="shrink-0">
-            <h1 className="text-[20px] font-bold leading-tight">
+            <h1 className="text-[24px] mt-5 font-bold leading-tight">
               Histórico de Lavagens
             </h1>
-            <p className="mt-1 text-[13px] text-muted-foreground">
+            <p className="mt-1 text-[18px] text-muted-foreground">
               Adicione uma ou mais informações para filtrar.
             </p>
 
@@ -797,8 +815,8 @@ const History = () => {
             </div>
           )}
 
-          <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-            <div className="min-h-0 min-w-0 flex-1 overflow-auto rounded-lg border bg-card">
+          <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border bg-card shadow-sm">
+            <div className="min-h-0 min-w-0 flex-1 overflow-auto">
               {loading ? (
                 <div className="grid h-full place-items-center text-sm text-muted-foreground">
                   Carregando histórico...

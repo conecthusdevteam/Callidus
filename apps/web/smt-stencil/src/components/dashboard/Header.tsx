@@ -12,7 +12,15 @@ import { NavLink } from "@/components/NavLink";
  */
 export function Header() {
   return (
-    <header className="border-b-[6px] border-primary bg-card text-foreground shadow-card">
+    <header
+      className="border-b-[6px] border-primary bg-card text-foreground shadow-card"
+      style={{
+        height: "60px",
+        backgroundColor: "#FFFFFF",
+        borderColor: "#2B8E37",
+        boxShadow: "0px 4px 4px rgba(0,0,0,0.25)",
+      }}
+    >
       <div className="flex items-center gap-3 px-5 py-3">
         <Sheet>
           <SheetTrigger asChild>
