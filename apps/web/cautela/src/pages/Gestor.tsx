@@ -136,17 +136,25 @@ function DetalhesConteudo({
         <p className="text-base font-bold text-black">Id da cautela</p>
         <p className="text-base text-black">{cautela.id}</p>
       </div>
-      <div className="mb-4">
-        <p className="text-base font-bold text-black">Setor:</p>
-        <p className="text-base text-black">{cautela.empresa}</p>
+      <div className="mb-3">
+        <p className="text-base font-bold text-black">Setor</p>
+        <p className="text-base text-black">{cautela.setorId || "-"}</p>
       </div>
       <div className="mb-4">
         <p className="text-base font-bold text-black">Data e hora de entrada</p>
         <p className="text-base text-black">{cautela.data}</p>
       </div>
       <div className="mb-4">
-        <p className="text-base font-bold text-black">Propriedade</p>
+        <p className="text-base font-bold text-black">Proprietário</p>
         <p className="text-base text-black">{cautela.visitante}</p>
+      </div>
+      <div className="mb-3">
+        <p className="text-base font-bold text-black">Documento</p>
+        <p className="text-base text-gray-700">{cautela.documento || "-"}</p>
+      </div>
+      <div className="mb-3">
+        <p className="text-base font-bold text-black">Empresa</p>
+        <p className="text-base text-gray-700">{cautela.empresa || "-"}</p>
       </div>
       <div className="mb-4">
         <p className="text-base font-bold text-black">E-mail do proprietário</p>
@@ -154,8 +162,8 @@ function DetalhesConteudo({
       </div>
       {cautela.validade && (
         <div className="mb-4">
-          <p className="text-sm font-bold text-black">Válido até:</p>
-          <p className="text-sm text-gray-700">{cautela.validade}</p>
+          <p className="text-base font-bold text-black">Válido até:</p>
+          <p className="text-base text-gray-700">{cautela.validade}</p>
         </div>
       )}
       {cautela.aprovadoEm && (
@@ -166,8 +174,10 @@ function DetalhesConteudo({
       )}
       {cautela.status === "Encerrada" && cautela.encerradaEm && (
         <div className="mb-3">
-          <p className="text-sm font-bold text-black">Data e hora de saída:</p>
-          <p className="text-sm text-gray-700">{cautela.encerradaEm}</p>
+          <p className="text-base font-bold text-black">
+            Data e hora de saída:
+          </p>
+          <p className="text-base text-gray-700">{cautela.encerradaEm}</p>
         </div>
       )}
 

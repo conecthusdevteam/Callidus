@@ -136,8 +136,8 @@ function DetalhesCautelaPortaria({
           <p className="text-sm text-gray-700 break-all">{cautela.id}</p>
         </div>
         <div className="mb-3">
-          <p className="text-sm font-bold text-black">Setor:</p>
-          <p className="text-sm text-gray-700">{cautela.empresa || "-"}</p>
+          <p className="text-sm font-bold text-black">Setor</p>
+          <p className="text-sm text-gray-700">{cautela.setorId || "-"}</p>
         </div>
         <div className="mb-3">
           <p className="text-sm font-bold text-black">Data e hora de entrada</p>
@@ -147,12 +147,26 @@ function DetalhesCautelaPortaria({
           <p className="text-sm font-bold text-black">Proprietário</p>
           <p className="text-sm text-gray-700">{cautela.visitante || "-"}</p>
         </div>
+        <div className="mb-3">
+          <p className="text-sm font-bold text-black">Documento</p>
+          <p className="text-sm text-gray-700">{cautela.documento || "-"}</p>
+        </div>
+        <div className="mb-3">
+          <p className="text-sm font-bold text-black">Empresa</p>
+          <p className="text-sm text-gray-700">{cautela.empresa || "-"}</p>
+        </div>
         {cautela.proprietarioEmail && (
           <div className="mb-3">
             <p className="text-sm font-bold text-black">
               E-mail do proprietário
             </p>
             <p className="text-sm text-gray-700">{cautela.proprietarioEmail}</p>
+          </div>
+        )}
+        {cautela.gestor && (
+          <div className="mb-3">
+            <p className="text-sm font-bold text-black">Aprovado por:</p>
+            <p className="text-sm text-gray-700">{cautela.gestor}</p>
           </div>
         )}
         {cautela.validade && (
@@ -653,7 +667,7 @@ export default function Home() {
           Notebooks, Mouses, Teclados, Etc...
         </h3>
       </div>
-      <div className="bg-[#F2FBF3] rounded-sm shadow-sm border border-[#22592A] p-4 md:p-8"> 
+      <div className="bg-[#F2FBF3] rounded-sm shadow-sm border border-[#22592A] p-4 md:p-8">
         <FormularioCautela
           {...formularioProps}
           fieldErrors={fieldErrors}
