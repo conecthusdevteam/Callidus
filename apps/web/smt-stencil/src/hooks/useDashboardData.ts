@@ -18,7 +18,7 @@ export interface NewWashEvent {
 
 // ── Cache em localStorage ────────────────────────────────────────────────────
 
-const CACHE_KEY = "smt-dashboard-v2";
+const CACHE_KEY = "smt-dashboard-v3";
 
 function loadCache(): DashboardData | null {
   try {

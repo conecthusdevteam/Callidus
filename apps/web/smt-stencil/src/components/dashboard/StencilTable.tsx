@@ -55,7 +55,8 @@ export function StencilTable({
         <tbody>
           {rows.map((row) => {
             const selected = row.id === selectedId;
-            const attention = isWashOutsideStandardSchedule(row.hora);
+            const attention =
+              row.attention ?? isWashOutsideStandardSchedule(row.hora);
             return (
               <tr
                 key={row.id}

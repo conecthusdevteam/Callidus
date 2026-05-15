@@ -41,7 +41,17 @@ export const stencilsApi = {
     if (sim === "sgs" || sim === "both") {
       throw new Error("[SIMULAÇÃO] SGS indisponível");
     }
-    return apiRequest<ApiStencil[]>("/stencils");
+    const [washesResponse, stencils] = await Promise.all([
+      apiRequest<ApiPaginatedResponse<ApiStencil>>(
+        "/stencils/washes?limit=100",
+      ),
+      apiRequest<HistoryStencilSummary[]>("/stencils"),
+    ]);
+    const stencilsById = new Map(stencils.map((stencil) => [stencil.id, stencil]));
+    return washesResponse.items.map((wash) => ({
+      ...wash,
+      asset: stencilsById.get(wash.stencil_id),
+    }));
   },
 };
 
@@ -51,7 +61,15 @@ export const platesApi = {
     if (sim === "clp" || sim === "both") {
       throw new Error("[SIMULAÇÃO] CLP indisponível");
     }
-    return apiRequest<ApiPlate[]>("/plates");
+    const [washesResponse, plates] = await Promise.all([
+      apiRequest<ApiPaginatedResponse<ApiPlate>>("/plates/washes?limit=100"),
+      apiRequest<HistoryPlateSummary[]>("/plates"),
+    ]);
+    const platesById = new Map(plates.map((plate) => [plate.id, plate]));
+    return washesResponse.items.map((wash) => ({
+      ...wash,
+      asset: platesById.get(wash.plate_id),
+    }));
   },
 };
 
@@ -104,37 +122,40 @@ export const historyApi = {
 
 // ── Shapes exatos que o back entrega ─────────────────────────────────────────
 
+export interface ApiPaginatedResponse<T> {
+  items: T[];
+  page: number;
+  limit: number;
+  total: number;
+  total_pages: number;
+}
+
 export interface ApiStencil {
   id: string;
-  stencilCode: string;
-  manufactureId: string;
-  country: string;
-  thickness: number;
-  addressing: number;
-  totalWashes: number;
-  operator: string;
-  lineName: string;
+  stencil_id: string;
+  created_at: string;
+  stencil_code: string;
+  addressing: string;
   status: "active" | "inactive";
-  createdAt: string; // ISO 8601
-  updatedAt: string;
+  line_name: string;
+  operator: string;
+  previous_wash_interval: number | null;
+  non_standard: boolean;
+  asset?: HistoryStencilSummary;
 }
 
 export interface ApiPlate {
   id: string;
-  plateModel: string;
-  serialNumber: string;
-  blankId: string;
+  plate_id: string;
+  created_at: string;
   shift: number;
+  plate_model: string;
   phase: number;
-  totalWashes: number;
+  line: string;
+  serial: string;
+  blank_id: string;
   operator: string;
-  lineName: string;
-  plateManufacturerId?: string;
-  country?: string;
-  thickness?: number;
-  addressing?: string;
-  createdAt: string;
-  updatedAt: string;
+  asset?: HistoryPlateSummary;
 }
 
 export interface HistoryStencilFilters {

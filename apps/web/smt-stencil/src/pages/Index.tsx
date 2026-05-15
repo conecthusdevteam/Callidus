@@ -106,7 +106,10 @@ const Index = () => {
   const filteredStencils = useMemo(
     () =>
       data.stencils.filter((row) => {
-        if (showAttention && !isWashOutsideStandardSchedule(row.hora))
+        if (
+          showAttention &&
+          !(row.attention ?? isWashOutsideStandardSchedule(row.hora))
+        )
           return false;
         if (
           stencilFilters.codigo &&
