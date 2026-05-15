@@ -31,6 +31,8 @@ const LINE_NAMES = [
   'Tefé',
   'Coari',
   'Manicoré',
+  'Japurá',
+  'Eirunepé',
 ];
 const STENCIL_CODES = [
   'SMB-100',
@@ -59,37 +61,107 @@ const PLATE_MODELS = [
   'PCB-6000',
 ];
 
+const OPERATORS = ['João Silva', 'Maria Santos', 'Carlos Lima', 'Ana Costa', 'Pedro Souza'];
+const SHIFTS = [1, 2];
+const PHASES = [1, 2];
+
 const STATUSES = [WashStatus.ACTIVE, WashStatus.INACTIVE];
 
-function randomDate(): Date {
+function isWeekday(date: Date): boolean {
+  const day = date.getDay();
+  return day !== 0 && day !== 6;
+}
+
+function randomDateForPastDay(date: Date): Date {
+  const hours = random(7, 17);
+  const minutes = random(0, hours === 17 ? 0 : 59);
+  const seconds = random(0, 59);
+  
+  const result = new Date(date);
+  result.setHours(0, 0, 0, 0);
+  result.setHours(hours, minutes, seconds);
+  
+  return result;
+}
+
+function randomDateForToday(): Date {
   const now = new Date();
   const currentHour = now.getHours();
-  const maxHour = Math.min(currentHour, 21);
-
-  if (maxHour < 11) {
-    throw new Error('Current create seeds before 7:00 AM');
+  const currentMinutes = now.getMinutes();
+  const currentSeconds = now.getSeconds();
+  
+  if (currentHour < 7) {
+    const date = new Date(now);
+    date.setHours(7, 0, 0, 0);
+    return date;
   }
-
-  const hoursAgo = random(11, maxHour);
-
-  let minutesAgo = 0;
-  let secondsAgo = 0;
-
-  if (hoursAgo === currentHour && currentHour <= 21) {
-    const currentMinutes = now.getMinutes();
-    const currentSeconds = now.getSeconds();
-    minutesAgo = random(0, currentMinutes);
-    secondsAgo = random(0, minutesAgo === currentMinutes ? currentSeconds : 59);
+  
+  let hours: number;
+  let minutes: number;
+  let seconds: number;
+  
+  if (currentHour >= 17) {
+    hours = random(7, 17);
+    minutes = random(0, hours === 17 ? 0 : 59);
+    seconds = random(0, 59);
   } else {
-    minutesAgo = random(0, 59);
-    secondsAgo = random(0, 59);
+    hours = random(7, currentHour);
+    
+    if (hours === currentHour) {
+      minutes = random(0, currentMinutes);
+      seconds = random(0, hours === currentHour && minutes === currentMinutes ? currentSeconds : 59);
+    } else {
+      minutes = random(0, 59);
+      seconds = random(0, 59);
+    }
   }
-
+  
   const date = new Date(now);
   date.setHours(0, 0, 0, 0);
-  date.setHours(hoursAgo, minutesAgo, secondsAgo);
-
+  date.setHours(hours, minutes, seconds);
+  
   return date;
+}
+
+function getLastWeekdays(): Date[] {
+  const weekdays: Date[] = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  let currentDate = new Date(today);
+  
+  while (weekdays.length < 5) {
+    if (isWeekday(currentDate)) {
+      weekdays.push(new Date(currentDate));
+    }
+    currentDate.setDate(currentDate.getDate() - 1);
+  }
+  
+  return weekdays.reverse();
+}
+
+function generateWashDates(washCount: number): Date[] {
+  const weekdays = getLastWeekdays();
+  const dates: Date[] = [];
+  
+  for (let i = 0; i < washCount; i++) {
+    const dayIndex = random(0, weekdays.length - 1);
+    const selectedDay = weekdays[dayIndex];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    let washDate: Date;
+    
+    if (selectedDay.getTime() === today.getTime()) {
+      washDate = randomDateForToday();
+    } else {
+      washDate = randomDateForPastDay(selectedDay);
+    }
+    
+    dates.push(washDate);
+  }
+  
+  return dates.sort((a, b) => a.getTime() - b.getTime());
 }
 
 function generateStencilData(index: number): Partial<Stencil> {
@@ -100,6 +172,7 @@ function generateStencilData(index: number): Partial<Stencil> {
   const addressing = random(1, 100);
   const lineName = LINE_NAMES[random(0, LINE_NAMES.length - 1)];
   const status = STATUSES[random(0, STATUSES.length - 1)];
+  const createdAt = randomDateForToday();
 
   const stencil = new Stencil();
   stencil.stencilCode = `${stencilCodeBase}-${String(index).padStart(4, '0')}`;
@@ -109,8 +182,8 @@ function generateStencilData(index: number): Partial<Stencil> {
   stencil.addressing = addressing;
   stencil.lineName = lineName;
   stencil.status = status;
-  stencil.createdAt = randomDate();
-  stencil.updatedAt = stencil.createdAt;
+  stencil.createdAt = createdAt;
+  stencil.updatedAt = createdAt;
 
   return stencil;
 }
@@ -120,11 +193,11 @@ function generatePlateData(index: number): Partial<Plate> {
   const serialNumber = `${plateModel}-${String(index).padStart(6, '0')}`;
   const blankId = `BLANK-${random(1000, 9999)}`;
   const lineName = LINE_NAMES[random(0, LINE_NAMES.length - 1)];
-  const plateManufacturerId =
-    MANUFACTURE_IDS[random(0, MANUFACTURE_IDS.length - 1)];
+  const plateManufacturerId = MANUFACTURE_IDS[random(0, MANUFACTURE_IDS.length - 1)];
   const country = COUNTRIES[random(0, COUNTRIES.length - 1)];
   const thickness = randomFloat(0.05, 0.15, 2);
   const addressing = String(random(1, 100)).padStart(3, '0');
+  const createdAt = randomDateForToday();
 
   const plate = new Plate();
   plate.plateModel = plateModel;
@@ -135,10 +208,36 @@ function generatePlateData(index: number): Partial<Plate> {
   plate.country = country;
   plate.thickness = thickness;
   plate.addressing = addressing;
-  plate.createdAt = randomDate();
-  plate.updatedAt = plate.createdAt;
+  plate.createdAt = createdAt;
+  plate.updatedAt = createdAt;
 
   return plate;
+}
+
+function generateStencilWashes(stencilId: string, washCount: number): Partial<StencilWash>[] {
+  const washDates = generateWashDates(washCount);
+  
+  return washDates.map((date) => {
+    const wash = new StencilWash();
+    wash.stencilId = stencilId;
+    wash.operator = OPERATORS[random(0, OPERATORS.length - 1)];
+    wash.createdAt = date;
+    return wash;
+  });
+}
+
+function generatePlateWashes(plateId: string, washCount: number): Partial<PlateWash>[] {
+  const washDates = generateWashDates(washCount);
+  
+  return washDates.map((date) => {
+    const wash = new PlateWash();
+    wash.plateId = plateId;
+    wash.operator = OPERATORS[random(0, OPERATORS.length - 1)];
+    wash.shift = SHIFTS[random(0, SHIFTS.length - 1)];
+    wash.phase = PHASES[random(0, PHASES.length - 1)];
+    wash.createdAt = date;
+    return wash;
+  });
 }
 
 async function stencilExists(
@@ -168,9 +267,12 @@ async function plateExists(
 }
 
 async function runSeed() {
-  console.log('🚀 Initializing seed of Stencils and Plates (SQL Server)...');
+  console.log('🚀 Initializing seed of Stencils, Plates and Washes (SQL Server)...');
   console.log(`📊 Host: ${process.env.DB_HOST}:${process.env.DB_PORT}`);
   console.log(`💾 Database: ${process.env.DB_DATABASE}`);
+  
+  const weekdays = getLastWeekdays();
+  console.log(`\n📅 Last 5 weekdays: ${weekdays.map(d => d.toLocaleDateString()).join(', ')}`);
 
   const dataSource = new DataSource({
     type: 'mssql',
@@ -192,7 +294,9 @@ async function runSeed() {
     console.log('✅ Connect on SQL Server');
 
     const stencilRepo = dataSource.getRepository(Stencil);
+    const stencilWashRepo = dataSource.getRepository(StencilWash);
     const plateRepo = dataSource.getRepository(Plate);
+    const plateWashRepo = dataSource.getRepository(PlateWash);
 
     // ============================================
     // 1. SEED DE STENCILS (35 registers)
@@ -200,6 +304,7 @@ async function runSeed() {
     console.log('\n📦 Generate 35 Stencils...');
     let stencilsInserted = 0;
     let stencilsSkipped = 0;
+    const createdStencils: Stencil[] = [];
 
     for (let i = 1; i <= 35; i++) {
       const stencilData = generateStencilData(i);
@@ -209,7 +314,8 @@ async function runSeed() {
 
       if (!exists) {
         const stencil = stencilRepo.create(stencilData);
-        await stencilRepo.save(stencil);
+        const savedStencil = await stencilRepo.save(stencil);
+        createdStencils.push(savedStencil);
         stencilsInserted++;
       } else {
         stencilsSkipped++;
@@ -227,11 +333,31 @@ async function runSeed() {
     );
 
     // ============================================
+    // 1.1 WASHES FOR STENCILS (between 3-8 washes each)
+    // ============================================
+    console.log('\n🧼 Generating Washes for Stencils (last 5 weekdays)...');
+    let stencilWashesInserted = 0;
+    
+    for (const stencil of createdStencils) {
+      const washCount = random(3, 8);
+      const washes = generateStencilWashes(stencil.id, washCount);
+      
+      for (const washData of washes) {
+        const wash = stencilWashRepo.create(washData);
+        await stencilWashRepo.save(wash);
+        stencilWashesInserted++;
+      }
+    }
+    
+    console.log(`   ✅ Stencil Washes: ${stencilWashesInserted} inserted`);
+
+    // ============================================
     // 2. SEED DE PLATES (35 registers)
     // ============================================
     console.log('\n📦 Generate 35 Plates...');
     let platesInserted = 0;
     let platesSkipped = 0;
+    const createdPlates: Plate[] = [];
 
     for (let i = 1; i <= 35; i++) {
       const plateData = generatePlateData(i);
@@ -241,7 +367,8 @@ async function runSeed() {
 
       if (!exists) {
         const plate = plateRepo.create(plateData);
-        await plateRepo.save(plate);
+        const savedPlate = await plateRepo.save(plate);
+        createdPlates.push(savedPlate);
         platesInserted++;
       } else {
         platesSkipped++;
@@ -259,34 +386,56 @@ async function runSeed() {
     );
 
     // ============================================
+    // 2.1 WASHES FOR PLATES (between 3-8 washes each)
+    // ============================================
+    console.log('\n🧼 Generating Washes for Plates (last 5 weekdays)...');
+    let plateWashesInserted = 0;
+    
+    for (const plate of createdPlates) {
+      const washCount = random(3, 8);
+      const washes = generatePlateWashes(plate.id, washCount);
+      
+      for (const washData of washes) {
+        const wash = plateWashRepo.create(washData);
+        await plateWashRepo.save(wash);
+        plateWashesInserted++;
+      }
+    }
+    
+    console.log(`   ✅ Plate Washes: ${plateWashesInserted} inserted`);
+
+    // ============================================
     // 3. FINAL VERIFICATION
     // ============================================
     const totalStencils = await stencilRepo.count();
+    const totalStencilWashes = await stencilWashRepo.count();
     const totalPlates = await plateRepo.count();
+    const totalPlateWashes = await plateWashRepo.count();
 
     console.log('\n📊 SEED RESUME:');
-    console.log(
-      `   Stencils: ${stencilsInserted} inserted, ${stencilsSkipped} existing.`,
-    );
-    console.log(
-      `   Plates: ${platesInserted} inserted, ${platesSkipped} existing.`,
-    );
-    console.log(`   New registers total: ${stencilsInserted + platesInserted}`);
+    console.log(`   Stencils: ${stencilsInserted} inserted, ${stencilsSkipped} existing.`);
+    console.log(`   Stencil Washes: ${stencilWashesInserted} inserted.`);
+    console.log(`   Plates: ${platesInserted} inserted, ${platesSkipped} existing.`);
+    console.log(`   Plate Washes: ${plateWashesInserted} inserted.`);
+    console.log(`   New registers total: ${stencilsInserted + platesInserted + stencilWashesInserted + plateWashesInserted}`);
 
     console.log('\n📈 DATABASE TOTAL:');
     console.log(`   Stencils: ${totalStencils}`);
+    console.log(`   Stencil Washes: ${totalStencilWashes}`);
     console.log(`   Plates: ${totalPlates}`);
+    console.log(`   Plate Washes: ${totalPlateWashes}`);
 
-    // Amostra dos dados inseridos
     if (stencilsInserted > 0) {
       const lastStencils = await stencilRepo.find({
         take: 3,
         order: { createdAt: 'DESC' },
+        relations: ['washes'],
       });
       console.log('\n🔍 Last stencils inserted:');
       lastStencils.forEach((s) => {
+        const washDates = s.washes.map(w => w.createdAt.toLocaleDateString()).join(', ');
         console.log(
-          `   - ${s.stencilCode} | ${s.lineName} | ${s.createdAt.toLocaleString()}`,
+          `   - ${s.stencilCode} | ${s.lineName} | Created: ${s.createdAt.toLocaleString()} | ${s.washes.length} washes (${washDates})`,
         );
       });
     }
@@ -295,11 +444,14 @@ async function runSeed() {
       const lastPlates = await plateRepo.find({
         take: 3,
         order: { createdAt: 'DESC' },
+        relations: ['washes'],
       });
       console.log('\n🔍 Latest plates inserted:');
       lastPlates.forEach((p) => {
+        const washDates = p.washes.map(w => w.createdAt.toLocaleDateString()).join(', ');
+        const shifts = p.washes.map(w => w.shift).join(', ');
         console.log(
-          `   - ${p.serialNumber} | ${p.lineName} | ${p.createdAt.toLocaleString()}`,
+          `   - ${p.serialNumber} | ${p.lineName} | Created: ${p.createdAt.toLocaleString()} | ${p.washes.length} washes (${washDates}) | Shifts: ${shifts}`,
         );
       });
     }
