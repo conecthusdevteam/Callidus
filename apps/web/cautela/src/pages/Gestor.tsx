@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from "react";
-import StatusBadge from "../components/StatusBadge";
 import { type Cautela, type StatusCautela } from "../data/cautelaTypes";
 import {
   approveCautela,
@@ -7,6 +6,14 @@ import {
   rejectCautela,
   authorizeDeparture,
 } from "../lib/api";
+import StatusBadge from "../components/StatusBadge";
+import {
+  BannerAguardandoSaida,
+  JustificativaBox,
+} from "../components/BannerStatus";
+import { TabelaCautelados } from "../components/TabelaCautelados";
+import { CardCautelaHistorico } from "../components/CardCautelaHistorico";
+import { matchesSearch } from "../lib/cautelaUtils";
 import {
   ModalAprovado,
   ModalRecusado,
@@ -25,7 +32,8 @@ interface CautelaComDecisao extends Cautela {
   decisaoLocal?: "aprovado" | "reprovado";
 }
 
-// ── Painel de detalhes da cautela ──
+// ─── Painel de detalhes ───────────────────────────────────────────────────────
+
 function DetalhesConteudo({
   cautela,
   onAutorizarSaida,
@@ -76,21 +84,8 @@ function DetalhesConteudo({
             </div>
           )}
           {cautela.status === "Saída Autorizada" && (
-            <div className="mt-2 w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-amber-100 border border-amber-400 text-amber-800 text-[13px] font-medium">
-              <svg
-                className="w-4 h-4 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                />
-              </svg>
-              Aguardando saída
+            <div className="mt-2">
+              <BannerAguardandoSaida />
             </div>
           )}
           {cautela.status === "Reprovado" && (
@@ -130,32 +125,36 @@ function DetalhesConteudo({
             </div>
           )}
           {(cautela.motivoNegativa || cautela.decisaoLocal === "reprovado") && (
-            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm font-semibold text-red-700 mb-1">
-                Justificativa:
-              </p>
-              <p className="text-sm text-red-700">
-                {cautela.motivoNegativa ?? "—"}
-              </p>
+            <div className="mt-3">
+              <JustificativaBox motivo={cautela.motivoNegativa ?? "—"} />
             </div>
           )}
         </div>
       )}
+
       <div className="mb-4">
         <p className="text-base font-bold text-black">Id da cautela</p>
         <p className="text-base text-black">{cautela.id}</p>
       </div>
-      <div className="mb-4">
-        <p className="text-base font-bold text-black">Setor:</p>
-        <p className="text-base text-black">{cautela.empresa}</p>
+      <div className="mb-3">
+        <p className="text-base font-bold text-black">Setor</p>
+        <p className="text-base text-black">{cautela.setorId || "-"}</p>
       </div>
       <div className="mb-4">
         <p className="text-base font-bold text-black">Data e hora de entrada</p>
         <p className="text-base text-black">{cautela.data}</p>
       </div>
       <div className="mb-4">
-        <p className="text-base font-bold text-black">Propriedade</p>
+        <p className="text-base font-bold text-black">Proprietário</p>
         <p className="text-base text-black">{cautela.visitante}</p>
+      </div>
+      <div className="mb-3">
+        <p className="text-base font-bold text-black">Documento</p>
+        <p className="text-base text-gray-700">{cautela.documento || "-"}</p>
+      </div>
+      <div className="mb-3">
+        <p className="text-base font-bold text-black">Empresa</p>
+        <p className="text-base text-gray-700">{cautela.empresa || "-"}</p>
       </div>
       <div className="mb-4">
         <p className="text-base font-bold text-black">E-mail do proprietário</p>
@@ -163,52 +162,35 @@ function DetalhesConteudo({
       </div>
       {cautela.validade && (
         <div className="mb-4">
-          <p className="text-sm font-bold text-black">Válido até:</p>
-          <p className="text-sm text-gray-700">{cautela.validade}</p>
+          <p className="text-base font-bold text-black">Válido até:</p>
+          <p className="text-base text-gray-700">{cautela.validade}</p>
         </div>
       )}
       {cautela.aprovadoEm && (
         <div className="mb-4">
-          <p className="text-sm font-bold text-black">Aprovado em:</p>
-          <p className="text-sm text-gray-700">{cautela.aprovadoEm}</p>
+          <p className="text-base font-bold text-black">Aprovado em:</p>
+          <p className="text-base text-gray-700">{cautela.aprovadoEm}</p>
         </div>
       )}
       {cautela.status === "Encerrada" && cautela.encerradaEm && (
         <div className="mb-3">
-          <p className="text-sm font-bold text-black">Data e hora de saída:</p>
-          <p className="text-sm text-gray-700">{cautela.encerradaEm}</p>
+          <p className="text-base font-bold text-black">
+            Data e hora de saída:
+          </p>
+          <p className="text-base text-gray-700">{cautela.encerradaEm}</p>
         </div>
       )}
-      <table className="w-full mt-16 mb-2 overflow-hidden">
-        <thead>
-          <tr style={{ backgroundColor: "#0E9F6E" }}>
-            <th className="px-4 py-2 text-left text-white text-base font-bold">
-              Descrição
-            </th>
-            <th className="px-4 py-2 text-center text-white text-base font-bold">
-              Quantidade
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {cautela.equipamentos.map((eq, i) => (
-            <tr key={i} className="border-b border-gray-100 even:bg-[#F4F4F4]">
-              <td className="px-4 py-3 text-sm text-[#0A0A0A]">
-                {eq.descricao}
-              </td>
-              <td className="px-4 py-3 text-center text-sm text-[#0A0A0A]">
-                {eq.quantidade ?? "—"}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+
+      <div className="mt-16 mb-2">
+        <TabelaCautelados equipamentos={cautela.equipamentos} />
+      </div>
+
       {cautela.status === "Aprovado" &&
         cautela.decisaoLocal === undefined &&
         onAutorizarSaida && (
           <button
             onClick={onAutorizarSaida}
-            className="w-full mt-12 py-2.5 rounded-lg bg-[#F5F5F5] text-black text-sm font-semibold hover:bg-gray-300 transition-colors"
+            className="w-full mt-12 py-2.5 rounded-lg bg-[#3BB14A] text-white text-sm font-semibold hover:bg-green-600 transition-colors"
           >
             Autorizar saída
           </button>
@@ -217,8 +199,9 @@ function DetalhesConteudo({
   );
 }
 
-// ── Card da lista de recebidas ──
-function CardCautela({
+// ─── Card de Recebidas ────────────────────────────────────────────────────────
+
+function CardCautelaRecebida({
   cautela,
   index,
   isNaoLida,
@@ -233,7 +216,6 @@ function CardCautela({
   onAprovar: (id: string) => void;
   onDescartar: (id: string) => void;
 }) {
-  // Amarelo se não lida, borda amarela se for a primeira
   const borderClass = isNaoLida
     ? "border-2 border-amber-400 bg-[#FFFBEB]"
     : index === 0
@@ -257,24 +239,32 @@ function CardCautela({
           <span className="font-bold">{cautela.visitante.toUpperCase()}</span>
         </span>
       </div>
-      {isNaoLida && (
-        <span className="inline-flex items-center rounded-lg px-2 py-0.5 text-[12px] font-semibold bg-[#FCE96A] text-black mb-2">
-          Nova
-        </span>
-      )}
       <hr className="border-black mb-3" />
-      <p className="text-sm font-medium text-[#404040] mb-1">Cautelados:</p>
-      <ul className="mb-4 space-y-0.5">
-        {cautela.equipamentos.map((eq, i) => (
-          <li
-            key={i}
-            className="text-sm text-[#404040] flex items-start gap-1.5"
-          >
-            <span className="mt-0.5">-</span>
-            {eq.descricao} - {eq.quantidade ?? 1}
-          </li>
-        ))}
-      </ul>
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-sm font-medium text-[#404040] mb-1">Cautelados:</p>
+
+          <ul className="mb-4 space-y-0.5">
+            {cautela.equipamentos.map((eq, i) => (
+              <li
+                key={i}
+                className="text-sm text-[#404040] flex items-start gap-1.5"
+              >
+                <span className="mt-0.5">-</span>
+                {eq.descricao} - {eq.quantidade ?? 1}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-1">
+          {isNaoLida && (
+            <span className="inline-flex items-center rounded-lg px-2 py-0.5 text-[12px] font-semibold bg-[#FCE96A] text-black">
+              Nova
+            </span>
+          )}
+        </div>
+      </div>
       <div
         className="flex items-center justify-between"
         onClick={(e) => e.stopPropagation()}
@@ -307,164 +297,30 @@ function CardCautela({
   );
 }
 
-function CardHistorico({
-  cautela,
-  onClick,
+function ContadorRecebidas({
+  total,
+  mostrarBolinha,
 }: {
-  cautela: CautelaComDecisao;
-  onClick: () => void;
+  total: number;
+  mostrarBolinha: boolean;
 }) {
-  const statusExibido =
-    cautela.decisaoLocal === "aprovado"
-      ? "Aprovado"
-      : cautela.decisaoLocal === "reprovado"
-        ? "Reprovado"
-        : cautela.status === "Saída Autorizada"
-          ? "Aprovado"
-          : cautela.status;
-
-  const avatar =
-    cautela.status === "Aprovado" || cautela.status === "Saída Autorizada" ? (
-      <div className="w-12 h-12 rounded-full bg-[#D1FAE5] border border-[#31C48D] flex items-center justify-center flex-shrink-0">
-        <svg
-          className="w-6 h-6 text-[#2B8E37]"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.8}
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-          />
-        </svg>
-      </div>
-    ) : cautela.status === "Reprovado" ? (
-      <div className="w-12 h-12 rounded-full bg-[#FEE2E2] border border-[#F05252] flex items-center justify-center flex-shrink-0">
-        <svg
-          className="w-6 h-6 text-[#E02424]"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.8}
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-          />
-        </svg>
-      </div>
-    ) : (
-      <div className="w-12 h-12 rounded-full bg-[#F4F4F4] border border-[#A3A3A3] flex items-center justify-center flex-shrink-0">
-        <svg
-          className="w-6 h-6 text-[#525252]"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.8}
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-          />
-        </svg>
-      </div>
-    );
-
+  if (total === 0) return null;
   return (
-    <div
-      onClick={onClick}
-      className="rounded-lg p-5 cursor-pointer transition-all hover:shadow-md mb-3 border border-[#D1D5DB] bg-white"
-    >
-      <div className="flex items-start justify-between gap-3 mb-2">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          {avatar}
-          <p className="text-[16px] font-bold leading-tight text-[#404040]">
-            {cautela.visitante || "—"}
-          </p>
-        </div>
-        <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-1">
-          <StatusBadge status={statusExibido as StatusCautela} />
-          {cautela.status === "Saída Autorizada" && (
-            <span className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[13px] font-medium bg-amber-100 text-amber-800 border border-amber-400">
-              ⚠ Aguardando saída
-            </span>
-          )}
-        </div>
+    <div className="relative flex-shrink-0">
+      <div
+        className="min-w-[28px] h-[28px] px-1.5 mx-6 rounded-full flex items-center justify-center text-white text-[13px] font-bold"
+        style={{ backgroundColor: "#0E9F6E" }}
+      >
+        {total > 9 ? "9+" : total}
       </div>
-
-      <p className="text-[14px] text-[#404040] mt-1">
-        Data: {cautela.data || "—"}
-      </p>
-      <p className="text-[14px] text-[#404040] mt-0.5">
-        Ciente:{" "}
-        <span className="font-bold">
-          {(cautela.gestor || "").toUpperCase()}
-        </span>
-      </p>
-
-      <div className="border-t border-gray-200 my-3" />
-
-      <p className="text-[13px] font-medium text-[#404040] mb-1">Cautelados:</p>
-      <ul className="space-y-0.5 mb-3">
-        {cautela.equipamentos?.slice(0, 3).map((eq, i) => (
-          <li
-            key={i}
-            className="text-[13px] text-[#404040] flex items-center gap-1.5"
-          >
-            <span className="text-[#6B7280]">•</span>
-            {eq.descricao} - {eq.quantidade ?? 1}
-          </li>
-        ))}
-        {(cautela.equipamentos?.length ?? 0) > 3 && (
-          <li className="text-[12px] text-[#9CA3AF]">
-            +{cautela.equipamentos.length - 3} item(ns)
-          </li>
-        )}
-      </ul>
-
-      <div className="flex justify-end">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onClick();
-          }}
-          className="text-[13px] px-4 py-2 bg-gray-100 rounded-lg text-[#171717] font-medium hover:underline"
-        >
-          Ver detalhes
-        </button>
-      </div>
+      {mostrarBolinha && (
+        <span className="absolute mx-6 -top-1 -right-1 w-3 h-3 rounded-full bg-red-500 border-2 border-white" />
+      )}
     </div>
   );
 }
 
-const STATUS_LABELS: Record<string, string[]> = {
-  "Em análise": ["em análise", "analise", "análise", "pendente"],
-  Aprovado: ["aprovado", "aprovada"],
-  Reprovado: ["reprovado", "reprovada", "negado", "recusado"],
-  "Saída Autorizada": [
-    "saída autorizada",
-    "saida autorizada",
-    "aguardando saída",
-    "aguardando saida",
-  ],
-  Encerrada: ["encerrada", "encerrado", "finalizada", "concluida"],
-};
-
-function matchesSearch(cautela: Cautela, term: string): boolean {
-  if (!term.trim()) return true;
-  const q = term.toLowerCase().trim();
-  if (cautela.id.toLowerCase().includes(q)) return true;
-  if (cautela.visitante?.toLowerCase().includes(q)) return true;
-  if (cautela.gestor?.toLowerCase().includes(q)) return true;
-  if (cautela.empresa?.toLowerCase().includes(q)) return true;
-  const variants = STATUS_LABELS[cautela.status] ?? [];
-  if (variants.some((v) => v.includes(q) || q.includes(v))) return true;
-  return false;
-}
+// ─── Gestor ───────────────────────────────────────────────────────────────────
 
 export default function Gestor() {
   const [activeTab, setActiveTab] = useState<Tab>("recebidas");
@@ -478,10 +334,11 @@ export default function Gestor() {
   const [modalAutorizarSaida, setModalAutorizarSaida] = useState(false);
   const [mobileView, setMobileView] = useState<MobileView>("lista");
   const [searchTerm, setSearchTerm] = useState("");
-
-  // IDs de cautelas de Recebidas já vistas
   const [cautelasLidas, setCautelasLidas] = useState<Set<string>>(new Set());
   const [recebidasLidas, setRecebidasLidas] = useState<Set<string>>(new Set());
+  const [origemDetalhe, setOrigemDetalhe] = useState<"recebidas" | "historico">(
+    "recebidas",
+  );
 
   const carregarCautelas = useCallback(async () => {
     try {
@@ -501,31 +358,28 @@ export default function Gestor() {
   }, [carregarCautelas]);
 
   const recebidas = cautelas.filter((c) => {
-    const passaStatus = c.status === "Em análise" && !c.decisaoLocal;
-    if (!searchTerm.trim()) return passaStatus;
-    return passaStatus && matchesSearch(c, searchTerm);
+    const ok = c.status === "Em análise" && !c.decisaoLocal;
+    return searchTerm.trim() ? ok && matchesSearch(c, searchTerm) : ok;
   });
 
   const historico = cautelas.filter((c) => {
-    const passaStatus =
+    const ok =
       !!c.decisaoLocal ||
       c.status === "Aprovado" ||
       c.status === "Reprovado" ||
       c.status === "Saída Autorizada" ||
       c.status === "Encerrada";
-    if (!searchTerm.trim()) return passaStatus;
-    return passaStatus && matchesSearch(c, searchTerm);
+    return searchTerm.trim() ? ok && matchesSearch(c, searchTerm) : ok;
   });
 
   useEffect(() => {
     function onSelecionar(e: Event) {
       const cautela = (e as CustomEvent<{ cautela: Cautela }>).detail.cautela;
-      const cautelaCompleta =
-        cautelas.find((c) => c.id === cautela.id) ?? cautela;
-      abrirDetalhe(cautelaCompleta as CautelaComDecisao);
-      if (cautelaCompleta.status !== "Em análise") {
-        setActiveTab("historico");
-      }
+      const completa = cautelas.find((c) => c.id === cautela.id) ?? cautela;
+      abrirDetalhe(
+        completa as CautelaComDecisao,
+        completa.status !== "Em análise" ? "historico" : "recebidas",
+      );
     }
     window.addEventListener("cautela-selecionar", onSelecionar);
     return () => window.removeEventListener("cautela-selecionar", onSelecionar);
@@ -548,11 +402,11 @@ export default function Gestor() {
       const term = (e as CustomEvent<{ term: string }>).detail.term;
       setSearchTerm(term);
       if (term.trim()) {
-        const encontrada = cautelas.find((c) => matchesSearch(c, term));
-        if (encontrada) {
-          if (encontrada.status !== "Em análise") setActiveTab("historico");
-          else setActiveTab("recebidas");
-        }
+        const found = cautelas.find((c) => matchesSearch(c, term));
+        if (found)
+          setActiveTab(
+            found.status !== "Em análise" ? "historico" : "recebidas",
+          );
       }
     }
     window.addEventListener("cautela-search", onSearch);
@@ -567,8 +421,12 @@ export default function Gestor() {
     c.status === "Saída Autorizada" ||
     c.status === "Encerrada";
 
-  function abrirDetalhe(cautela: CautelaComDecisao) {
+  function abrirDetalhe(
+    cautela: CautelaComDecisao,
+    origem: "recebidas" | "historico",
+  ) {
     setCautelaSelecionada(cautela);
+    setOrigemDetalhe(origem);
     setCautelasLidas((prev) => new Set([...prev, cautela.id]));
     setRecebidasLidas((prev) => new Set([...prev, cautela.id]));
   }
@@ -581,16 +439,11 @@ export default function Gestor() {
   async function aprovar(id: string) {
     try {
       setActionError("");
-      const cautelaAtualizada = await approveCautela(id);
-      setCautelas((prev) =>
-        prev.map((c) => (c.id === id ? cautelaAtualizada : c)),
-      );
+      const atualizada = await approveCautela(id);
+      setCautelas((prev) => prev.map((c) => (c.id === id ? atualizada : c)));
     } catch (error) {
-      console.error("Erro ao aprovar cautela.", error);
       setActionError(
-        error instanceof Error
-          ? error.message
-          : "Nao foi possivel aprovar a cautela.",
+        error instanceof Error ? error.message : "Não foi possível aprovar.",
       );
       return;
     } finally {
@@ -608,13 +461,9 @@ export default function Gestor() {
   async function handleAutorizarSaida(id: string) {
     try {
       setActionError("");
-      const cautelaAtualizada = await authorizeDeparture(id);
-      setCautelas((prev) =>
-        prev.map((c) => (c.id === id ? cautelaAtualizada : c)),
-      );
-      setCautelaSelecionada((prev) =>
-        prev?.id === id ? cautelaAtualizada : prev,
-      );
+      const atualizada = await authorizeDeparture(id);
+      setCautelas((prev) => prev.map((c) => (c.id === id ? atualizada : c)));
+      setCautelaSelecionada((prev) => (prev?.id === id ? atualizada : prev));
     } catch (error) {
       setActionError(
         error instanceof Error
@@ -630,21 +479,16 @@ export default function Gestor() {
     if (cautelaSelecionada) {
       try {
         setActionError("");
-        const cautelaAtualizada = await rejectCautela(
+        const atualizada = await rejectCautela(
           cautelaSelecionada.id,
           justificativa,
         );
         setCautelas((prev) =>
-          prev.map((c) =>
-            c.id === cautelaSelecionada.id ? cautelaAtualizada : c,
-          ),
+          prev.map((c) => (c.id === cautelaSelecionada.id ? atualizada : c)),
         );
       } catch (error) {
-        console.error("Erro ao reprovar cautela.", error);
         setActionError(
-          error instanceof Error
-            ? error.message
-            : "Nao foi possivel reprovar a cautela.",
+          error instanceof Error ? error.message : "Não foi possível reprovar.",
         );
         setModalDescartar(false);
         return;
@@ -656,15 +500,23 @@ export default function Gestor() {
     setMobileView("lista");
   }
 
+  function statusHistorico(c: CautelaComDecisao): StatusCautela {
+    if (c.decisaoLocal === "aprovado") return "Aprovado";
+    if (c.decisaoLocal === "reprovado") return "Reprovado";
+    if (c.status === "Saída Autorizada") return "Aprovado";
+    return c.status as StatusCautela;
+  }
+
   return (
     <>
-      {/* ══════════════ MOBILE ══════════════ */}
+      {/* ══ MOBILE ══ */}
       <div className="md:hidden flex flex-col h-screen pt-[90px] bg-white">
         {actionError && (
           <div className="mx-4 mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
             {actionError}
           </div>
         )}
+
         {mobileView === "lista" && (
           <>
             <div className="relative top-6 mx-4">
@@ -679,34 +531,19 @@ export default function Gestor() {
                 onClick={() => {
                   setActiveTab("recebidas");
                   setRecebidasLidas((prev) => {
-                    const novo = new Set(prev);
-                    recebidas.forEach((c) => novo.add(c.id));
-                    return novo;
+                    const n = new Set(prev);
+                    recebidas.forEach((c) => n.add(c.id));
+                    return n;
                   });
                 }}
-                className={`absolute top-0 left-0 w-1/2 h-[68px] text-[18px] font-bold leading-[100%] rounded-t-[5px] transition-all ${
-                  activeTab === "recebidas"
-                    ? "bg-[#22592A] text-white"
-                    : "bg-[#C4EEC9] text-[#22592A]"
-                }`}
+                className={`absolute top-0 left-0 w-1/2 h-[68px] text-[18px] font-bold leading-[100%] rounded-t-[5px] transition-all ${activeTab === "recebidas" ? "bg-[#22592A] text-white" : "bg-[#C4EEC9] text-[#22592A]"}`}
               >
                 <div className="flex items-center justify-center gap-2 w-full h-full">
                   <span>Recebidas</span>
-                  {totalRecebidasNaoLidas > 0 && (
-                    <div className="relative flex-shrink-0">
-                      <div
-                        className="min-w-[28px] h-[28px] px-1.5 rounded-full flex items-center justify-center text-white text-[13px] font-bold"
-                        style={{ backgroundColor: "#0E9F6E" }}
-                      >
-                        {totalRecebidasNaoLidas > 9
-                          ? "9+"
-                          : totalRecebidasNaoLidas}
-                      </div>
-                      {mostrarBolinhaGestor && (
-                        <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-red-500 border-2 border-white" />
-                      )}
-                    </div>
-                  )}
+                  <ContadorRecebidas
+                    total={totalRecebidasNaoLidas}
+                    mostrarBolinha={mostrarBolinhaGestor}
+                  />
                 </div>
               </button>
             </div>
@@ -719,14 +556,14 @@ export default function Gestor() {
                       Nenhuma cautela.
                     </p>
                   )}
-                  {recebidas.map((cautela, index) => (
-                    <CardCautela
-                      key={cautela.id}
-                      cautela={cautela}
-                      index={index}
-                      isNaoLida={!cautelasLidas.has(cautela.id)}
+                  {recebidas.map((c, i) => (
+                    <CardCautelaRecebida
+                      key={c.id}
+                      cautela={c}
+                      index={i}
+                      isNaoLida={!cautelasLidas.has(c.id)}
                       onClick={() => {
-                        abrirDetalhe(cautela);
+                        abrirDetalhe(c, "recebidas");
                         setMobileView("detalhe");
                       }}
                       onAprovar={aprovar}
@@ -735,7 +572,6 @@ export default function Gestor() {
                   ))}
                 </div>
               )}
-
               {activeTab === "historico" && (
                 <div className="py-8 mx-4 flex flex-col gap-2">
                   {historico.length === 0 && (
@@ -743,12 +579,13 @@ export default function Gestor() {
                       Nenhuma cautela.
                     </p>
                   )}
-                  {historico.map((cautela) => (
-                    <CardHistorico
-                      key={cautela.id}
-                      cautela={cautela}
+                  {historico.map((c) => (
+                    <CardCautelaHistorico
+                      key={c.id}
+                      cautela={c}
+                      statusExibido={statusHistorico(c)}
                       onClick={() => {
-                        abrirDetalhe(cautela);
+                        abrirDetalhe(c, "historico");
                         setMobileView("detalhe");
                       }}
                     />
@@ -846,7 +683,7 @@ export default function Gestor() {
         )}
       </div>
 
-      {/* ══════════════ DESKTOP ══════════════ */}
+      {/* ══ DESKTOP ══ */}
       <div className="hidden md:flex h-screen pt-[60px] pl-[70px] bg-white overflow-hidden">
         {actionError && (
           <div className="fixed left-[90px] right-5 top-[76px] z-40 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
@@ -854,26 +691,21 @@ export default function Gestor() {
           </div>
         )}
 
-        {/* Painel esquerdo — Recebidas */}
-        <div className="w-xl h-screen flex-shrink-0 flex flex-col overflow-hidden pt-[20px]">
+        {/* Recebidas */}
+        <div
+          className={`w-lg h-screen flex-shrink-0 flex flex-col overflow-hidden pt-[20px] relative ${
+            cautelaSelecionada && origemDetalhe === "recebidas" ? "z-10" : "z-0"
+          }`}
+        >
           <div
             className="bg-[#22592A] px-5 py-4 flex-shrink-0 rounded-t-lg mx-4 mt-4 flex items-center justify-between"
             style={{ boxShadow: "4px 0 8px rgba(0,0,0,0.25)" }}
           >
             <h2 className="text-white font-bold text-base">Recebidas</h2>
-            {totalRecebidasNaoLidas > 0 && (
-              <div className="relative flex-shrink-0">
-                <div
-                  className="min-w-[28px] h-[28px] px-1.5 rounded-full flex items-center justify-center text-white text-[13px] font-bold leading-none"
-                  style={{ backgroundColor: "#0E9F6E" }}
-                >
-                  {totalRecebidasNaoLidas > 9 ? "9+" : totalRecebidasNaoLidas}
-                </div>
-                {mostrarBolinhaGestor && (
-                  <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-red-500 border-2 border-white" />
-                )}
-              </div>
-            )}
+            <ContadorRecebidas
+              total={totalRecebidasNaoLidas}
+              mostrarBolinha={mostrarBolinhaGestor}
+            />
           </div>
           <div
             className="flex-1 overflow-y-auto mx-4 mb-4 bg-[#E5E7EB] flex flex-col gap-3 p-6 rounded-b-lg border border-gray-200"
@@ -884,13 +716,13 @@ export default function Gestor() {
                 Nenhuma cautela pendente.
               </p>
             )}
-            {recebidas.map((cautela, index) => (
-              <CardCautela
-                key={cautela.id}
-                cautela={cautela}
-                index={index}
-                isNaoLida={!cautelasLidas.has(cautela.id)}
-                onClick={() => abrirDetalhe(cautela)}
+            {recebidas.map((c, i) => (
+              <CardCautelaRecebida
+                key={c.id}
+                cautela={c}
+                index={i}
+                isNaoLida={!cautelasLidas.has(c.id)}
+                onClick={() => abrirDetalhe(c, "recebidas")}
                 onAprovar={aprovar}
                 onDescartar={abrirDescartar}
               />
@@ -898,40 +730,63 @@ export default function Gestor() {
           </div>
         </div>
 
-        {/* Área central */}
-        {cautelaSelecionada ? (
-          <div className="flex-1 flex flex-col overflow-hidden pt-14 mb-4 px-2">
-            <div className="flex-1 overflow-y-auto bg-white border border-black rounded-sm p-6">
-              <DetalhesConteudo
-                cautela={cautelaSelecionada}
-                onAutorizarSaida={() =>
-                  handleAutorizarSaida(cautelaSelecionada.id)
-                }
+        {/* Área central — vazia, só serve de espaço */}
+        <div className="flex-1 bg-white relative flex">
+          {cautelaSelecionada && (
+            <>
+              <div
+                className="fixed inset-0 z-[5]"
+                style={{ backgroundColor: "rgba(0,0,0,0.35)" }}
+                onClick={() => setCautelaSelecionada(null)}
               />
-            </div>
-            {!isSomenteLeitura(cautelaSelecionada) && (
-              <div className="flex gap-3 justify-center pt-5 pb-32">
-                <button
-                  onClick={() => aprovar(cautelaSelecionada.id)}
-                  className="px-8 py-2.5 rounded-lg bg-[#3BB14A] text-white text-sm font-semibold hover:bg-[#0E9F6E]"
-                >
-                  Aprovar
-                </button>
-                <button
-                  onClick={() => abrirDescartar(cautelaSelecionada.id)}
-                  className="px-8 py-2.5 rounded-lg border border-black bg-white text-black text-sm font-medium hover:bg-gray-100"
-                >
-                  Descartar
-                </button>
+              <div
+                className={`absolute top-4 w-[420px] bg-white border border-gray-200 rounded-xl shadow-2xl z-10 max-h-[90vh] overflow-y-auto ${
+                  origemDetalhe === "historico" ? "right-0" : "left-0"
+                }`}
+              >
+                <div className="p-6">
+                  <DetalhesConteudo
+                    cautela={cautelaSelecionada}
+                    onAutorizarSaida={() =>
+                      handleAutorizarSaida(cautelaSelecionada.id)
+                    }
+                  />
+                </div>
+                {!isSomenteLeitura(cautelaSelecionada) && (
+                  <div className="flex gap-3 justify-center px-6 pb-6">
+                    <button
+                      onClick={() => aprovar(cautelaSelecionada.id)}
+                      className="flex-1 py-2.5 rounded-lg bg-[#3BB14A] text-white text-sm font-semibold hover:bg-[#0E9F6E]"
+                    >
+                      Aprovar
+                    </button>
+                    <button
+                      onClick={() => abrirDescartar(cautelaSelecionada.id)}
+                      className="flex-1 py-2.5 rounded-lg border border-black bg-white text-black text-sm font-medium hover:bg-gray-100"
+                    >
+                      Descartar
+                    </button>
+                  </div>
+                )}
+                <div className="px-6 pb-6">
+                  <button
+                    onClick={() => setCautelaSelecionada(null)}
+                    className="w-full py-2.5 rounded-lg bg-[#F5F5F5] text-black text-sm font-semibold hover:bg-gray-200 transition-colors"
+                  >
+                    Fechar detalhes
+                  </button>
+                </div>
               </div>
-            )}
-          </div>
-        ) : (
-          <div className="flex-1 bg-white" />
-        )}
+            </>
+          )}
+        </div>
 
-        {/* Painel direito — Histórico */}
-        <div className="w-lg h-screen flex-shrink-0 flex flex-col overflow-hidden pt-[20px]">
+        {/* Histórico */}
+        <div
+          className={`w-lg h-screen flex-shrink-0 flex flex-col overflow-hidden pt-[20px] relative ${
+            cautelaSelecionada && origemDetalhe === "historico" ? "z-10" : "z-0"
+          }`}
+        >
           <div
             className="bg-[#22592A] pl-5 py-4 flex-shrink-0 rounded-t-lg mx-4 mt-4"
             style={{ boxShadow: "-4px 0 8px rgba(0,0,0,0.25)" }}
@@ -947,18 +802,19 @@ export default function Gestor() {
                 Nenhum histórico.
               </p>
             )}
-            {historico.map((cautela) => (
-              <CardHistorico
-                key={cautela.id}
-                cautela={cautela}
-                onClick={() => abrirDetalhe(cautela)}
+            {historico.map((c) => (
+              <CardCautelaHistorico
+                key={c.id}
+                cautela={c}
+                statusExibido={statusHistorico(c)}
+                onClick={() => abrirDetalhe(c, "historico")}
               />
             ))}
           </div>
         </div>
       </div>
 
-      {/* ── Modais ── */}
+      {/* Modais */}
       {modalDescartar && (
         <ModalDescartar
           onConfirmar={confirmarDescartar}

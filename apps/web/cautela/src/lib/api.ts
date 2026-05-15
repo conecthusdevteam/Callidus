@@ -220,16 +220,18 @@ async function apiRequest<T>(
 
 function mapCautela(cautela: ApiCautela): Cautela {
   return {
-    aprovadoEm:
-      cautela.status === "APROVADA"
-        ? formatDate(cautela.aprovadoEm ?? cautela.respondidoEm)
+    aprovadoEm: cautela.aprovadoEm
+      ? formatDate(cautela.aprovadoEm)
+      : cautela.respondidoEm
+        ? formatDate(cautela.respondidoEm)
         : undefined,
     data: formatDate(cautela.criadoEm),
     encerradaEm:
       cautela.status === "ENCERRADA" && cautela.encerradoEm
         ? formatDate(cautela.encerradoEm)
         : undefined,
-    empresa: cautela.setor?.nome ?? "Setor não informado",
+    empresa: cautela.empresa ?? "Empresa não informada",
+    setorId: cautela.setor?.nome ?? "Setor não informado",
     equipamentos: cautela.itens.map((item) => ({
       descricao: item.descricao ?? item.nomeItem,
       quantidade: item.quantidade,

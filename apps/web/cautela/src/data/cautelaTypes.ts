@@ -21,6 +21,7 @@ export interface Cautela {
   gestor: string;
   data: string;
   equipamentos: Equipamento[];
+  setorId: string;
 
   aprovadoEm?: string;
   reprovadoEm?: string;
