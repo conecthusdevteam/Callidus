@@ -18,12 +18,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type {
-  HistoryPlateDetail,
+  ApiPlate,
+  ApiStencil,
   HistoryPlateFilters,
-  HistoryPlateSummary,
-  HistoryStencilDetail,
   HistoryStencilFilters,
-  HistoryStencilSummary,
 } from "@/lib/api";
 import { historyApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -66,22 +64,13 @@ function formatTime(iso?: string | null) {
   }).format(new Date(iso));
 }
 
-function formatInterval(minutes?: number | null) {
-  if (minutes == null) return "-";
-  if (minutes < 60) return `${minutes} min`;
-
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  return rest ? `${hours}h ${rest}min` : `${hours}h`;
-}
-
-function sortByLastWash<T extends { last_wash: string | null }>(
+function sortByWashDate<T extends { created_at: string }>(
   rows: T[],
   direction: SortDirection,
 ) {
   return [...rows].sort((a, b) => {
-    const first = a.last_wash ? new Date(a.last_wash).getTime() : 0;
-    const second = b.last_wash ? new Date(b.last_wash).getTime() : 0;
+    const first = new Date(a.created_at).getTime();
+    const second = new Date(b.created_at).getTime();
     return direction === "asc" ? first - second : second - first;
   });
 }
@@ -331,10 +320,10 @@ function StencilTable({
   onToggleSort,
   onConsult,
 }: {
-  rows: HistoryStencilSummary[];
+  rows: ApiStencil[];
   sort: SortDirection;
   onToggleSort: () => void;
-  onConsult: (row: HistoryStencilSummary) => void;
+  onConsult: (row: ApiStencil) => void;
 }) {
   return (
     <div className="min-h-0 overflow-auto rounded-t-md">
@@ -367,14 +356,14 @@ function StencilTable({
               key={row.id}
               className={cn(
                 index % 2 === 0 ? "bg-white" : "bg-[#eeeeee]",
-                row.anomaly && "bg-red-50 shadow-[inset_4px_0_0_#ef4444]",
+                row.non_standard && "bg-red-50 shadow-[inset_4px_0_0_#ef4444]",
               )}
             >
-              <td className="px-3 py-3 tabular">{formatDate(row.last_wash)}</td>
-              <td className="px-3 py-3 tabular">{formatTime(row.last_wash)}</td>
-              <td className="px-3 py-3 font-medium">{row.stencilCode}</td>
+              <td className="px-3 py-3 tabular">{formatDate(row.created_at)}</td>
+              <td className="px-3 py-3 tabular">{formatTime(row.created_at)}</td>
+              <td className="px-3 py-3 font-medium">{row.stencil_code}</td>
               <td className="px-3 py-3 tabular">
-                {String(row.eddressing ?? "").padStart(3, "0")}
+                {String(row.addressing ?? "").padStart(3, "0")}
               </td>
               <td className="px-3 py-3">
                 <span
@@ -416,10 +405,10 @@ function PlateTable({
   onToggleSort,
   onConsult,
 }: {
-  rows: HistoryPlateSummary[];
+  rows: ApiPlate[];
   sort: SortDirection;
   onToggleSort: () => void;
-  onConsult: (row: HistoryPlateSummary) => void;
+  onConsult: (row: ApiPlate) => void;
 }) {
   return (
     <div className="min-h-0 overflow-auto rounded-t-md">
@@ -452,8 +441,8 @@ function PlateTable({
               key={row.id}
               className={index % 2 === 0 ? "bg-white" : "bg-[#eeeeee]"}
             >
-              <td className="px-3 py-3 tabular">{formatDate(row.last_wash)}</td>
-              <td className="px-3 py-3 tabular">{formatTime(row.last_wash)}</td>
+              <td className="px-3 py-3 tabular">{formatDate(row.created_at)}</td>
+              <td className="px-3 py-3 tabular">{formatTime(row.created_at)}</td>
               <td className="px-3 py-3 font-medium">{row.plate_model}</td>
               <td className="px-3 py-3 tabular">{row.serial}</td>
               <td className="px-3 py-3 tabular">{row.blank_id}</td>
@@ -485,7 +474,7 @@ function StencilDetailsModal({
   open,
   onOpenChange,
 }: {
-  detail: HistoryStencilDetail | null;
+  detail: ApiStencil | null;
   loading: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -510,29 +499,33 @@ function StencilDetailsModal({
               <div className="grid gap-4 md:grid-cols-[1.65fr_0.55fr_0.55fr_0.65fr_0.8fr]">
                 <DetailMetric
                   label="Código Stencil"
-                  value={detail.stencilCode}
+                  value={detail.stencil_code}
                 />
                 <DetailMetric
                   label="Endereçamento"
-                  value={String(detail.eddressing ?? "").padStart(3, "0")}
+                  value={String(detail.addressing ?? "").padStart(3, "0")}
                 />
                 <DetailMetric
                   label="Espessura"
-                  value={Number(detail.thickness || 0).toFixed(2)}
+                  value={
+                    detail.asset?.thickness != null
+                      ? Number(detail.asset.thickness).toFixed(2)
+                      : "-"
+                  }
                 />
                 <DetailMetric
                   label="ID Fabricante"
-                  value={detail.manufacture_id || "-"}
+                  value={detail.asset?.manufacture_id || "-"}
                 />
                 <DetailMetric
                   label="País de Origem"
-                  value={detail.country || "-"}
+                  value={detail.asset?.country || "-"}
                 />
               </div>
 
               <DetailMetric
                 label="Total de Lavagens Registradas"
-                value={`${String(detail.total_washes).padStart(3, "0")} lavagens`}
+                value={`${String(detail.asset?.total_washes ?? 0).padStart(3, "0")} lavagens`}
                 className="mt-5"
               />
 
@@ -544,19 +537,19 @@ function StencilDetailsModal({
                   <div className="grid grid-cols-4 gap-3">
                     <DetailMetric
                       label="ID Lavagem"
-                      value={detail.last_wash_details?.id ?? "-"}
+                      value={detail.id}
                     />
                     <DetailMetric
                       label="Data"
-                      value={formatDate(detail.last_wash)}
+                      value={formatDate(detail.created_at)}
                     />
                     <DetailMetric
                       label="Hora"
-                      value={formatTime(detail.last_wash)}
+                      value={formatTime(detail.created_at)}
                     />
                     <DetailMetric
                       label="Operador de Lavagem"
-                      value={detail.last_wash_details?.operator ?? "-"}
+                      value={detail.operator || "-"}
                     />
                   </div>
                 </div>
@@ -573,52 +566,8 @@ function StencilDetailsModal({
                 </div>
               </div>
 
-              <div className="mt-6">
-                <h3 className="text-[18px] font-bold">Histórico de lavagens</h3>
-                <div className="mt-3 overflow-hidden rounded-md border">
-                  <table className="w-full text-[13px]">
-                    <thead>
-                      <tr className="bg-[#1d55d8] text-left text-white">
-                        <th className="px-3 py-2">Data</th>
-                        <th className="px-3 py-2">Hora</th>
-                        <th className="px-3 py-2">Origem</th>
-                        <th className="px-3 py-2">Operador</th>
-                        <th className="px-3 py-2">Intervalo</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {detail.washes_history.map((wash, index) => (
-                        <tr
-                          key={wash.id}
-                          className={cn(
-                            index % 2 === 0 ? "bg-white" : "bg-[#f1f1f1]",
-                            wash.non_standard && "bg-red-50",
-                          )}
-                        >
-                          <td className="px-3 py-2 tabular">
-                            {formatDate(wash.created_at)}
-                          </td>
-                          <td className="px-3 py-2 tabular">
-                            {formatTime(wash.created_at)}
-                          </td>
-                          <td className="px-3 py-2">SGS</td>
-                          <td className="px-3 py-2">{wash.operator}</td>
-                          <td className="px-3 py-2">
-                            <span
-                              className={cn(
-                                "font-semibold",
-                                wash.non_standard && "text-red-600",
-                              )}
-                            >
-                              {formatInterval(wash.previous_wash_interval)}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+              <div className="mt-6 h-[245px] rounded-xl bg-[#d9d9d9]" />
+              <div className="mt-4 h-[72px] rounded-xl bg-[#d9d9d9]" />
             </>
           )}
         </div>
@@ -633,7 +582,7 @@ function PlateDetailsModal({
   open,
   onOpenChange,
 }: {
-  detail: HistoryPlateDetail | null;
+  detail: ApiPlate | null;
   loading: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -664,7 +613,7 @@ function PlateDetailsModal({
 
               <DetailMetric
                 label="Total de Lavagens Registradas"
-                value={`${String(detail.total_washes).padStart(3, "0")} lavagens`}
+                value={`${String(detail.asset?.total_washes ?? 0).padStart(3, "0")} lavagens`}
                 className="mt-5"
               />
 
@@ -675,65 +624,29 @@ function PlateDetailsModal({
                 <div className="grid grid-cols-5 gap-3">
                   <DetailMetric
                     label="ID Lavagem"
-                    value={detail.last_wash_details?.id ?? "-"}
+                    value={detail.id}
                   />
                   <DetailMetric
                     label="Data"
-                    value={formatDate(detail.last_wash)}
+                    value={formatDate(detail.created_at)}
                   />
                   <DetailMetric
                     label="Hora"
-                    value={formatTime(detail.last_wash)}
+                    value={formatTime(detail.created_at)}
                   />
                   <DetailMetric
                     label="Turno"
-                    value={detail.last_wash_details?.shift ?? "-"}
+                    value={detail.shift}
                   />
                   <DetailMetric
                     label="Operador de Lavagem"
-                    value={detail.last_wash_details?.operator ?? "-"}
+                    value={detail.operator || "-"}
                   />
                 </div>
               </div>
 
-              <div className="mt-6">
-                <h3 className="text-[18px] font-bold">Histórico de lavagens</h3>
-                <div className="mt-3 overflow-hidden rounded-md border">
-                  <table className="w-full text-[13px]">
-                    <thead>
-                      <tr className="bg-[#0fa468] text-left text-white">
-                        <th className="px-3 py-2">Data</th>
-                        <th className="px-3 py-2">Hora</th>
-                        <th className="px-3 py-2">Origem</th>
-                        <th className="px-3 py-2">Turno</th>
-                        <th className="px-3 py-2">Fase</th>
-                        <th className="px-3 py-2">Operador</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {detail.washes_history.map((wash, index) => (
-                        <tr
-                          key={wash.id}
-                          className={
-                            index % 2 === 0 ? "bg-white" : "bg-[#f1f1f1]"
-                          }
-                        >
-                          <td className="px-3 py-2 tabular">
-                            {formatDate(wash.created_at)}
-                          </td>
-                          <td className="px-3 py-2 tabular">
-                            {formatTime(wash.created_at)}
-                          </td>
-                          <td className="px-3 py-2">CLP</td>
-                          <td className="px-3 py-2">{wash.shift}</td>
-                          <td className="px-3 py-2">{wash.phase}</td>
-                          <td className="px-3 py-2">{wash.operator}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+              <div className="mt-6 h-[245px] rounded-xl bg-[#d9d9d9]" />
+              <div className="mt-4 h-[72px] rounded-xl bg-[#d9d9d9]" />
             </>
           )}
         </div>
@@ -748,8 +661,8 @@ const History = () => {
     useState<HistoryStencilFilters>(emptyStencilFilters);
   const [plateFilters, setPlateFilters] =
     useState<HistoryPlateFilters>(emptyPlateFilters);
-  const [stencils, setStencils] = useState<HistoryStencilSummary[]>([]);
-  const [plates, setPlates] = useState<HistoryPlateSummary[]>([]);
+  const [stencils, setStencils] = useState<ApiStencil[]>([]);
+  const [plates, setPlates] = useState<ApiPlate[]>([]);
   const [lines, setLines] = useState<string[]>([]);
   const [sort, setSort] = useState<SortDirection>("desc");
   const [stencilPage, setStencilPage] = useState(1);
@@ -757,19 +670,17 @@ const History = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [selectedStencil, setSelectedStencil] =
-    useState<HistoryStencilDetail | null>(null);
-  const [selectedPlate, setSelectedPlate] = useState<HistoryPlateDetail | null>(
-    null,
-  );
+    useState<ApiStencil | null>(null);
+  const [selectedPlate, setSelectedPlate] = useState<ApiPlate | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailType, setDetailType] = useState<AssetType | null>(null);
 
   const sortedStencils = useMemo(
-    () => sortByLastWash(stencils, sort),
+    () => sortByWashDate(stencils, sort),
     [stencils, sort],
   );
   const sortedPlates = useMemo(
-    () => sortByLastWash(plates, sort),
+    () => sortByWashDate(plates, sort),
     [plates, sort],
   );
   const stencilPages = Math.max(1, Math.ceil(sortedStencils.length / PAGE_SIZE));
@@ -794,10 +705,10 @@ const History = () => {
 
     try {
       if (assetType === "stencil") {
-        setStencils(await historyApi.getStencils(stencilFilters));
+        setStencils(await historyApi.getStencilWashes(stencilFilters));
         setStencilPage(1);
       } else {
-        setPlates(await historyApi.getPlates(plateFilters));
+        setPlates(await historyApi.getPlateWashes(plateFilters));
         setPlatePage(1);
       }
     } catch (err) {
@@ -826,26 +737,16 @@ const History = () => {
     setPlatePage(1);
   }, [sort]);
 
-  const openStencil = async (row: HistoryStencilSummary) => {
+  const openStencil = (row: ApiStencil) => {
     setDetailType("stencil");
-    setSelectedStencil(null);
-    setDetailsLoading(true);
-    try {
-      setSelectedStencil(await historyApi.getStencil(row.id));
-    } finally {
-      setDetailsLoading(false);
-    }
+    setSelectedStencil(row);
+    setDetailsLoading(false);
   };
 
-  const openPlate = async (row: HistoryPlateSummary) => {
+  const openPlate = (row: ApiPlate) => {
     setDetailType("placa");
-    setSelectedPlate(null);
-    setDetailsLoading(true);
-    try {
-      setSelectedPlate(await historyApi.getPlate(row.id));
-    } finally {
-      setDetailsLoading(false);
-    }
+    setSelectedPlate(row);
+    setDetailsLoading(false);
   };
 
   return (

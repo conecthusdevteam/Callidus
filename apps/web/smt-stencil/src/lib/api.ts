@@ -101,6 +101,49 @@ export const historyApi = {
   getStencil: async (id: string): Promise<HistoryStencilDetail> =>
     apiRequest<HistoryStencilDetail>(`/stencils/${id}`),
 
+  getStencilWashes: async (
+    filters: HistoryStencilFilters = {},
+  ): Promise<ApiStencil[]> => {
+    const [washesResponse, stencils] = await Promise.all([
+      apiRequest<ApiPaginatedResponse<ApiStencil>>(
+        "/stencils/washes?limit=100",
+      ),
+      apiRequest<HistoryStencilSummary[]>("/stencils"),
+    ]);
+    const stencilsById = new Map(stencils.map((stencil) => [stencil.id, stencil]));
+
+    return washesResponse.items
+      .map((wash) => ({
+        ...wash,
+        asset: stencilsById.get(wash.stencil_id),
+      }))
+      .filter((wash) => {
+        const asset = wash.asset;
+        if (
+          filters.codigo &&
+          !wash.stencil_code.toLowerCase().includes(filters.codigo.toLowerCase())
+        )
+          return false;
+        if (
+          filters.idFabricante &&
+          !(asset?.manufacture_id ?? "")
+            .toLowerCase()
+            .includes(filters.idFabricante.toLowerCase())
+        )
+          return false;
+        if (
+          filters.pais &&
+          !(asset?.country ?? "")
+            .toLowerCase()
+            .includes(filters.pais.toLowerCase())
+        )
+          return false;
+        if (filters.status && wash.status !== filters.status) return false;
+        if (filters.linha && wash.line_name !== filters.linha) return false;
+        return true;
+      });
+  },
+
   getPlates: async (
     filters: HistoryPlateFilters = {},
   ): Promise<HistoryPlateSummary[]> =>
@@ -115,6 +158,41 @@ export const historyApi = {
 
   getPlate: async (id: string): Promise<HistoryPlateDetail> =>
     apiRequest<HistoryPlateDetail>(`/plates/${id}`),
+
+  getPlateWashes: async (
+    filters: HistoryPlateFilters = {},
+  ): Promise<ApiPlate[]> => {
+    const [washesResponse, plates] = await Promise.all([
+      apiRequest<ApiPaginatedResponse<ApiPlate>>("/plates/washes?limit=100"),
+      apiRequest<HistoryPlateSummary[]>("/plates"),
+    ]);
+    const platesById = new Map(plates.map((plate) => [plate.id, plate]));
+
+    return washesResponse.items
+      .map((wash) => ({
+        ...wash,
+        asset: platesById.get(wash.plate_id),
+      }))
+      .filter((wash) => {
+        if (
+          filters.modelo &&
+          !wash.plate_model.toLowerCase().includes(filters.modelo.toLowerCase())
+        )
+          return false;
+        if (
+          filters.blankId &&
+          !wash.blank_id.toLowerCase().includes(filters.blankId.toLowerCase())
+        )
+          return false;
+        if (
+          filters.serial &&
+          !wash.serial.toLowerCase().includes(filters.serial.toLowerCase())
+        )
+          return false;
+        if (filters.linha && wash.line !== filters.linha) return false;
+        return true;
+      });
+  },
 
   getLines: async (): Promise<string[]> =>
     apiRequest<string[]>("/stencils/lines"),
