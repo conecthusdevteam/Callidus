@@ -1,55 +1,60 @@
 import { nanoid } from 'nanoid';
-import { BeforeInsert, Column, CreateDateColumn, Entity, PrimaryColumn, UpdateDateColumn } from "typeorm";
+import {
+  BeforeInsert,
+  Column,
+  CreateDateColumn,
+  Entity,
+  OneToMany,
+  PrimaryColumn,
+  UpdateDateColumn,
+} from 'typeorm';
+import { PlateWash } from './plate-wash.entity';
 
 @Entity('plates')
 export class Plate {
-    @PrimaryColumn()
-    id!: string;
+  @PrimaryColumn()
+  id!: string;
 
-    @Column()
-    plateModel!: string;
+  @Column()
+  plateModel!: string;
 
-    @Column()
-    serialNumber!: string;
+  @Column({ unique: true })
+  serialNumber!: string;
 
-    @Column()
-    blankId!: string;
+  @Column()
+  blankId!: string;
 
-    @Column()
-    shift!: number;
+  @Column()
+  lineName!: string;
 
-    @Column()
-    phase!: number;
+  @Column({ nullable: true })
+  plateManufacturerId?: string;
 
-    @Column()
-    totalWashes!: number;
+  @Column({ nullable: true })
+  country?: string;
 
-    @Column()
-    operator!: string;
+  @Column({
+    type: 'decimal',
+    precision: 5,
+    scale: 3,
+    nullable: true,
+  })
+  thickness?: number;
 
-    @Column()
-    lineName!: string;
+  @Column({ nullable: true })
+  addressing?: string;
 
-    @Column({ nullable: true })
-    plateManufacturerId?: string;
+  @OneToMany(() => PlateWash, (wash) => wash.plate)
+  washes!: PlateWash[];
 
-    @Column({ nullable: true })
-    country?: string;
+  @CreateDateColumn()
+  createdAt!: Date;
 
-    @Column({ type: 'decimal', precision: 5, scale: 3, nullable: true })
-    thickness?: number;
+  @UpdateDateColumn()
+  updatedAt!: Date;
 
-    @Column({ nullable: true })
-    addressing?: string;
-
-    @CreateDateColumn()
-    createdAt!: Date;
-
-    @UpdateDateColumn()
-    updatedAt!: Date;
-
-    @BeforeInsert()
-    generateId() {
-        this.id = `plate_${nanoid()}`
-    }
+  @BeforeInsert()
+  generateId() {
+    this.id = `p_${nanoid()}`;
+  }
 }
