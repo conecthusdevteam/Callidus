@@ -16,6 +16,9 @@ GET {{baseUrl}}/washes/daily-summary
 ### List recent plate washes - success
 GET {{baseUrl}}/plates/washes?page=1&limit=10
 
+### List today plate washes - success
+GET {{baseUrl}}/plates/washes/today?page=1&limit=10
+
 ### List plates paginated - success
 GET {{baseUrl}}/plates?page=1&limit=10
 
