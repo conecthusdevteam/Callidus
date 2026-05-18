@@ -318,10 +318,10 @@ export function ModalEncerrada({ onClose }: { onClose: () => void }) {
           </svg>
         </div>
         <p className="text-base font-bold text-black text-center">
-          Cautela encerrada com sucesso
+          A cautela foi autorizada a sair com sucesso.
         </p>
         <p className="text-sm text-[#404040] text-center">
-          O registro foi fechado com data e hora de saída.
+          Ao sair, essa cautela será encerrada.
         </p>
       </div>
     </div>

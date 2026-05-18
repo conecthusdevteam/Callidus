@@ -470,16 +470,8 @@ export default function Home() {
       newErrors.email = "Use apenas e-mail institucional.";
     if (!validarDocumento(documento))
       newErrors.documento = "Informe um CPF ou identidade válida";
-    if (!descricao.trim()) {
-      newErrors.descricao = "A descrição do material é obrigatória.";
-    } else if (descricao.trim().length < 3) {
-      newErrors.descricao = "A descrição deve ter no mínimo 3 caracteres.";
-    }
-
-    if (!quantidade) {
-      newErrors.quantidade = "A quantidade é obrigatória.";
-    } else if (Number(quantidade) <= 0) {
-      newErrors.quantidade = "A quantidade deve ser maior que 0.";
+    if (items.length === 0) {
+      newErrors.items = "Adicione ao menos um item à lista.";
     }
     if (retornado === null)
       newErrors.retornado = "Selecione se o item será retornado.";
