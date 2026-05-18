@@ -42,7 +42,7 @@ GET {{baseUrl}}/stencils?status=active
 GET {{baseUrl}}/stencils?lineName=
 
 ### List stencils filtered by multiple fields - success
-GET {{baseUrl}}/stencils?stencilCode=A&id_fabricante=MNF&status=active&lineName=Linha%201&page=1&limit=10
+GET {{baseUrl}}/stencils?stencilCode=A&manufactureId=MNF&status=active&lineName=Linha%201&page=1&limit=10
 
 ### List stencils with no results - success with empty array
 GET {{baseUrl}}/stencils?stencilCode=SEM-RESULTADO

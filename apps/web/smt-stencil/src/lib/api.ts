@@ -41,17 +41,12 @@ export const stencilsApi = {
     if (sim === "sgs" || sim === "both") {
       throw new Error("[SIMULAÇÃO] SGS indisponível");
     }
-    const [washesResponse, stencils] = await Promise.all([
-      apiRequest<ApiPaginatedResponse<ApiStencil>>(
-        "/stencils/washes?limit=100",
-      ),
-      apiRequest<HistoryStencilSummary[]>("/stencils"),
-    ]);
-    const stencilsById = new Map(stencils.map((stencil) => [stencil.id, stencil]));
-    return washesResponse.items.map((wash) => ({
-      ...wash,
-      asset: stencilsById.get(wash.stencil_id),
-    }));
+    const washesResponse = await apiRequest<ApiTodayStencilWashesResponse>(
+      "/stencils/washes/today?limit=100",
+    );
+    return withTodayStencilCountsAndAnomalies(
+      getPaginatedRows(washesResponse).map(normalizeTodayStencilWash),
+    );
   },
 };
 
@@ -61,15 +56,12 @@ export const platesApi = {
     if (sim === "clp" || sim === "both") {
       throw new Error("[SIMULAÇÃO] CLP indisponível");
     }
-    const [washesResponse, plates] = await Promise.all([
-      apiRequest<ApiPaginatedResponse<ApiPlate>>("/plates/washes?limit=100"),
-      apiRequest<HistoryPlateSummary[]>("/plates"),
-    ]);
-    const platesById = new Map(plates.map((plate) => [plate.id, plate]));
-    return washesResponse.items.map((wash) => ({
-      ...wash,
-      asset: platesById.get(wash.plate_id),
-    }));
+    const washesResponse = await apiRequest<ApiTodayPlateWashesResponse>(
+      "/plates/washes/today?limit=100",
+    );
+    return withTodayPlateCounts(
+      getPaginatedRows(washesResponse).map(normalizeTodayPlateWash),
+    );
   },
 };
 
@@ -206,6 +198,200 @@ export interface ApiPaginatedResponse<T> {
   limit: number;
   total: number;
   total_pages: number;
+}
+
+type ApiTodayResponse<T> =
+  | ApiPaginatedResponse<T>
+  | {
+      data: T[];
+      meta: {
+        total: number;
+        page: number;
+        limit: number;
+        total_pages: number;
+      };
+    };
+
+function getPaginatedRows<T>(response: ApiTodayResponse<T>): T[] {
+  return "items" in response ? response.items : response.data;
+}
+
+type ApiTodayStencilWashesResponse = ApiTodayResponse<ApiTodayStencilWash>;
+type ApiTodayPlateWashesResponse = ApiTodayResponse<ApiTodayPlateWash>;
+
+interface ApiTodayStencilWash {
+  id: string;
+  stencilId: string;
+  operator: string;
+  createdAt: string;
+  stencil: {
+    id: string;
+    stencilCode: string;
+    manufactureId: string;
+    country: string;
+    thickness: number;
+    addressing: number;
+    status: "active" | "inactive";
+    lineName: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+}
+
+interface ApiTodayPlateWash {
+  id: string;
+  plateId: string;
+  operator: string;
+  shift: number;
+  phase: number;
+  createdAt: string;
+  plate: {
+    id: string;
+    plateModel: string;
+    serialNumber: string;
+    blankId: string;
+    lineName: string;
+    plateManufacturerId?: string | null;
+    country?: string | null;
+    thickness?: number | null;
+    addressing?: string | null;
+    createdAt: string;
+    updatedAt: string;
+  };
+}
+
+function normalizeTodayStencilWash(wash: ApiTodayStencilWash): ApiStencil {
+  const stencil = wash.stencil;
+
+  return {
+    id: wash.id,
+    stencil_id: wash.stencilId,
+    created_at: wash.createdAt,
+    stencil_code: stencil.stencilCode,
+    addressing: String(stencil.addressing).padStart(3, "0"),
+    status: stencil.status,
+    line_name: stencil.lineName,
+    operator: wash.operator,
+    previous_wash_interval: null,
+    non_standard: false,
+    asset: {
+      id: stencil.id,
+      stencilCode: stencil.stencilCode,
+      manufacture_id: stencil.manufactureId,
+      country: stencil.country,
+      thickness: stencil.thickness,
+      eddressing: stencil.addressing,
+      status: stencil.status,
+      line_name: stencil.lineName,
+      created_at: stencil.createdAt,
+      updated_at: stencil.updatedAt,
+      total_washes: 0,
+      last_wash: wash.createdAt,
+      last_wash_details: {
+        id: wash.id,
+        operator: wash.operator,
+        created_at: wash.createdAt,
+        previous_wash_interval: null,
+        non_standard: false,
+      },
+      mid_range: null,
+      anomaly: false,
+    },
+  };
+}
+
+function normalizeTodayPlateWash(wash: ApiTodayPlateWash): ApiPlate {
+  const plate = wash.plate;
+
+  return {
+    id: wash.id,
+    plate_id: wash.plateId,
+    created_at: wash.createdAt,
+    shift: wash.shift,
+    plate_model: plate.plateModel,
+    phase: wash.phase,
+    line: plate.lineName,
+    serial: plate.serialNumber,
+    blank_id: plate.blankId,
+    operator: wash.operator,
+    asset: {
+      id: plate.id,
+      plate_model: plate.plateModel,
+      serial: plate.serialNumber,
+      blank_id: plate.blankId,
+      line: plate.lineName,
+      manufacturer_id: plate.plateManufacturerId ?? null,
+      origin_country: plate.country ?? null,
+      thickness: plate.thickness ?? null,
+      addressing: plate.addressing ?? null,
+      created_at: plate.createdAt,
+      updated_at: plate.updatedAt,
+      total_washes: 0,
+      last_wash: wash.createdAt,
+      last_wash_details: {
+        id: wash.id,
+        operator: wash.operator,
+        shift: wash.shift,
+        phase: wash.phase,
+        created_at: wash.createdAt,
+      },
+    },
+  };
+}
+
+function withTodayStencilCountsAndAnomalies(washes: ApiStencil[]): ApiStencil[] {
+  const countByStencilId = new Map<string, number>();
+
+  washes.forEach((wash) => {
+    countByStencilId.set(wash.stencil_id, (countByStencilId.get(wash.stencil_id) ?? 0) + 1);
+  });
+
+  return washes.map((wash) => {
+    const count = countByStencilId.get(wash.stencil_id) ?? 0;
+    const nonStandard = count > 1 || isOutsideStencilReservedHours(wash.created_at);
+
+    return {
+      ...wash,
+      non_standard: nonStandard,
+      asset: wash.asset
+        ? {
+            ...wash.asset,
+            total_washes: count,
+            anomaly: nonStandard || wash.asset.anomaly,
+          }
+        : wash.asset,
+    };
+  });
+}
+
+function withTodayPlateCounts(washes: ApiPlate[]): ApiPlate[] {
+  const countByPlateId = new Map<string, number>();
+
+  washes.forEach((wash) => {
+    countByPlateId.set(wash.plate_id, (countByPlateId.get(wash.plate_id) ?? 0) + 1);
+  });
+
+  return washes.map((wash) => ({
+    ...wash,
+    asset: wash.asset
+      ? {
+          ...wash.asset,
+          total_washes: countByPlateId.get(wash.plate_id) ?? 0,
+        }
+      : wash.asset,
+  }));
+}
+
+function isOutsideStencilReservedHours(iso: string) {
+  const hour = Number(
+    new Intl.DateTimeFormat("pt-BR", {
+      timeZone: "America/Manaus",
+      hour: "2-digit",
+      hour12: false,
+    }).format(new Date(iso)),
+  );
+
+  return hour !== 11 && hour !== 16;
 }
 
 export interface ApiStencil {

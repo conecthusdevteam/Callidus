@@ -7,6 +7,9 @@ import { UpdatePlateDto } from './dto/update-plate.dto';
 import { PlateWash } from './entities/plate-wash.entity';
 import { Plate } from './entities/plate.entity';
 
+const MANAUS_TIME_ZONE = 'America/Manaus';
+const MANAUS_UTC_OFFSET_HOURS = 4;
+
 type PlateWashHistoryItem = {
   id: string;
   operator: string;
@@ -75,12 +78,7 @@ export class PlatesService {
   }
 
   async findTodayPlateWashes(filters?: PlateFilters) {
-    const today = new Date();
-    const startOfDay = new Date(today);
-    startOfDay.setHours(0, 0, 0, 0);
-
-    const endOfDay = new Date(today);
-    endOfDay.setHours(23, 59, 59, 999);
+    const { startUtc, endUtc } = this.getManausDayRange(new Date());
 
     const page = filters?.page || 1;
     const limit = filters?.limit || 10;
@@ -90,8 +88,8 @@ export class PlatesService {
       .createQueryBuilder('wash')
       .leftJoinAndSelect('wash.plate', 'plate')
       .where('wash.createdAt BETWEEN :startOfDay AND :endOfDay', {
-        startOfDay,
-        endOfDay
+        startOfDay: startUtc,
+        endOfDay: endUtc,
       });
 
     if (filters?.plate_model) {
@@ -258,6 +256,27 @@ export class PlatesService {
     return [...washes].sort(
       (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
     );
+  }
+
+  private getManausDayRange(date: Date) {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: MANAUS_TIME_ZONE,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(date);
+
+    const value = (type: string) =>
+      parts.find((part) => part.type === type)?.value ?? '';
+    const year = Number(value('year'));
+    const month = Number(value('month'));
+    const day = Number(value('day'));
+    const startUtc = new Date(
+      Date.UTC(year, month - 1, day, MANAUS_UTC_OFFSET_HOURS, 0, 0, 0),
+    );
+    const endUtc = new Date(startUtc.getTime() + 24 * 60 * 60 * 1000 - 1);
+
+    return { startUtc, endUtc };
   }
 
   private paginateIfRequested<T>(items: T[], page?: number, limit?: number) {

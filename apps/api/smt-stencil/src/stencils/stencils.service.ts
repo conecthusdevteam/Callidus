@@ -8,6 +8,7 @@ import { StencilWash } from './entities/stencil-wash.entity';
 import { Stencil, WashStatus } from './entities/stencil.entity';
 
 const MANAUS_TIME_ZONE = 'America/Manaus';
+const MANAUS_UTC_OFFSET_HOURS = 4;
 const RESERVED_WASH_HOURS = [11, 16];
 
 type StencilWashHistoryItem = {
@@ -92,11 +93,7 @@ export class StencilsService {
   }
 
   async findTodayStencilWashes(filters?: StencilFilters) {
-    const today = new Date();
-    const startOfDay = new Date(today);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(today);
-    endOfDay.setHours(23, 59, 59, 999);
+    const { startUtc, endUtc } = this.getManausDayRange(new Date());
 
     const page = filters?.page || 1;
     const limit = filters?.limit || 10;
@@ -106,8 +103,8 @@ export class StencilsService {
       .createQueryBuilder('wash')
       .leftJoinAndSelect('wash.stencil', 'stencil')
       .where('wash.createdAt BETWEEN :startOfDay AND :endOfDay', {
-        startOfDay,
-        endOfDay
+        startOfDay: startUtc,
+        endOfDay: endUtc,
       });
 
     if (filters?.stencilCode) {
@@ -384,6 +381,17 @@ export class StencilsService {
       dayKey: `${value('year')}-${value('month')}-${value('day')}`,
       hour: Number(value('hour')),
     };
+  }
+
+  private getManausDayRange(date: Date) {
+    const { dayKey } = this.getManausDateParts(date);
+    const [year, month, day] = dayKey.split('-').map(Number);
+    const startUtc = new Date(
+      Date.UTC(year, month - 1, day, MANAUS_UTC_OFFSET_HOURS, 0, 0, 0),
+    );
+    const endUtc = new Date(startUtc.getTime() + 24 * 60 * 60 * 1000 - 1);
+
+    return { startUtc, endUtc };
   }
 
   private paginateIfRequested<T>(items: T[], page?: number, limit?: number) {

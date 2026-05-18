@@ -1,5 +1,5 @@
 @baseUrl=http://localhost:5000
-@plateId=plate_RUs-sxLxx3EFz5mr-PnXq
+@plateId=p_1oC45kmo1RnSG-E-fagHz
 @missingPlateId=plate_missing
 @uniquePlateModel=REST-PLATE-{{$timestamp}}
 @uniquePlateSerial=REST-SERIAL-{{$timestamp}}
@@ -59,7 +59,7 @@ Content-Type: application/json
 
 ### Create plate wash with custom date/time - 400 expected
 # createdAt e gerado automaticamente pelo backend para lavagens de placas.
-POST {{baseUrl}}/plates/{{plateId}}/lavagens
+POST {{baseUrl}}/plates/{{plateId}}/washes
 Content-Type: application/json
 
 {
@@ -70,7 +70,7 @@ Content-Type: application/json
 }
 
 ### Create plate wash for missing plate - 404 expected
-POST {{baseUrl}}/plates/{{missingPlateId}}/lavagens
+POST {{baseUrl}}/plates/{{missingPlateId}}/washes
 Content-Type: application/json
 
 {
@@ -80,7 +80,7 @@ Content-Type: application/json
 }
 
 ### Create plate wash with invalid body - 400 expected
-POST {{baseUrl}}/plates/{{plateId}}/lavagens
+POST {{baseUrl}}/plates/{{plateId}}/washes
 Content-Type: application/json
 
 {
