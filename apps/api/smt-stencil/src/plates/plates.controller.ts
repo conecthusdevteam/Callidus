@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   HttpCode,
+  HttpException,
   InternalServerErrorException,
   NotFoundException,
   Param,
@@ -28,7 +29,7 @@ export class PlatesController {
 
   @Get()
   async findAll(
-@Query('plate_model') plate_model?: string,
+    @Query('plate_model') plate_model?: string,
     @Query('blank_id') blank_id?: string,
     @Query('serial') serial?: string,
     @Query('line') line?: string,
@@ -64,6 +65,34 @@ export class PlatesController {
       page: page ? Number(page) : undefined,
       limit: limit ? Number(limit) : undefined,
     });
+  }
+  
+  @Get('washes/today')
+  async findTodayWashes(
+    @Query('plate_model') plate_model?: string,
+    @Query('blank_id') blank_id?: string,
+    @Query('serial') serial?: string,
+    @Query('line') line?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    try {
+      return await this.platesService.findTodayPlateWashes({
+        plate_model: plate_model,
+        blank_id: blank_id,
+        serial: serial,
+        line: line,
+        page: page ? Number(page) : undefined,
+        limit: limit ? Number(limit) : undefined,
+      });
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'Error when searching for today\'s plate washes.',
+      );
+    }
   }
 
   @Get(':id')
