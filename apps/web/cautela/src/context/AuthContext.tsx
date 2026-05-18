@@ -4,6 +4,7 @@ import {
   useCallback,
   useContext,
   useMemo,
+  useEffect,
   useState,
   type ReactNode,
 } from "react";
@@ -31,6 +32,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     getStoredSession(),
   );
 
+  useEffect(() => {
+    function handleExpired() {
+      setSession(null);
+    }
+    window.addEventListener("auth:expired", handleExpired);
+    return () => window.removeEventListener("auth:expired", handleExpired);
+  }, []);
+
   const handleLogin = useCallback(async (email: string, senha: string) => {
     const nextSession = await loginRequest(email, senha);
     storeSession(nextSession);
@@ -45,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         await logoutRequest(refreshToken);
       } catch {
-        // Falha remota não deve prender o usuário na sessão local.
+        //
       }
     }
 

@@ -204,6 +204,12 @@ async function apiRequest<T>(
     headers,
   });
 
+  if (response.status === 401 && !options.skipAuth) {
+    clearSession();
+    window.dispatchEvent(new Event("auth:expired"));
+    throw new Error("Sessão expirada.");
+  }
+
   if (!response.ok) {
     let message = "Não foi possível completar a requisição.";
     try {
