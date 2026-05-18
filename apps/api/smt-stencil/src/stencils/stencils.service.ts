@@ -4,8 +4,8 @@ import { Like, Repository } from 'typeorm';
 import { CreateStencilWashDto } from './dto/create-stencil-wash.dto';
 import { CreateStencilDto } from './dto/create-stencil.dto';
 import { UpdateStencilDto } from './dto/update-stencil.dto';
-import { Stencil, WashStatus } from './entities/stencil.entity';
 import { StencilWash } from './entities/stencil-wash.entity';
+import { Stencil, WashStatus } from './entities/stencil.entity';
 
 const MANAUS_TIME_ZONE = 'America/Manaus';
 const RESERVED_WASH_HOURS = [11, 16];
@@ -50,7 +50,7 @@ export class StencilsService {
     private readonly repository: Repository<Stencil>,
     @InjectRepository(StencilWash)
     private readonly washRepository: Repository<StencilWash>,
-  ) {}
+  ) { }
 
   async create(dto: CreateStencilDto) {
     const existingStencil = await this.findByStencilCode(dto.stencilCode);
@@ -89,6 +89,72 @@ export class StencilsService {
     const items = stencils.map((stencil) => this.toSummary(stencil));
 
     return this.paginateIfRequested(items, filters?.page, filters?.limit);
+  }
+
+  async findTodayStencilWashes(filters?: StencilFilters) {
+    const today = new Date();
+    const startOfDay = new Date(today);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(today);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const page = filters?.page || 1;
+    const limit = filters?.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = this.washRepository
+      .createQueryBuilder('wash')
+      .leftJoinAndSelect('wash.stencil', 'stencil')
+      .where('wash.createdAt BETWEEN :startOfDay AND :endOfDay', {
+        startOfDay,
+        endOfDay
+      });
+
+    if (filters?.stencilCode) {
+      queryBuilder.andWhere('stencil.stencilCode LIKE :stencilCode', {
+        stencilCode: `%${filters.stencilCode}%`,
+      });
+    }
+
+    if (filters?.manufactureId) {
+      queryBuilder.andWhere('stencil.manufactureId LIKE :manufactureId', {
+        manufactureId: `%${filters.manufactureId}%`,
+      });
+    }
+
+    if (filters?.country) {
+      queryBuilder.andWhere('stencil.country LIKE :country', {
+        country: `%${filters.country}%`,
+      });
+    }
+
+    if (filters?.status) {
+      queryBuilder.andWhere('stencil.status = :status', {
+        status: filters.status,
+      });
+    }
+
+    if (filters?.lineName) {
+      queryBuilder.andWhere('stencil.lineName = :lineName', {
+        lineName: filters.lineName,
+      });
+    }
+
+    queryBuilder.orderBy('wash.createdAt', 'DESC');
+
+    queryBuilder.skip(skip).take(limit);
+
+    const [data, total] = await queryBuilder.getManyAndCount();
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        total_pages: Math.ceil(total / limit),
+      },
+    };
   }
 
   async findOne(id: string) {
@@ -245,8 +311,8 @@ export class StencilsService {
     const average =
       intervals.length > 0
         ? Math.round(
-            intervals.reduce((sum, value) => sum + value, 0) / intervals.length,
-          )
+          intervals.reduce((sum, value) => sum + value, 0) / intervals.length,
+        )
         : null;
 
     const washesByManausDay = this.countWashesByManausDay(orderedAsc);

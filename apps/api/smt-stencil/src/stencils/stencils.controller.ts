@@ -19,7 +19,7 @@ import { StencilsService } from './stencils.service';
 
 @Controller('stencils')
 export class StencilsController {
-  constructor(private readonly stencilsService: StencilsService) {}
+  constructor(private readonly stencilsService: StencilsService) { }
 
   @Post()
   @HttpCode(201)
@@ -76,6 +76,36 @@ export class StencilsController {
     });
   }
 
+  @Get('washes/today')
+  async findTodayWashes(
+    @Query('stencilCode') stencilCode?: string,
+    @Query('manufactureId') manufactureId?: string,
+    @Query('country') country?: string,
+    @Query('status') status?: string,
+    @Query('lineName') lineName?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    try {
+      return await this.stencilsService.findTodayStencilWashes({
+        stencilCode,
+        manufactureId,
+        country,
+        status,
+        lineName: lineName,
+        page: page ? Number(page) : undefined,
+        limit: limit ? Number(limit) : undefined,
+      });
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'Error when searching for today\'s stencil washes.',
+      );
+    }
+  }
+
   @Get('stencilCode/:stencilCode')
   async findByCode(@Param('stencilCode') stencilCode: string) {
     const stencil = await this.stencilsService.findDetailByStencilCode(stencilCode);
@@ -93,7 +123,7 @@ export class StencilsController {
 
   @Post('stencilCode/:stencilCode/washes')
   @HttpCode(201)
-async createWashByCode(
+  async createWashByCode(
     @Param('stencilCode') stencilCode: string,
     @Body() dto: CreateStencilWashDto,
   ) {

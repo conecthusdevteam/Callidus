@@ -17,6 +17,9 @@ GET {{baseUrl}}/washes/daily-summary
 ### List recent stencil washes - success
 GET {{baseUrl}}/stencils/washes?page=1&limit=10
 
+### List today stencil washes - success
+GET {{baseUrl}}/stencils/washes/today?page=1&limit=10
+
 ### List recent stencil washes with attention only - success
 GET {{baseUrl}}/stencils/washes?page=1&limit=10&attentionOnly=true
 
