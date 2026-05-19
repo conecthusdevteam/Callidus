@@ -44,17 +44,24 @@ function BadgeStatus({ status }: { status: StatusCautela }) {
     );
 }
 
-function formatarData(dataISO: string): { data: string; hora: string } {
-  try {
-    const d = new Date(dataISO);
-    const data = d.toLocaleDateString("pt-BR");
-    const hora = d.toLocaleTimeString("pt-BR", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+function formatarData(valor: string): { data: string; hora: string } {
+  if (!valor) return { data: "", hora: "--:--" };
+  
+  if (valor.includes(', ')) {
+    const [data, hora] = valor.split(', ');
     return { data, hora };
+  }
+  
+  try {
+    const d = new Date(valor);
+    if (isNaN(d.getTime())) return { data: valor, hora: "--:--" };
+    
+    return {
+      data: d.toLocaleDateString("pt-BR"),
+      hora: d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+    };
   } catch {
-    return { data: dataISO, hora: "--:--" };
+    return { data: valor, hora: "--:--" };
   }
 }
 
@@ -256,9 +263,8 @@ export default function HistoricoCautelas({
               {!loading &&
                 !erro &&
                 itensPagina.map((cautela, i) => {
-                  const { data, hora } = formatarData(
-                    cautela.criadoEm ?? cautela.data,
-                  );
+                  console.log("Date: ", cautela.data);
+                  const { data, hora } = formatarData(cautela.data);
                   const selecionada = cautelaSelecionada?.id === cautela.id;
                   return (
                     <div
