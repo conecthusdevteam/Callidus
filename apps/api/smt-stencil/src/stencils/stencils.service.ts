@@ -4,10 +4,11 @@ import { Like, Repository } from 'typeorm';
 import { CreateStencilWashDto } from './dto/create-stencil-wash.dto';
 import { CreateStencilDto } from './dto/create-stencil.dto';
 import { UpdateStencilDto } from './dto/update-stencil.dto';
-import { Stencil, WashStatus } from './entities/stencil.entity';
 import { StencilWash } from './entities/stencil-wash.entity';
+import { Stencil, WashStatus } from './entities/stencil.entity';
 
 const MANAUS_TIME_ZONE = 'America/Manaus';
+const MANAUS_UTC_OFFSET_HOURS = 4;
 const RESERVED_WASH_HOURS = [11, 16];
 
 type StencilWashHistoryItem = {
@@ -50,7 +51,7 @@ export class StencilsService {
     private readonly repository: Repository<Stencil>,
     @InjectRepository(StencilWash)
     private readonly washRepository: Repository<StencilWash>,
-  ) {}
+  ) { }
 
   async create(dto: CreateStencilDto) {
     const existingStencil = await this.findByStencilCode(dto.stencilCode);
@@ -89,6 +90,68 @@ export class StencilsService {
     const items = stencils.map((stencil) => this.toSummary(stencil));
 
     return this.paginateIfRequested(items, filters?.page, filters?.limit);
+  }
+
+  async findTodayStencilWashes(filters?: StencilFilters) {
+    const { startUtc, endUtc } = this.getManausDayRange(new Date());
+
+    const page = filters?.page || 1;
+    const limit = filters?.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = this.washRepository
+      .createQueryBuilder('wash')
+      .leftJoinAndSelect('wash.stencil', 'stencil')
+      .where('wash.createdAt BETWEEN :startOfDay AND :endOfDay', {
+        startOfDay: startUtc,
+        endOfDay: endUtc,
+      });
+
+    if (filters?.stencilCode) {
+      queryBuilder.andWhere('stencil.stencilCode LIKE :stencilCode', {
+        stencilCode: `%${filters.stencilCode}%`,
+      });
+    }
+
+    if (filters?.manufactureId) {
+      queryBuilder.andWhere('stencil.manufactureId LIKE :manufactureId', {
+        manufactureId: `%${filters.manufactureId}%`,
+      });
+    }
+
+    if (filters?.country) {
+      queryBuilder.andWhere('stencil.country LIKE :country', {
+        country: `%${filters.country}%`,
+      });
+    }
+
+    if (filters?.status) {
+      queryBuilder.andWhere('stencil.status = :status', {
+        status: filters.status,
+      });
+    }
+
+    if (filters?.lineName) {
+      queryBuilder.andWhere('stencil.lineName = :lineName', {
+        lineName: filters.lineName,
+      });
+    }
+
+    queryBuilder.orderBy('wash.createdAt', 'DESC');
+
+    queryBuilder.skip(skip).take(limit);
+
+    const [data, total] = await queryBuilder.getManyAndCount();
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        total_pages: Math.ceil(total / limit),
+      },
+    };
   }
 
   async findOne(id: string) {
@@ -245,8 +308,8 @@ export class StencilsService {
     const average =
       intervals.length > 0
         ? Math.round(
-            intervals.reduce((sum, value) => sum + value, 0) / intervals.length,
-          )
+          intervals.reduce((sum, value) => sum + value, 0) / intervals.length,
+        )
         : null;
 
     const washesByManausDay = this.countWashesByManausDay(orderedAsc);
@@ -318,6 +381,17 @@ export class StencilsService {
       dayKey: `${value('year')}-${value('month')}-${value('day')}`,
       hour: Number(value('hour')),
     };
+  }
+
+  private getManausDayRange(date: Date) {
+    const { dayKey } = this.getManausDateParts(date);
+    const [year, month, day] = dayKey.split('-').map(Number);
+    const startUtc = new Date(
+      Date.UTC(year, month - 1, day, MANAUS_UTC_OFFSET_HOURS, 0, 0, 0),
+    );
+    const endUtc = new Date(startUtc.getTime() + 24 * 60 * 60 * 1000 - 1);
+
+    return { startUtc, endUtc };
   }
 
   private paginateIfRequested<T>(items: T[], page?: number, limit?: number) {
