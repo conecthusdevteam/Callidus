@@ -256,7 +256,9 @@ export default function HistoricoCautelas({
               {!loading &&
                 !erro &&
                 itensPagina.map((cautela, i) => {
-                  const { data, hora } = formatarData(cautela.data);
+                  const { data, hora } = formatarData(
+                    cautela.criadoEm ?? cautela.data,
+                  );
                   const selecionada = cautelaSelecionada?.id === cautela.id;
                   return (
                     <div
