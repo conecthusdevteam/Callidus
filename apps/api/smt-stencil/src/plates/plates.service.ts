@@ -4,8 +4,11 @@ import { Like, Repository } from 'typeorm';
 import { CreatePlateWashDto } from './dto/create-plate-wash.dto';
 import { CreatePlateDto } from './dto/create-plate.dto';
 import { UpdatePlateDto } from './dto/update-plate.dto';
-import { Plate } from './entities/plate.entity';
 import { PlateWash } from './entities/plate-wash.entity';
+import { Plate } from './entities/plate.entity';
+
+const MANAUS_TIME_ZONE = 'America/Manaus';
+const MANAUS_UTC_OFFSET_HOURS = 4;
 
 type PlateWashHistoryItem = {
   id: string;
@@ -36,7 +39,7 @@ export class PlatesService {
     private readonly repository: Repository<Plate>,
     @InjectRepository(PlateWash)
     private readonly washRepository: Repository<PlateWash>,
-  ) {}
+  ) { }
 
   async create(dto: CreatePlateDto) {
     const existingPlate = await this.findByPlateModel(dto.plateModel);
@@ -72,6 +75,62 @@ export class PlatesService {
     const items = plates.map((plate) => this.toSummary(plate));
 
     return this.paginateIfRequested(items, filters?.page, filters?.limit);
+  }
+
+  async findTodayPlateWashes(filters?: PlateFilters) {
+    const { startUtc, endUtc } = this.getManausDayRange(new Date());
+
+    const page = filters?.page || 1;
+    const limit = filters?.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = this.washRepository
+      .createQueryBuilder('wash')
+      .leftJoinAndSelect('wash.plate', 'plate')
+      .where('wash.createdAt BETWEEN :startOfDay AND :endOfDay', {
+        startOfDay: startUtc,
+        endOfDay: endUtc,
+      });
+
+    if (filters?.plate_model) {
+      queryBuilder.andWhere('plate.plateModel LIKE :plateModel', {
+        plateModel: `%${filters.plate_model}%`,
+      });
+    }
+
+    if (filters?.blank_id) {
+      queryBuilder.andWhere('plate.blankId LIKE :blankId', {
+        blankId: `%${filters.blank_id}%`,
+      });
+    }
+
+    if (filters?.serial) {
+      queryBuilder.andWhere('plate.serialNumber LIKE :serialNumber', {
+        serialNumber: `%${filters.serial}%`,
+      });
+    }
+
+    if (filters?.line) {
+      queryBuilder.andWhere('plate.lineName = :lineName', {
+        lineName: filters.line,
+      });
+    }
+
+    queryBuilder.orderBy('wash.createdAt', 'DESC');
+
+    queryBuilder.skip(skip).take(limit);
+
+    const [data, total] = await queryBuilder.getManyAndCount();
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        total_pages: Math.ceil(total / limit),
+      },
+    };
   }
 
   async findOne(id: string) {
@@ -168,12 +227,12 @@ export class PlatesService {
       last_wash: lastWash?.createdAt ?? null,
       last_wash_details: lastWash
         ? {
-            id: lastWash.id,
-            operator: lastWash.operator,
-            shift: lastWash.shift,
-            phase: lastWash.phase,
-            created_at: lastWash.createdAt,
-          }
+          id: lastWash.id,
+          operator: lastWash.operator,
+          shift: lastWash.shift,
+          phase: lastWash.phase,
+          created_at: lastWash.createdAt,
+        }
         : null,
     };
   }
@@ -197,6 +256,27 @@ export class PlatesService {
     return [...washes].sort(
       (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
     );
+  }
+
+  private getManausDayRange(date: Date) {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: MANAUS_TIME_ZONE,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(date);
+
+    const value = (type: string) =>
+      parts.find((part) => part.type === type)?.value ?? '';
+    const year = Number(value('year'));
+    const month = Number(value('month'));
+    const day = Number(value('day'));
+    const startUtc = new Date(
+      Date.UTC(year, month - 1, day, MANAUS_UTC_OFFSET_HOURS, 0, 0, 0),
+    );
+    const endUtc = new Date(startUtc.getTime() + 24 * 60 * 60 * 1000 - 1);
+
+    return { startUtc, endUtc };
   }
 
   private paginateIfRequested<T>(items: T[], page?: number, limit?: number) {

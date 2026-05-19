@@ -447,7 +447,6 @@ export default function FormularioCautela({
           setItems([...items, { descricao, quantidade: Number(quantidade) }]);
           setDescricao("");
           setQuantidade("");
-          // Limpa erros dos campos após adicionar com sucesso
           setFieldErrors((prev) => {
             const next = { ...prev };
             delete next.descricao;
