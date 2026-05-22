@@ -256,7 +256,7 @@ export default function Home() {
   const { user } = useAuth();
   const location = useLocation();
   const canCreateCautela =
-    user?.papel === "ADMIN" || user?.papel === "PORTARIA";
+    user?.papel === "ADMIN" || user?.papel === "SOLICITANTE";
 
   const [activeTab, setActiveTab] = useState<Tab>(() => {
     const state = location.state as { cautelaSelecionada?: Cautela } | null;
@@ -554,6 +554,7 @@ export default function Home() {
     dataFim,
     setDataFim,
     fieldErrors,
+    setFieldErrors,
     submitError,
     submitting,
     handleSubmit,
@@ -623,7 +624,7 @@ export default function Home() {
         className="w-full h-full flex items-center justify-center gap-2"
         style={{ paddingLeft: "50%" }}
       >
-        <span>Recebidos</span>
+        <span>Respondido</span>
         <ContadorNaoLidas
           total={totalNaoLidas}
           mostrarBolinha={mostrarBolinha}
@@ -641,7 +642,7 @@ export default function Home() {
       }}
       className={`absolute top-0 left-0 w-[50%] ${isMobile ? "h-[56px] text-[16px]" : "h-[68px] text-[18px]"} font-bold rounded-tl${isMobile ? "-lg" : "-xl"} transition-all ${activeTab === "enviados" ? "bg-[#22592A] text-white" : "bg-[#C4EEC9] text-[#22592A]"}`}
     >
-      Enviados
+      Solicitadas
     </button>
   );
 

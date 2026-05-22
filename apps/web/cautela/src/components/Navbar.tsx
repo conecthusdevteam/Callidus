@@ -115,10 +115,16 @@ export default function Navbar() {
 
     const isHistorico =
       location.pathname === "/historico" ||
-      location.pathname === "/gestor/historico";
+      location.pathname === "/gestor/historico" ||
+      location.pathname === "/portaria/historico";
 
     if (isHistorico) {
-      const destino = user?.papel === "GESTOR" ? "/gestor" : "/";
+      const destino =
+        user?.papel === "GESTOR"
+          ? "/gestor"
+          : user?.papel === "PORTARIA"
+            ? "/portaria"
+            : "/";
       navigate(destino, { state: { cautelaSelecionada: cautela } });
     } else {
       emitSelecionar(cautela);
@@ -129,6 +135,8 @@ export default function Navbar() {
     setDropdownAberto(false);
     if (user?.papel === "GESTOR") {
       navigate("/gestor/historico");
+    } else if (user?.papel === "PORTARIA") {
+      navigate("/portaria/historico");
     } else {
       navigate("/historico");
     }
@@ -159,7 +167,7 @@ export default function Navbar() {
     <>
       {/* DESKTOP */}
       <header
-        className="hidden md:flex fixed top-0 left-[70px] right-0 z-10 items-center gap-4 px-4 border-b-[6px]"
+        className="hidden md:flex fixed top-0 left-[70px] right-0 z-10 items-center px-4 border-b-[6px]"
         style={{
           height: "60px",
           backgroundColor: "#FFFFFF",
@@ -185,100 +193,6 @@ export default function Navbar() {
           <span className="text-black font-bold text-xl tracking-wide whitespace-nowrap">
             Controle de Cautelas
           </span>
-        </div>
-
-        <div className="ml-4 flex items-center gap-2 flex-1 max-w-[480px] relative">
-          <div className="relative flex-1">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"
-                />
-              </svg>
-            </span>
-            <input
-              ref={inputRef}
-              type="text"
-              value={termo}
-              placeholder="Pesquise por nome, proprietário, Id de cautela ou status"
-              className="w-full pl-9 pr-3 py-1.5 text-[13px] border border-[#D1D5DB] rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-[#2B8E37] focus:border-transparent"
-              onChange={handleChange}
-              onKeyDown={handleKeyDown}
-              onFocus={() => termo.trim() && setDropdownAberto(true)}
-            />
-
-            {mostrarDropdown && (
-              <div
-                ref={dropdownRef}
-                className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-2xl border border-[#E5E7EB] z-50 overflow-hidden"
-                style={{ minWidth: "360px" }}
-              >
-                {resultadosDropdown.length === 0 ? (
-                  <div className="px-4 py-4 text-[13px] text-[#6B7280] text-center">
-                    Nenhum resultado encontrado.
-                  </div>
-                ) : (
-                  resultadosDropdown.map((cautela) => {
-                    const { label, color } = statusLabel(cautela.status);
-                    return (
-                      <button
-                        key={cautela.id}
-                        onClick={() => handleSelecionarCautela(cautela)}
-                        className="w-full text-left px-4 py-3 hover:bg-[#F9FAFB] transition-colors border-b border-[#F3F4F6] last:border-0"
-                      >
-                        <div className="flex items-center justify-between gap-4">
-                          <div className="min-w-0">
-                            <p className="text-[12px] text-[#6B7280]">
-                              Id Cautela:{" "}
-                              <span className="font-mono">{cautela.id}</span>
-                            </p>
-                            <p className="text-[13px] text-[#111827] mt-0.5">
-                              Ciente:{" "}
-                              <span className="font-bold">
-                                {(cautela.gestor || "—").toUpperCase()}
-                              </span>
-                            </p>
-                          </div>
-                          <div className="flex-shrink-0 text-right">
-                            <p className="text-[12px] text-[#6B7280]">
-                              Data: {cautela.data}
-                            </p>
-                            <p
-                              className="text-[13px] font-bold mt-0.5"
-                              style={{ color }}
-                            >
-                              {label}
-                            </p>
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })
-                )}
-                <button
-                  onClick={handleVerHistorico}
-                  className="w-full px-4 py-3 text-[13px] text-[#6B7280] hover:text-[#2B8E37] hover:bg-[#F9FAFB] transition-colors text-center font-medium border-t border-[#E5E7EB]"
-                >
-                  Ver histórico completo
-                </button>
-              </div>
-            )}
-          </div>
-
-          <button
-            onClick={handlePesquisar}
-            className="px-2 py-1.5 rounded-md bg-[#3BB14A] text-white text-[13px] font-semibold hover:bg-[#22592A] transition-colors whitespace-nowrap"
-          >
-            Pesquisar
-          </button>
         </div>
 
         <div className="ml-auto flex items-center gap-3 flex-shrink-0">
@@ -334,22 +248,66 @@ export default function Navbar() {
               </svg>
             </span>
             <input
+              ref={inputRef}
               type="text"
               value={termo}
               placeholder="Pesquisar..."
               className="w-full pl-9 pr-3 py-1.5 text-[12px] border border-[#D1D5DB] rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-[#2B8E37]"
               onChange={handleChange}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  emitSearch(e.currentTarget.value);
-                  setDropdownAberto(false);
-                }
-              }}
+              onKeyDown={handleKeyDown}
+              onFocus={() => termo.trim() && setDropdownAberto(true)}
             />
+            {mostrarDropdown && (
+              <div
+                ref={dropdownRef}
+                className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-2xl border border-[#E5E7EB] z-50 overflow-hidden"
+              >
+                {resultadosDropdown.length === 0 ? (
+                  <div className="px-4 py-4 text-[13px] text-[#6B7280] text-center">
+                    Nenhum resultado encontrado.
+                  </div>
+                ) : (
+                  resultadosDropdown.map((cautela) => {
+                    const { label, color } = statusLabel(cautela.status);
+                    return (
+                      <button
+                        key={cautela.id}
+                        onClick={() => handleSelecionarCautela(cautela)}
+                        className="w-full text-left px-4 py-3 hover:bg-[#F9FAFB] transition-colors border-b border-[#F3F4F6] last:border-0"
+                      >
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="min-w-0">
+                            <p className="text-[12px] text-[#6B7280]">
+                              Id:{" "}
+                              <span className="font-mono">{cautela.id}</span>
+                            </p>
+                            <p className="text-[13px] text-[#111827] mt-0.5">
+                              {cautela.visitante}
+                            </p>
+                          </div>
+                          <p
+                            className="text-[12px] font-bold flex-shrink-0"
+                            style={{ color }}
+                          >
+                            {label}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+                <button
+                  onClick={handleVerHistorico}
+                  className="w-full px-4 py-3 text-[13px] text-[#6B7280] hover:text-[#2B8E37] hover:bg-[#F9FAFB] transition-colors text-center font-medium border-t border-[#E5E7EB]"
+                >
+                  Ver histórico completo
+                </button>
+              </div>
+            )}
           </div>
           <button
             onClick={handlePesquisar}
-            className="px-3 py-1.5 rounded-md bg-[#2B8E37] text-white text-[12px] font-semibold"
+            className="px-3 py-1.5 rounded-md bg-[#2B8E37] text-white text-[12px] font-semibold flex-shrink-0"
           >
             Pesquisar
           </button>

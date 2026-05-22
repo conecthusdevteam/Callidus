@@ -105,7 +105,7 @@ export function AvatarEncerrada() {
 import type { StatusCautela } from "../data/cautelaTypes";
 
 export function AvatarStatus({ status }: { status: StatusCautela }) {
-  if (status === "Saída Autorizada") return <AvatarAtencao />;
+  if (status === "Saída Autorizada") return <AvatarAprovado />;
   if (status === "Aprovado") return <AvatarAprovado />;
   if (status === "Reprovado") return <AvatarReprovado />;
   if (status === "Encerrada") return <AvatarEncerrada />;

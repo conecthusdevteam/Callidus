@@ -12,6 +12,7 @@ import Home from "./pages/Home";
 import Gestor from "./pages/Gestor";
 import Login from "./pages/Login";
 import HistoricoCautelas from "./pages/HistoricoCautelas";
+import Portaria from "./pages/Portaria";
 
 function ProtectedRoute({
   children,
@@ -23,14 +24,22 @@ function ProtectedRoute({
   const { user } = useAuth();
   const location = useLocation();
 
-  if (!user) {
+  if (!user)
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
-  }
-
   if (roles && !roles.includes(user.papel)) {
-    return <Navigate to={user.papel === "GESTOR" ? "/gestor" : "/"} replace />;
+    return (
+      <Navigate
+        to={
+          user.papel === "GESTOR"
+            ? "/gestor"
+            : user.papel === "PORTARIA"
+              ? "/portaria"
+              : "/"
+        }
+        replace
+      />
+    );
   }
-
   return children;
 }
 
@@ -48,7 +57,7 @@ function Layout() {
         <Route
           path="/"
           element={
-            <ProtectedRoute roles={["ADMIN", "PORTARIA"]}>
+            <ProtectedRoute roles={["ADMIN", "SOLICITANTE"]}>
               <Home />
             </ProtectedRoute>
           }
@@ -56,8 +65,24 @@ function Layout() {
         <Route
           path="/historico"
           element={
-            <ProtectedRoute roles={["ADMIN", "PORTARIA"]}>
+            <ProtectedRoute roles={["ADMIN", "SOLICITANTE"]}>
               <HistoricoCautelas voltarPara="/" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/portaria"
+          element={
+            <ProtectedRoute roles={["ADMIN", "PORTARIA"]}>
+              <Portaria />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/portaria/historico"
+          element={
+            <ProtectedRoute roles={["ADMIN", "PORTARIA"]}>
+              <HistoricoCautelas voltarPara="/portaria" />
             </ProtectedRoute>
           }
         />
@@ -82,7 +107,13 @@ function Layout() {
           element={
             user ? (
               <Navigate
-                to={user.papel === "GESTOR" ? "/gestor" : "/"}
+                to={
+                  user.papel === "GESTOR"
+                    ? "/gestor"
+                    : user.papel === "PORTARIA"
+                      ? "/portaria"
+                      : "/"
+                }
                 replace
               />
             ) : (

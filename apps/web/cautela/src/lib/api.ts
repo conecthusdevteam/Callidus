@@ -4,7 +4,7 @@ import type { Cautela, StatusCautela } from "../data/cautelaTypes";
 // Tipos públicos
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type UserRole = "ADMIN" | "GESTOR" | "PORTARIA";
+export type UserRole = "ADMIN" | "GESTOR" | "PORTARIA" | "SOLICITANTE";
 
 export interface AuthUser {
   ativo: boolean;
