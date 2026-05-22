@@ -14,7 +14,12 @@ import { matchesSearch } from "../lib/cautelaUtils";
 import DetalhesCautela from "../components/DetalhesCautela";
 
 const STATUS_ATIVAS: StatusCautela[] = ["Aprovado", "Saída Autorizada"];
-const STATUS_HISTORICO: StatusCautela[] = ["Encerrada", "Reprovado"];
+const STATUS_HISTORICO: StatusCautela[] = [
+  "Encerrada",
+  "Reprovado",
+  "Aprovado",
+  "Saída Autorizada",
+];
 const ITENS_POR_PAGINA = 9;
 
 type MobileView = "lista" | "detalhe";

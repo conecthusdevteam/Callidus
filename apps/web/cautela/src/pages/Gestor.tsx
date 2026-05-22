@@ -32,6 +32,7 @@ type MobileView =
 
 interface CautelaComDecisao extends Cautela {
   decisaoLocal?: "aprovado" | "reprovado";
+  livreAcesso?: "livre" | "entrada";
 }
 
 // ─── Painel de detalhes ───────────────────────────────────────────────────────
@@ -979,7 +980,15 @@ export default function Gestor() {
                       <span className="flex justify-center">
                         <BadgeHistorico status={statusHistorico(cautela)} />
                       </span>
-                      <span className="truncate">{cautela.gestor || "—"}</span>
+                      <span className="truncate">
+                        {(
+                          cautela as CautelaComDecisao & {
+                            livreAcesso?: string;
+                          }
+                        ).livreAcesso === "livre"
+                          ? "Livre trânsito"
+                          : "-"}
+                      </span>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1086,7 +1095,16 @@ export default function Gestor() {
           cautela={cautelaEdicao}
           livreAcesso={livreAcesso}
           onChangeLivreAcesso={setLivreAcesso}
-          onSalvar={() => setCautelaEdicao(null)}
+          onSalvar={() => {
+            setCautelas((prev) =>
+              prev.map((c) =>
+                c.id === cautelaEdicao.id
+                  ? { ...c, livreAcesso: livreAcesso }
+                  : c,
+              ),
+            );
+            setCautelaEdicao(null);
+          }}
           onFechar={() => setCautelaEdicao(null)}
         />
       )}
