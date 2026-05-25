@@ -2,24 +2,24 @@
 @json = application/json
 
 # Cole aqui os tokens retornados nos logins.
-@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFkbWluLmNhdXRlbGFAY2FsbGlkdXMubG9jYWwiLCJwYXBlbCI6IkFETUlOIiwic3ViIjoiNEI1NDQzM0UtRjM2Qi0xNDEwLTg2MjItMDBGODRDQTk3MUEwIiwidG9rZW5WZXJzaW9uIjowLCJpYXQiOjE3NzkxMjc0NjIsImV4cCI6MTc3OTE1NjI2Mn0.vo7SX0Cpdu1z9lvC0XWSlOYTDuQ2jcoc_ESNBVgCHxo
+@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFkbWluLmNhdXRlbGFAY2FsbGlkdXMubG9jYWwiLCJwYXBlbCI6IkFETUlOIiwic3ViIjoiN0Y0MzQzM0UtRjM2Qi0xNDEwLThBMjYtMDA1MkNGOUIyRjI1IiwidG9rZW5WZXJzaW9uIjowLCJpYXQiOjE3Nzk0Nzc4OTcsImV4cCI6MTc3OTUwNjY5N30.FHQejoG9vpAwdXE5QgdHzSZe6A4eilx9reNbp7J4MFY
 @gestorToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Imdlc3RvckBjYXV0ZWxhLmxvY2FsIiwicGFwZWwiOiJHRVNUT1IiLCJzdWIiOiJBN0I4NDMzRS1GMzZCLTE0MTAtODEzRS0wMDFGNkQyMDQyMDgiLCJ0b2tlblZlcnNpb24iOjAsImlhdCI6MTc3ODE4MTIyOCwiZXhwIjoxNzc4MjEwMDI4fQ.G286lrKfZ1d63s-v7o99W3kIDaq-rKPRbF_mRi_g3ME
-@portariaToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InBvcnRhcmlhQGNhdXRlbGEubG9jYWwiLCJwYXBlbCI6IlBPUlRBUklBIiwic3ViIjoiQjBCODQzM0UtRjM2Qi0xNDEwLTgxM0UtMDAxRjZEMjA0MjA4IiwidG9rZW5WZXJzaW9uIjowLCJpYXQiOjE3NzgxODExOTAsImV4cCI6MTc3ODIwOTk5MH0.ebmXAJXWMkd7kkMkex8aNicm-JkOxHtq-L7iGBlq4EQ
-
+@portariaToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InBvcnRhcmlhQGNhdXRlbGEubG9jYWwiLCJwYXBlbCI6IlBPUlRBUklBIiwic3ViIjoiOTE0MzQzM0UtRjM2Qi0xNDEwLThBMjYtMDA1MkNGOUIyRjI1IiwidG9rZW5WZXJzaW9uIjowLCJpYXQiOjE3Nzk0Nzc5MjYsImV4cCI6MTc3OTUwNjcyNn0.QtNOIeDb6TgG8cv6Mx011C3yLC0JlWpXWgzlruJtImc
+@solicitanteToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InNvbGljaXRhbnRlQGNhdXRlbGEubG9jYWwiLCJwYXBlbCI6IlNPTElDSVRBTlRFIiwic3ViIjoiOTM0MzQzM0UtRjM2Qi0xNDEwLThBMjYtMDA1MkNGOUIyRjI1IiwidG9rZW5WZXJzaW9uIjowLCJpYXQiOjE3Nzk0Nzc5NDQsImV4cCI6MTc3OTUwNjc0NH0.lGRjpBEiw9FonCWWI4J1Req6wnOEgXnu6D-U40m5DBo
 # Preencha estes IDs depois de listar usuários, setores e cautelas.
 @gestorId = A7B8433E-F36B-1410-813E-001F6D204208
 @outroGestorId = COLE_O_ID_DE_OUTRO_GESTOR_AQUI
 @usuarioParaAtualizarId = COLE_O_ID_DE_USUARIO_PARA_ATUALIZAR_AQUI
 @usuarioParaInativarId = COLE_O_ID_DE_USUARIO_PARA_INATIVAR_AQUI
-@setorId = 8254433E-F36B-1410-8622-00F84CA971A0
+@setorId = 9743433E-F36B-1410-8A26-0052CF9B2F25
 @setorParaAtualizarId = 8254433E-F36B-1410-8622-00F84CA971A0
 @setorParaInativarId = 7C54433E-F36B-1410-8622-00F84CA971A0
 @setorInativoId = COLE_O_ID_DE_SETOR_INATIVO_AQUI
 @cautelaEmAnaliseId = COLE_O_ID_DA_CAUTELA_EM_ANALISE_AQUI
 @cautelaAprovadaId = COLE_O_ID_DA_CAUTELA_APROVADA_AQUI
 # Depois de rodar "Autorizar saida", normalmente este ID deve ser igual ao @cautelaAprovadaId.
-@cautelaSaidaAutorizadaId = COLE_O_ID_DA_CAUTELA_COM_SAIDA_AUTORIZADA_AQUI
-@cautelaEncerradaId = COLE_O_ID_DA_CAUTELA_ENCERRADA_AQUI
+@cautelaSaidaAutorizadaId = 7A2E433E-F36B-1410-8B27-0051659C6E99
+@cautelaEncerradaId = 7A2E433E-F36B-1410-8B27-0051659C6E99
 @cautelaReprovadaId = COLE_O_ID_DA_CAUTELA_REPROVADA_AQUI
 @cautelaDeOutroGestorId = COLE_O_ID_DA_CAUTELA_DE_OUTRO_GESTOR_AQUI
 @cautelaDeOutraPortariaId = COLE_O_ID_DA_CAUTELA_DE_OUTRA_PORTARIA_AQUI
@@ -78,13 +78,26 @@ Content-Type: {{json}}
 }
 
 ###
-# 5) Listar usuários
+# 5) Criar SOLICITANTE
+POST {{baseUrl}}/users
+Authorization: Bearer {{adminToken}}
+Content-Type: {{json}}
+
+{
+  "nome": "Solicitante Teste",
+  "email": "solicitante@cautela.local",
+  "senha": "123456",
+  "papel": "SOLICITANTE"
+}
+
+###
+# 6) Listar usuários
 # Use para preencher @gestorId se não estiver usando seed.
 GET {{baseUrl}}/users
 Authorization: Bearer {{adminToken}}
 
 ###
-# 6) Criar setor
+# 7) Criar setor
 POST {{baseUrl}}/sectors
 Authorization: Bearer {{adminToken}}
 Content-Type: {{json}}
@@ -96,13 +109,13 @@ Content-Type: {{json}}
 }
 
 ###
-# 7) Listar setores
+# 8) Listar setores
 # Use para preencher @setorId.
 GET {{baseUrl}}/sectors
 Authorization: Bearer {{adminToken}}
 
 ###
-# 8) Login PORTARIA
+# 9) Login PORTARIA
 POST {{baseUrl}}/auth/login
 Content-Type: {{json}}
 
@@ -112,46 +125,54 @@ Content-Type: {{json}}
 }
 
 ###
-# 9) Login GESTOR
+# 10) Login GESTOR
 POST {{baseUrl}}/auth/login
 Content-Type: {{json}}
 
 {
-  "email": "gestor@cautela.local",
+  "email": "gestor.ti@callidus.local",
   "senha": "123456"
 }
 
 ###
-# 10) Criar cautela com novos campos da sprint
+# 11) Login SOLICITANTE
+POST {{baseUrl}}/auth/login
+Content-Type: {{json}}
+
+{
+  "email": "solicitante@cautela.local",
+  "senha": "123456"
+}
+
+###
+# 12) Criar cautela pelo solicitante
 # Valida: empresa, documentoProprietario e itens com descricao + quantidade.
 POST {{baseUrl}}/cautelas
-Authorization: Bearer {{portariaToken}}
+Authorization: Bearer {{solicitanteToken}}
 Content-Type: {{json}}
 
 {
   "setorId": "{{setorId}}",
   "proprietarioNome": "Lucas Araujo",
-  "empresa": "Callidus Testes Ltda",
+  "empresa": "Callidus",
   "documentoProprietario": "12345678900",
-  "proprietarioEmail": "lucas@teste.com",
-  "retornoItem": true,
-  "validade": "2026-12-31T18:00:00.000Z",
+  "proprietarioEmail": "lucas@conecthus.org.br",
   "itens": [
     {
-      "descricao": "Notebook Dell Latitude",
+      "descricao": "Carregador IPhone",
       "quantidade": 1
     },
     {
-      "descricao": "Mouse Logitech",
-      "quantidade": 2
+      "descricao": "IPhone",
+      "quantidade": 1
     }
   ]
 }
 
 ###
-# 11) Criar cautela sem retorno
+# 13) Criar cautela simples
 POST {{baseUrl}}/cautelas
-Authorization: Bearer {{portariaToken}}
+Authorization: Bearer {{solicitanteToken}}
 Content-Type: {{json}}
 
 {
@@ -160,7 +181,6 @@ Content-Type: {{json}}
   "empresa": "Fornecedor Sem Retorno",
   "documentoProprietario": "98765432100",
   "proprietarioEmail": "visitante.sem.retorno@teste.com",
-  "retornoItem": false,
   "itens": [
     {
       "descricao": "Capacete de seguranca",
@@ -170,9 +190,9 @@ Content-Type: {{json}}
 }
 
 ###
-# 12) Compatibilidade: criar cautela usando o campo antigo nomeItem
+# 14) Compatibilidade: criar cautela usando o campo antigo nomeItem
 POST {{baseUrl}}/cautelas
-Authorization: Bearer {{portariaToken}}
+Authorization: Bearer {{solicitanteToken}}
 Content-Type: {{json}}
 
 {
@@ -181,8 +201,6 @@ Content-Type: {{json}}
   "empresa": "Empresa Legado",
   "documentoProprietario": "11222333444",
   "proprietarioEmail": "visitante.legado@teste.com",
-  "retornoItem": true,
-  "validade": "2026-12-31T18:00:00.000Z",
   "itens": [
     {
       "nomeItem": "Projetor Epson",
@@ -192,43 +210,68 @@ Content-Type: {{json}}
 }
 
 ###
-# 13) Listar cautelas da portaria
+# 15) Listar cautelas da portaria
 # Verifique: empresa, documentoProprietario, itens[].descricao, statusVisualPortaria,
 # badgePortaria, badgeGestor, saidaAutorizada, dataStatus e acoesDisponiveis.
 GET {{baseUrl}}/cautelas
 Authorization: Bearer {{portariaToken}}
 
 ###
-# 14) Listar cautelas do gestor
+# 16) Listar cautelas do gestor
 # Verifique cautelas EM_ANALISE aguardando aprovacao.
 GET {{baseUrl}}/cautelas
 Authorization: Bearer {{gestorToken}}
 
 ###
-# 15) Listar cautelas em analise
+# 17) Listar cautelas em analise
 GET {{baseUrl}}/cautelas?respondidas=false
 Authorization: Bearer {{gestorToken}}
 
 ###
-# 16) Detalhe de cautela em analise
+# 18) Detalhe de cautela em analise
 # Use uma cautela EM_ANALISE e preencha @cautelaEmAnaliseId.
 GET {{baseUrl}}/cautelas/{{cautelaEmAnaliseId}}
 Authorization: Bearer {{gestorToken}}
 
 ###
-# 17) Aprovar cautela
-# Resultado esperado: status APROVADA, aprovadoEm preenchido, respondidoEm preenchido.
+# 19) Aprovar cautela pelo gestor
+# Resultado esperado: status EM_ANALISE, etapaFluxo APROVADA_PELO_GESTOR.
 PATCH {{baseUrl}}/cautelas/{{cautelaEmAnaliseId}}/aprovar
 Authorization: Bearer {{gestorToken}}
+Content-Type: {{json}}
+
+{
+  "tipoPermissao": "ENTRADA_UNICA"
+}
 
 ###
-# 18) Detalhe apos aprovacao
-# Copie o mesmo ID para @cautelaAprovadaId se quiser seguir o fluxo de saida.
+# 20) Detalhe apos aprovacao do gestor
 GET {{baseUrl}}/cautelas/{{cautelaEmAnaliseId}}
 Authorization: Bearer {{gestorToken}}
 
 ###
-# 19) Autorizar saida pelo gestor
+# 21) Validar entrada pela portaria
+# Resultado esperado: status APROVADA, etapaFluxo VALIDADA_PELA_PORTARIA.
+PATCH {{baseUrl}}/cautelas/{{cautelaEmAnaliseId}}/validar-entrada
+Authorization: Bearer {{portariaToken}}
+
+###
+# 23) Alterar tipo de permissao pelo gestor
+PATCH {{baseUrl}}/cautelas/{{cautelaAprovadaId}}/tipo-permissao
+Authorization: Bearer {{gestorToken}}
+Content-Type: {{json}}
+
+{
+  "tipoPermissao": "ENTRADA_UNICA"
+}
+
+###
+# 24) Marcar cautela como visualizada pelo usuario autenticado
+PATCH {{baseUrl}}/cautelas/{{cautelaAprovadaId}}/visualizar
+Authorization: Bearer {{solicitanteToken}}
+
+###
+# 25) Autorizar saida pelo gestor
 # Resultado esperado:
 # status continua APROVADA;
 # saidaAutorizada = true;
@@ -366,8 +409,8 @@ POST {{baseUrl}}/auth/logout-all
 Authorization: Bearer {{gestorToken}}
 
 ###
-# 40) Validacao: criar cautela com retornoItem true sem validade
-# Esperado: 400.
+# 40) Permissao: portaria tentando criar cautela
+# Esperado: 403.
 POST {{baseUrl}}/cautelas
 Authorization: Bearer {{portariaToken}}
 Content-Type: {{json}}
@@ -378,7 +421,6 @@ Content-Type: {{json}}
   "empresa": "Empresa Validacao",
   "documentoProprietario": "10020030040",
   "proprietarioEmail": "sem.validade@teste.com",
-  "retornoItem": true,
   "itens": [
     {
       "descricao": "Notebook sem validade",
@@ -388,10 +430,10 @@ Content-Type: {{json}}
 }
 
 ###
-# 41) Validacao: criar cautela sem retorno e com validade
-# Esperado: 400.
+# 41) Criar cautela sem campos legados retornoItem/validade
+# Esperado: 201.
 POST {{baseUrl}}/cautelas
-Authorization: Bearer {{portariaToken}}
+Authorization: Bearer {{solicitanteToken}}
 Content-Type: {{json}}
 
 {
@@ -400,8 +442,6 @@ Content-Type: {{json}}
   "empresa": "Empresa Validacao",
   "documentoProprietario": "10020030041",
   "proprietarioEmail": "validade.indevida@teste.com",
-  "retornoItem": false,
-  "validade": "2026-12-31T18:00:00.000Z",
   "itens": [
     {
       "descricao": "Item sem retorno",
@@ -414,7 +454,7 @@ Content-Type: {{json}}
 # 42) Validacao: criar cautela sem itens
 # Esperado: 400.
 POST {{baseUrl}}/cautelas
-Authorization: Bearer {{portariaToken}}
+Authorization: Bearer {{solicitanteToken}}
 Content-Type: {{json}}
 
 {
@@ -423,7 +463,6 @@ Content-Type: {{json}}
   "empresa": "Empresa Validacao",
   "documentoProprietario": "10020030042",
   "proprietarioEmail": "sem.itens@teste.com",
-  "retornoItem": false,
   "itens": []
 }
 
@@ -431,7 +470,7 @@ Content-Type: {{json}}
 # 43) Validacao: criar cautela com item sem descricao/nomeItem
 # Esperado: 400.
 POST {{baseUrl}}/cautelas
-Authorization: Bearer {{portariaToken}}
+Authorization: Bearer {{solicitanteToken}}
 Content-Type: {{json}}
 
 {
@@ -440,7 +479,6 @@ Content-Type: {{json}}
   "empresa": "Empresa Validacao",
   "documentoProprietario": "10020030043",
   "proprietarioEmail": "item.invalido@teste.com",
-  "retornoItem": false,
   "itens": [
     {
       "quantidade": 1
@@ -452,7 +490,7 @@ Content-Type: {{json}}
 # 44) Validacao: criar cautela com quantidade zero
 # Esperado: 400.
 POST {{baseUrl}}/cautelas
-Authorization: Bearer {{portariaToken}}
+Authorization: Bearer {{solicitanteToken}}
 Content-Type: {{json}}
 
 {
@@ -461,7 +499,6 @@ Content-Type: {{json}}
   "empresa": "Empresa Validacao",
   "documentoProprietario": "10020030044",
   "proprietarioEmail": "quantidade.zero@teste.com",
-  "retornoItem": false,
   "itens": [
     {
       "descricao": "Item com quantidade zero",
@@ -474,7 +511,7 @@ Content-Type: {{json}}
 # 45) Validacao: criar cautela com setor inexistente
 # Esperado: 400.
 POST {{baseUrl}}/cautelas
-Authorization: Bearer {{portariaToken}}
+Authorization: Bearer {{solicitanteToken}}
 Content-Type: {{json}}
 
 {
@@ -483,7 +520,6 @@ Content-Type: {{json}}
   "empresa": "Empresa Validacao",
   "documentoProprietario": "10020030045",
   "proprietarioEmail": "setor.inexistente@teste.com",
-  "retornoItem": false,
   "itens": [
     {
       "descricao": "Item teste",
@@ -497,7 +533,7 @@ Content-Type: {{json}}
 # Primeiro inative um setor no bloco 78 e use o ID em @setorInativoId.
 # Esperado: 400.
 POST {{baseUrl}}/cautelas
-Authorization: Bearer {{portariaToken}}
+Authorization: Bearer {{solicitanteToken}}
 Content-Type: {{json}}
 
 {
@@ -506,7 +542,6 @@ Content-Type: {{json}}
   "empresa": "Empresa Validacao",
   "documentoProprietario": "10020030046",
   "proprietarioEmail": "setor.inativo@teste.com",
-  "retornoItem": false,
   "itens": [
     {
       "descricao": "Item teste",

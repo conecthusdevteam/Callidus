@@ -293,35 +293,29 @@ export function ModalEncerrada({ onClose }: { onClose: () => void }) {
       <div className="bg-white rounded-2xl shadow-xl px-12 py-10 flex flex-col items-center gap-4 min-w-[340px]">
         <div
           className="w-16 h-16 rounded-2xl flex items-center justify-center"
-          style={{ backgroundColor: "#F4F4F4" }}
+          style={{ backgroundColor: "#EEF5EE" }}
         >
-          <svg
-            className="w-8 h-8 text-[#525252]"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.8}
-            viewBox="0 0 24 24"
-          >
-            <rect
-              x="3"
-              y="11"
-              width="18"
-              height="11"
-              rx="2"
+          <div className="w-10 h-10 rounded-full border-2 border-[#2B8E37] flex items-center justify-center">
+            <svg
+              className="w-5 h-5 text-[#2B8E37]"
+              fill="none"
               stroke="currentColor"
-            />
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M7 11V7a5 5 0 0110 0v4"
-            />
-          </svg>
+              strokeWidth={2.5}
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+          </div>
         </div>
         <p className="text-base font-bold text-black text-center">
-          A cautela foi autorizada a sair com sucesso.
+          Saída Autorizada!
         </p>
         <p className="text-sm text-[#404040] text-center">
-          Ao sair, essa cautela será encerrada.
+          Esta cautela será encerrada.
         </p>
       </div>
     </div>

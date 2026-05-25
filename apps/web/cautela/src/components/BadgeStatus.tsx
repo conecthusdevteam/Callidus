@@ -113,7 +113,7 @@ export function BadgeEncerrada() {
 // ─── Seletor de Badge por status ──────────────────────────────────────────────
 
 export function BadgeStatus({ status }: { status: StatusCautela }) {
-  if (status === "Saída Autorizada") return <BadgeAtencao />;
+  if (status === "Saída Autorizada") return <BadgeAprovado />;
   if (status === "Aprovado") return <BadgeAprovado />;
   if (status === "Reprovado") return <BadgeReprovado />;
   if (status === "Encerrada") return <BadgeEncerrada />;

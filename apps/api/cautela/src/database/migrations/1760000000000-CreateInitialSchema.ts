@@ -36,7 +36,11 @@ export class CreateInitialSchema1760000000000 implements MigrationInterface {
             name: 'refreshTokenHash',
             type: 'varchar',
           },
-          { isNullable: true, name: 'refreshTokenExpiresAt', type: 'datetime2' },
+          {
+            isNullable: true,
+            name: 'refreshTokenExpiresAt',
+            type: 'datetime2',
+          },
           { default: 'GETDATE()', name: 'criadoEm', type: 'datetime2' },
           { default: 'GETDATE()', name: 'atualizadoEm', type: 'datetime2' },
         ],
@@ -76,16 +80,58 @@ export class CreateInitialSchema1760000000000 implements MigrationInterface {
             type: 'uniqueidentifier',
           },
           { length: '30', name: 'tipo', type: 'nvarchar' },
+          {
+            default: "'ENTRADA_UNICA'",
+            length: '30',
+            name: 'tipoPermissao',
+            type: 'nvarchar',
+          },
           { length: '30', name: 'status', type: 'nvarchar' },
+          {
+            default: "'SOLICITADA'",
+            length: '40',
+            name: 'etapaFluxo',
+            type: 'nvarchar',
+          },
           { name: 'solicitadoPorId', type: 'uniqueidentifier' },
           { name: 'gestorId', type: 'uniqueidentifier' },
           { name: 'setorId', type: 'uniqueidentifier' },
           { length: '150', name: 'proprietarioNome', type: 'nvarchar' },
           { length: '150', name: 'proprietarioEmail', type: 'nvarchar' },
-          { name: 'retornoItem', type: 'bit' },
-          { isNullable: true, name: 'validade', type: 'datetime2' },
-          { isNullable: true, length: 'MAX', name: 'justificativaRejeicao', type: 'nvarchar' },
+          {
+            isNullable: true,
+            length: 'MAX',
+            name: 'justificativaRejeicao',
+            type: 'nvarchar',
+          },
           { isNullable: true, name: 'respondidoEm', type: 'datetime2' },
+          { isNullable: true, name: 'entradaValidadaEm', type: 'datetime2' },
+          {
+            isNullable: true,
+            name: 'entradaValidadaPorId',
+            type: 'uniqueidentifier',
+          },
+          {
+            isNullable: true,
+            name: 'tipoPermissaoAlteradoEm',
+            type: 'datetime2',
+          },
+          {
+            isNullable: true,
+            name: 'tipoPermissaoAlteradoPorId',
+            type: 'uniqueidentifier',
+          },
+          {
+            isNullable: true,
+            name: 'visualizadoSolicitanteEm',
+            type: 'datetime2',
+          },
+          { isNullable: true, name: 'visualizadoGestorEm', type: 'datetime2' },
+          {
+            isNullable: true,
+            name: 'visualizadoPortariaEm',
+            type: 'datetime2',
+          },
           { default: 'GETDATE()', name: 'criadoEm', type: 'datetime2' },
           { default: 'GETDATE()', name: 'atualizadoEm', type: 'datetime2' },
         ],
@@ -157,6 +203,16 @@ export class CreateInitialSchema1760000000000 implements MigrationInterface {
         referencedColumnNames: ['id'],
         referencedTableName: 'sectors',
       }),
+      new TableForeignKey({
+        columnNames: ['entradaValidadaPorId'],
+        referencedColumnNames: ['id'],
+        referencedTableName: 'users',
+      }),
+      new TableForeignKey({
+        columnNames: ['tipoPermissaoAlteradoPorId'],
+        referencedColumnNames: ['id'],
+        referencedTableName: 'users',
+      }),
     ]);
 
     await queryRunner.createForeignKeys('cautela_items', [
@@ -184,8 +240,14 @@ export class CreateInitialSchema1760000000000 implements MigrationInterface {
 
     await queryRunner.createIndices('cautelas', [
       new TableIndex({ columnNames: ['status'], name: 'IDX_cautelas_status' }),
-      new TableIndex({ columnNames: ['setorId'], name: 'IDX_cautelas_setorId' }),
-      new TableIndex({ columnNames: ['gestorId'], name: 'IDX_cautelas_gestorId' }),
+      new TableIndex({
+        columnNames: ['setorId'],
+        name: 'IDX_cautelas_setorId',
+      }),
+      new TableIndex({
+        columnNames: ['gestorId'],
+        name: 'IDX_cautelas_gestorId',
+      }),
       new TableIndex({
         columnNames: ['solicitadoPorId'],
         name: 'IDX_cautelas_solicitadoPorId',
