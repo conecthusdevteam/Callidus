@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -15,6 +16,25 @@ async function bootstrap() {
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
+
+  if (process.env.NODE_ENV !== 'hml') {
+    const config = new DocumentBuilder()
+    .setTitle('LSP API documentation')
+    .setDescription('API documentation for stencil/plate washing system.')
+    .setVersion('1.0')
+    .addTag('stencil', 'operations related to stencils')
+    .addTag('plate', 'operations related to plates')
+    .addTag('wash', 'operations related to washing stencils and plates')
+    .build();
+
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api/docs', app, document, {
+      swaggerOptions: {
+        showRequestDuration: true,
+      },
+      customSiteTitle: 'LSP API - Documentation',
+    });
+  }
 
   app.useGlobalPipes(
     new ValidationPipe({
