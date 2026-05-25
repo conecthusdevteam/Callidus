@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { DateConverterInterceptor } from './common/interceptors/date-converter.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -35,6 +36,8 @@ async function bootstrap() {
       customSiteTitle: 'LSP API - Documentation',
     });
   }
+
+  app.useGlobalInterceptors(new DateConverterInterceptor());
 
   app.useGlobalPipes(
     new ValidationPipe({
