@@ -8,6 +8,8 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { CautelaFlowStep } from '../../common/enums/cautela-flow-step.enum';
+import { CautelaPermissionType } from '../../common/enums/cautela-permission-type.enum';
 import { CautelaStatus } from '../../common/enums/cautela-status.enum';
 import { CautelaType } from '../../common/enums/cautela-type.enum';
 import { Sector } from '../../sectors/entities/sector.entity';
@@ -27,10 +29,24 @@ export class Cautela {
   tipo: CautelaType;
 
   @Column({
+    default: CautelaPermissionType.ENTRADA_UNICA,
+    enum: CautelaPermissionType,
+    type: 'simple-enum',
+  })
+  tipoPermissao: CautelaPermissionType;
+
+  @Column({
     enum: CautelaStatus,
     type: 'simple-enum',
   })
   status: CautelaStatus;
+
+  @Column({
+    default: CautelaFlowStep.SOLICITADA,
+    enum: CautelaFlowStep,
+    type: 'simple-enum',
+  })
+  etapaFluxo: CautelaFlowStep;
 
   @Column()
   solicitadoPorId: string;
@@ -53,12 +69,6 @@ export class Cautela {
   @Column({ type: 'nvarchar', length: 30, nullable: true })
   documentoProprietario: string | null;
 
-  @Column()
-  retornoItem: boolean;
-
-  @Column({ type: 'datetime2', nullable: true })
-  validade: Date | null;
-
   @Column({ type: 'nvarchar', length: 'max', nullable: true })
   justificativaRejeicao: string | null;
 
@@ -76,6 +86,27 @@ export class Cautela {
 
   @Column({ type: 'uniqueidentifier', nullable: true })
   saidaAutorizadaPorId: string | null;
+
+  @Column({ type: 'datetime2', nullable: true })
+  entradaValidadaEm: Date | null;
+
+  @Column({ type: 'uniqueidentifier', nullable: true })
+  entradaValidadaPorId: string | null;
+
+  @Column({ type: 'datetime2', nullable: true })
+  tipoPermissaoAlteradoEm: Date | null;
+
+  @Column({ type: 'uniqueidentifier', nullable: true })
+  tipoPermissaoAlteradoPorId: string | null;
+
+  @Column({ type: 'datetime2', nullable: true })
+  visualizadoSolicitanteEm: Date | null;
+
+  @Column({ type: 'datetime2', nullable: true })
+  visualizadoGestorEm: Date | null;
+
+  @Column({ type: 'datetime2', nullable: true })
+  visualizadoPortariaEm: Date | null;
 
   @Column({ type: 'datetime2', nullable: true })
   encerradoEm: Date | null;
@@ -100,6 +131,14 @@ export class Cautela {
   @ManyToOne(() => User, { eager: false })
   @JoinColumn({ name: 'saidaAutorizadaPorId' })
   saidaAutorizadaPor: User | null;
+
+  @ManyToOne(() => User, { eager: false })
+  @JoinColumn({ name: 'entradaValidadaPorId' })
+  entradaValidadaPor: User | null;
+
+  @ManyToOne(() => User, { eager: false })
+  @JoinColumn({ name: 'tipoPermissaoAlteradoPorId' })
+  tipoPermissaoAlteradoPor: User | null;
 
   @ManyToOne(() => User, { eager: false })
   @JoinColumn({ name: 'encerradoPorId' })

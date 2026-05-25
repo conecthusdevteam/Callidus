@@ -2,8 +2,6 @@ import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsArray,
-  IsBoolean,
-  IsDateString,
   IsEmail,
   IsInt,
   IsNotEmpty,
@@ -52,13 +50,6 @@ export class CreateCautelaDto {
   @IsString()
   @IsNotEmpty()
   documentoProprietario?: string;
-
-  @IsBoolean()
-  retornoItem: boolean;
-
-  @ValidateIf((dto: CreateCautelaDto) => dto.retornoItem)
-  @IsDateString()
-  validade?: string;
 
   @IsArray()
   @ArrayMinSize(1)

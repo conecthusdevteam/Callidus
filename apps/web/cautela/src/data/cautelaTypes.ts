@@ -25,11 +25,19 @@ export interface Cautela {
   criadoEm?: string;
 
   aprovadoEm?: string;
+  entradaValidadaEm?: string;
   reprovadoEm?: string;
   encerradaEm?: string;
   validade?: string;
+  tipoPermissaoAlteradoEm?: string;
 
   motivoNegativa?: string;
   direcao?: "enviado" | "recebido";
   tipo?: string;
+  etapaFluxo?: string;
+  tipoPermissao?: "ENTRADA_UNICA" | "LIVRE_TRANSITO";
+  livreAcesso?: "livre" | "entrada";
+  badgeGestor?: string | null;
+  badgePortaria?: string | null;
+  badgeSolicitante?: string | null;
 }

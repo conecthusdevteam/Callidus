@@ -5,12 +5,16 @@ import {
   getCautelas,
   rejectCautela,
   authorizeDeparture,
+  updatePermissionType,
+  markCautelaAsRead,
 } from "../lib/api";
 import StatusBadge from "../components/StatusBadge";
 import {
   BannerAguardandoSaida,
   JustificativaBox,
 } from "../components/BannerStatus";
+import { AvatarStatus } from "../components/AvatarStatus";
+import { BadgeStatus } from "../components/BadgeStatus";
 import { TabelaCautelados } from "../components/TabelaCautelados";
 import { CardCautelaHistorico } from "../components/CardCautelaHistorico";
 import { matchesSearch } from "../lib/cautelaUtils";
@@ -20,6 +24,8 @@ import {
   ModalDescartar,
   ModalAutorizarSaida,
 } from "../components/ModalGestor";
+import DetalhesCautela from "../components/DetalhesCautela";
+import ModalEdicaoCautela from "../components/ModalEdicaoCautela";
 
 type Tab = "recebidas" | "historico";
 type MobileView =
@@ -30,6 +36,7 @@ type MobileView =
 
 interface CautelaComDecisao extends Cautela {
   decisaoLocal?: "aprovado" | "reprovado";
+  livreAcesso?: "livre" | "entrada";
 }
 
 // ─── Painel de detalhes ───────────────────────────────────────────────────────
@@ -41,6 +48,10 @@ function DetalhesConteudo({
   cautela: CautelaComDecisao;
   onAutorizarSaida?: () => void;
 }) {
+  const tipoPermissaoLabel =
+    cautela.tipoPermissao === "LIVRE_TRANSITO"
+      ? "Livre trânsito"
+      : "Entrada única";
   const statusExibido =
     cautela.decisaoLocal === "aprovado"
       ? "Aprovado"
@@ -129,6 +140,11 @@ function DetalhesConteudo({
               <JustificativaBox motivo={cautela.motivoNegativa ?? "—"} />
             </div>
           )}
+          {cautela.tipoPermissaoAlteradoEm && (
+            <p className="mt-2 text-center text-sm font-semibold text-[#404040]">
+              {tipoPermissaoLabel}
+            </p>
+          )}
         </div>
       )}
 
@@ -141,7 +157,9 @@ function DetalhesConteudo({
         <p className="text-base text-black">{cautela.setorId || "-"}</p>
       </div>
       <div className="mb-4">
-        <p className="text-base font-bold text-black">Data e hora de entrada</p>
+        <p className="text-base font-bold text-black">
+          Data e hora da solicitação
+        </p>
         <p className="text-base text-black">{cautela.data}</p>
       </div>
       <div className="mb-4">
@@ -203,11 +221,10 @@ function DetalhesConteudo({
 
 function CardCautelaRecebida({
   cautela,
-  index,
-  isNaoLida,
   onClick,
   onAprovar,
   onDescartar,
+  isNaoLida,
 }: {
   cautela: CautelaComDecisao;
   index: number;
@@ -216,82 +233,113 @@ function CardCautelaRecebida({
   onAprovar: (id: string) => void;
   onDescartar: (id: string) => void;
 }) {
-  const borderClass = isNaoLida
-    ? "border-2 border-amber-400 bg-[#FFFBEB]"
-    : index === 0
-      ? "border-2 border-yellow-300 bg-white"
-      : "border border-black bg-white";
+  const isAtencao = cautela.status === "Saída Autorizada";
+  const status = cautela.status as StatusCautela;
 
   return (
-    <div
-      onClick={onClick}
-      className={`rounded-sm p-5 cursor-pointer transition-all ${borderClass}`}
-    >
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-[13px] text-[#404040]">
-          Id Cautela: <span className="font-medium">{cautela.id}</span>
-        </span>
-        <span className="text-[13px] text-[#404040]">Data: {cautela.data}</span>
-      </div>
-      <div className="mb-2">
-        <span className="text-[13px] text-[#404040]">
-          Solicitada:{" "}
-          <span className="font-bold">{cautela.visitante.toUpperCase()}</span>
-        </span>
-      </div>
-      <hr className="border-black mb-3" />
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm font-medium text-[#404040] mb-1">Cautelados:</p>
-
-          <ul className="mb-4 space-y-0.5">
-            {cautela.equipamentos.map((eq, i) => (
-              <li
-                key={i}
-                className="text-sm text-[#404040] flex items-start gap-1.5"
-              >
-                <span className="mt-0.5">-</span>
-                {eq.descricao} - {eq.quantidade ?? 1}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-1">
-          {isNaoLida && (
-            <span className="inline-flex items-center rounded-lg px-2 py-0.5 text-[12px] font-semibold bg-[#FCE96A] text-black">
-              Nova
-            </span>
-          )}
-        </div>
-      </div>
+    <div className="flex justify-center">
       <div
-        className="flex items-center justify-between"
-        onClick={(e) => e.stopPropagation()}
+        onClick={onClick}
+        className={`rounded-lg p-5 cursor-pointer transition-all hover:shadow-md mb-3 w-full ${
+          isAtencao
+            ? "border border-red-300 bg-[#FFF5F5]"
+            : isNaoLida
+              ? "border-2 border-amber-300 bg-[#FFFBEB]"
+              : "border border-amber-200 bg-white"
+        }`}
       >
-        <div className="flex gap-3">
-          <button
-            onClick={() => onAprovar(cautela.id)}
-            className="px-5 py-2 rounded-lg bg-[#3BB14A] text-white text-sm font-semibold hover:bg-[#22592A] transition-colors"
+        <div className="flex justify-center mb-3">
+          <span
+            className={`w-full text-center px-3 py-1 rounded text-[12px] font-bold uppercase tracking-wide ${
+              isAtencao
+                ? "bg-red-100 border border-red-300 text-red-600"
+                : "bg-[#FCE96A] border border-amber-300 text-[#111827]"
+            }`}
           >
-            Aprovar
-          </button>
+            {isAtencao
+              ? "Atenção - Solicitação de saída"
+              : "Nova cautela solicitada"}
+          </span>
+        </div>
+
+        <div className="flex items-start justify-between gap-3 mb-2">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <AvatarStatus status={status} />
+            <div>
+              <p className="text-[18px] font-bold leading-tight text-[#404040] truncate">
+                {cautela.visitante || "Nome do solicitante"}
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-1">
+            <BadgeStatus status={isAtencao ? "Aprovado" : "Em análise"} />
+          </div>
+        </div>
+
+        <p className="text-[15px] text-[#404040] mt-1">
+          Data: {cautela.data || "00/00/0000"}
+        </p>
+        <p className="text-[15px] text-[#404040] mt-0.5">
+          Ciente:{" "}
+          <span className="font-bold">
+            {(cautela.gestor || "").toUpperCase()}
+          </span>
+        </p>
+
+        <hr className="border-black my-3" />
+
+        <p className="text-[14px] font-medium text-[#404040] mb-1">
+          Cautelados:
+        </p>
+        <ul className="mb-3 space-y-0.5">
+          {cautela.equipamentos.slice(0, 3).map((eq, i) => (
+            <li
+              key={i}
+              className="text-[14px] text-[#404040] flex items-start gap-1"
+            >
+              <span>•</span>
+              {eq.descricao} - {eq.quantidade ?? 1}
+            </li>
+          ))}
+          {cautela.equipamentos.length > 3 && (
+            <li className="text-[11px] text-[#9CA3AF]">
+              +{cautela.equipamentos.length - 3} item(ns)
+            </li>
+          )}
+        </ul>
+
+        <div
+          className="flex items-center justify-between gap-2 mt-3"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {!isAtencao ? (
+            <div className="flex gap-2">
+              <button
+                onClick={() => onAprovar(cautela.id)}
+                className="px-5 py-2 rounded-lg bg-[#3BB14A] text-white text-sm font-semibold hover:bg-[#22592A] transition-colors"
+              >
+                Aprovar
+              </button>
+              <button
+                onClick={() => onDescartar(cautela.id)}
+                className="px-5 py-2 rounded-lg bg-[#FAFAFA] border border-gray-400 text-black text-sm font-medium hover:bg-gray-100 transition-colors"
+              >
+                Descartar
+              </button>
+            </div>
+          ) : (
+            <div />
+          )}
           <button
-            onClick={() => onDescartar(cautela.id)}
-            className="px-5 py-2 rounded-lg bg-white border border-gray-400 text-black text-sm font-medium hover:bg-gray-100 transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              onClick();
+            }}
+            className="text-[13px] px-4 py-2 bg-gray-100 rounded-lg text-[#171717] font-medium hover:underline whitespace-nowrap"
           >
-            Descartar
+            Ver detalhes
           </button>
         </div>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onClick();
-          }}
-          className="text-[13px] px-4 py-2 bg-gray-100 rounded-lg text-[#171717] font-medium hover:underline"
-        >
-          Ver detalhes
-        </button>
       </div>
     </div>
   );
@@ -308,7 +356,7 @@ function ContadorRecebidas({
   return (
     <div className="relative flex-shrink-0">
       <div
-        className="min-w-[28px] h-[28px] px-1.5 mx-6 rounded-full flex items-center justify-center text-white text-[13px] font-bold"
+        className="min-w-[35px] h-[35px] px-1.5 mx-6 rounded-full flex items-center justify-center text-white text-[18px] font-bold"
         style={{ backgroundColor: "#0E9F6E" }}
       >
         {total > 9 ? "9+" : total}
@@ -318,6 +366,53 @@ function ContadorRecebidas({
       )}
     </div>
   );
+}
+
+function BadgeHistorico({ status }: { status: StatusCautela }) {
+  if (status === "Aprovado") {
+    return (
+      <span className="inline-flex items-center gap-1 w-fit px-2 py-1 rounded-full text-[12px] font-semibold border border-[#31C48D] bg-[#F0FDF4] text-[#065F46]">
+        <span className="w-2 h-2 rounded-full bg-[#0E9F6E]" />
+        Aprovado
+      </span>
+    );
+  }
+  if (status === "Reprovado") {
+    return (
+      <span className="inline-flex items-center gap-1 w-fit px-2 py-1 rounded-full text-[12px] font-semibold border border-[#F05252] bg-[#FEF2F2] text-[#9B1C1C]">
+        <span className="w-2 h-2 rounded-full bg-[#F05252]" />
+        Reprovado
+      </span>
+    );
+  }
+  if (status === "Encerrada") {
+    return (
+      <span className="inline-flex items-center gap-1 w-fit px-2 py-1 rounded-full text-[12px] font-semibold border border-[#A3A3A3] bg-[#F4F4F4] text-[#525252]">
+        <span className="w-2 h-2 rounded-full bg-[#A3A3A3]" />
+        Encerrado
+      </span>
+    );
+  }
+  return null;
+}
+
+function paginasVisiveis(paginaAtual: number, totalPaginas: number) {
+  const paginas: Array<number | "..."> = [];
+
+  for (let pagina = 1; pagina <= totalPaginas; pagina += 1) {
+    const deveExibir =
+      pagina === 1 ||
+      pagina === totalPaginas ||
+      Math.abs(pagina - paginaAtual) <= 1;
+
+    if (deveExibir) {
+      paginas.push(pagina);
+    } else if (paginas[paginas.length - 1] !== "...") {
+      paginas.push("...");
+    }
+  }
+
+  return paginas;
 }
 
 // ─── Gestor ───────────────────────────────────────────────────────────────────
@@ -334,10 +429,16 @@ export default function Gestor() {
   const [modalAutorizarSaida, setModalAutorizarSaida] = useState(false);
   const [mobileView, setMobileView] = useState<MobileView>("lista");
   const [searchTerm, setSearchTerm] = useState("");
-  const [cautelasLidas, setCautelasLidas] = useState<Set<string>>(new Set());
-  const [recebidasLidas, setRecebidasLidas] = useState<Set<string>>(new Set());
   const [origemDetalhe, setOrigemDetalhe] = useState<"recebidas" | "historico">(
     "recebidas",
+  );
+  const [paginaHistorico, setPaginaHistorico] = useState(1);
+  const ITENS_POR_PAGINA = 9;
+  const [livreAcesso, setLivreAcesso] = useState<"livre" | "entrada">(
+    "entrada",
+  );
+  const [cautelaEdicao, setCautelaEdicao] = useState<CautelaComDecisao | null>(
+    null,
   );
 
   const carregarCautelas = useCallback(async () => {
@@ -427,19 +528,29 @@ export default function Gestor() {
   ) {
     setCautelaSelecionada(cautela);
     setOrigemDetalhe(origem);
-    setCautelasLidas((prev) => new Set([...prev, cautela.id]));
-    setRecebidasLidas((prev) => new Set([...prev, cautela.id]));
+    void markCautelaAsRead(cautela.id)
+      .then((atualizada) => {
+        setCautelas((prev) =>
+          prev.map((c) => (c.id === atualizada.id ? atualizada : c)),
+        );
+      })
+      .catch((error) => {
+        console.error("Erro ao marcar cautela como lida.", error);
+      });
   }
 
   const totalRecebidasNaoLidas = recebidas.filter(
-    (c) => !recebidasLidas.has(c.id),
+    (c) => c.badgeGestor === "NOVA_CAUTELA_SOLICITADA",
   ).length;
   const mostrarBolinhaGestor = totalRecebidasNaoLidas > 0;
 
   async function aprovar(id: string) {
     try {
       setActionError("");
-      const atualizada = await approveCautela(id);
+      const atualizada = await approveCautela(
+        id,
+        livreAcesso === "livre" ? "LIVRE_TRANSITO" : "ENTRADA_UNICA",
+      );
       setCautelas((prev) => prev.map((c) => (c.id === id ? atualizada : c)));
     } catch (error) {
       setActionError(
@@ -528,14 +639,7 @@ export default function Gestor() {
                 Histórico
               </button>
               <button
-                onClick={() => {
-                  setActiveTab("recebidas");
-                  setRecebidasLidas((prev) => {
-                    const n = new Set(prev);
-                    recebidas.forEach((c) => n.add(c.id));
-                    return n;
-                  });
-                }}
+                onClick={() => setActiveTab("recebidas")}
                 className={`absolute top-0 left-0 w-1/2 h-[68px] text-[18px] font-bold leading-[100%] rounded-t-[5px] transition-all ${activeTab === "recebidas" ? "bg-[#22592A] text-white" : "bg-[#C4EEC9] text-[#22592A]"}`}
               >
                 <div className="flex items-center justify-center gap-2 w-full h-full">
@@ -561,7 +665,7 @@ export default function Gestor() {
                       key={c.id}
                       cautela={c}
                       index={i}
-                      isNaoLida={!cautelasLidas.has(c.id)}
+                      isNaoLida={c.badgeGestor === "NOVA_CAUTELA_SOLICITADA"}
                       onClick={() => {
                         abrirDetalhe(c, "recebidas");
                         setMobileView("detalhe");
@@ -684,31 +788,27 @@ export default function Gestor() {
       </div>
 
       {/* ══ DESKTOP ══ */}
-      <div className="hidden md:flex h-screen pt-[60px] pl-[70px] bg-white overflow-hidden">
+      <div className="hidden md:flex h-screen pt-[60px] pl-[70px] bg-white overflow-hidden items-stretch">
         {actionError && (
           <div className="fixed left-[90px] right-5 top-[76px] z-40 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
             {actionError}
           </div>
         )}
 
-        {/* Recebidas */}
-        <div
-          className={`w-lg h-screen flex-shrink-0 flex flex-col overflow-hidden pt-[20px] relative ${
-            cautelaSelecionada && origemDetalhe === "recebidas" ? "z-10" : "z-0"
-          }`}
-        >
+        {/* Coluna esquerda — Recebidos */}
+        <div className="w-[450px] flex-shrink-0 flex flex-col h-[calc(100vh-60px)] pt-6 pb-4 px-6 relative z-0">
           <div
-            className="bg-[#22592A] px-5 py-4 flex-shrink-0 rounded-t-lg mx-4 mt-4 flex items-center justify-between"
+            className="bg-[#22592A] px-5 py-4 flex-shrink-0 rounded-t-xl flex items-center justify-between"
             style={{ boxShadow: "4px 0 8px rgba(0,0,0,0.25)" }}
           >
-            <h2 className="text-white font-bold text-base">Recebidas</h2>
+            <h2 className="text-white font-bold text-[18px]">Recebidos</h2>
             <ContadorRecebidas
               total={totalRecebidasNaoLidas}
               mostrarBolinha={mostrarBolinhaGestor}
             />
           </div>
           <div
-            className="flex-1 overflow-y-auto mx-4 mb-4 bg-[#E5E7EB] flex flex-col gap-3 p-6 rounded-b-lg border border-gray-200"
+            className="flex-1 h-0 overflow-y-auto bg-[#E5E7EB] flex flex-col gap-3 p-4 pb-8 rounded-b-xl border border-gray-200"
             style={{ boxShadow: "4px 0 8px rgba(0,0,0,0.25)" }}
           >
             {recebidas.length === 0 && (
@@ -721,7 +821,7 @@ export default function Gestor() {
                 key={c.id}
                 cautela={c}
                 index={i}
-                isNaoLida={!cautelasLidas.has(c.id)}
+                isNaoLida={c.badgeGestor === "NOVA_CAUTELA_SOLICITADA"}
                 onClick={() => abrirDetalhe(c, "recebidas")}
                 onAprovar={aprovar}
                 onDescartar={abrirDescartar}
@@ -730,86 +830,286 @@ export default function Gestor() {
           </div>
         </div>
 
-        {/* Área central — vazia, só serve de espaço */}
-        <div className="flex-1 bg-white relative flex">
+        {/* Área central — tabela de histórico */}
+        <div className="flex-1 relative flex flex-col items-center pt-[24px] px-6 pb-4 z-20">
+          {/* Overlay */}
           {cautelaSelecionada && (
-            <>
-              <div
-                className="fixed inset-0 z-[5]"
-                style={{ backgroundColor: "rgba(0,0,0,0.35)" }}
-                onClick={() => setCautelaSelecionada(null)}
-              />
-              <div
-                className={`absolute top-4 w-[420px] bg-white border border-gray-200 rounded-xl shadow-2xl z-10 max-h-[90vh] overflow-y-auto ${
-                  origemDetalhe === "historico" ? "right-0" : "left-0"
-                }`}
-              >
-                <div className="p-6">
-                  <DetalhesConteudo
-                    cautela={cautelaSelecionada}
-                    onAutorizarSaida={() =>
-                      handleAutorizarSaida(cautelaSelecionada.id)
-                    }
-                  />
-                </div>
-                {!isSomenteLeitura(cautelaSelecionada) && (
-                  <div className="flex gap-3 justify-center px-6 pb-6">
-                    <button
-                      onClick={() => aprovar(cautelaSelecionada.id)}
-                      className="flex-1 py-2.5 rounded-lg bg-[#3BB14A] text-white text-sm font-semibold hover:bg-[#0E9F6E]"
-                    >
-                      Aprovar
-                    </button>
-                    <button
-                      onClick={() => abrirDescartar(cautelaSelecionada.id)}
-                      className="flex-1 py-2.5 rounded-lg border border-black bg-white text-black text-sm font-medium hover:bg-gray-100"
-                    >
-                      Descartar
-                    </button>
-                  </div>
-                )}
-                <div className="px-6 pb-6">
-                  <button
-                    onClick={() => setCautelaSelecionada(null)}
-                    className="w-full py-2.5 rounded-lg bg-[#F5F5F5] text-black text-sm font-semibold hover:bg-gray-200 transition-colors"
-                  >
-                    Fechar detalhes
-                  </button>
-                </div>
-              </div>
-            </>
+            <div
+              className="fixed inset-0 z-[5]"
+              style={{ backgroundColor: "rgba(0,0,0,0.35)" }}
+              onClick={() => setCautelaSelecionada(null)}
+            />
           )}
-        </div>
 
-        {/* Histórico */}
-        <div
-          className={`w-lg h-screen flex-shrink-0 flex flex-col overflow-hidden pt-[20px] relative ${
-            cautelaSelecionada && origemDetalhe === "historico" ? "z-10" : "z-0"
-          }`}
-        >
-          <div
-            className="bg-[#22592A] pl-5 py-4 flex-shrink-0 rounded-t-lg mx-4 mt-4"
-            style={{ boxShadow: "-4px 0 8px rgba(0,0,0,0.25)" }}
-          >
-            <h2 className="text-white font-bold text-base">Histórico</h2>
-          </div>
-          <div
-            className="flex-1 overflow-y-auto mx-4 mb-4 bg-[#E5E7EB] rounded-b-lg border border-gray-200 p-3"
-            style={{ boxShadow: "-4px 0 8px rgba(0,0,0,0.25)" }}
-          >
-            {historico.length === 0 && (
-              <p className="text-sm text-gray-400 text-center mt-8">
-                Nenhum histórico.
-              </p>
-            )}
-            {historico.map((c) => (
-              <CardCautelaHistorico
-                key={c.id}
-                cautela={c}
-                statusExibido={statusHistorico(c)}
-                onClick={() => abrirDetalhe(c, "historico")}
+          {cautelaSelecionada && origemDetalhe === "historico" && (
+            <div className="fixed inset-0 z-50 flex items-center pt-15 justify-center pointer-events-none">
+              <div
+                className="w-[420px] max-h-[calc(100vh-120px)] overflow-y-auto pointer-events-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <DetalhesCautela
+                  cautela={cautelaSelecionada}
+                  onFechar={() => setCautelaSelecionada(null)}
+                  variant="historico"
+                  acoes={
+                    cautelaSelecionada.status === "Aprovado" ? (
+                      <button
+                        onClick={() =>
+                          void handleAutorizarSaida(cautelaSelecionada.id)
+                        }
+                        className="w-full py-2.5 rounded-lg bg-[#3BB14A] text-white text-sm font-semibold hover:bg-green-600 transition-colors"
+                      >
+                        Autorizar saída
+                      </button>
+                    ) : null
+                  }
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Recebidas — painel ao lado da aba */}
+          {cautelaSelecionada && origemDetalhe === "recebidas" && (
+            <div
+              className="fixed top-20 w-[420px] z-50 overflow-y-auto"
+              style={{ left: "470px", maxHeight: "calc(100vh - 100px)" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <DetalhesCautela
+                cautela={cautelaSelecionada}
+                onFechar={() => setCautelaSelecionada(null)}
+                variant="recebida"
+                acoes={
+                  !isSomenteLeitura(cautelaSelecionada) ? (
+                    <>
+                      <div className="flex items-center gap-10 mb-2">
+                        <p className="text-[15px] text-black">
+                          Esta cautela tem livre acesso?
+                        </p>
+
+                        <label className="flex items-center gap-6 text-[15px] text-black cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={livreAcesso === "livre"}
+                            onChange={() => setLivreAcesso("livre")}
+                            className="w-4 h-4 accent-black"
+                          />
+                          Sim
+                        </label>
+
+                        <label className="flex items-center gap-6 text-[15px] text-black cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={livreAcesso === "entrada"}
+                            onChange={() => setLivreAcesso("entrada")}
+                            className="w-4 h-4 accent-black"
+                          />
+                          Não
+                        </label>
+                      </div>
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => aprovar(cautelaSelecionada.id)}
+                          className="flex-1 py-2.5 rounded-lg bg-[#3BB14A] text-white text-sm font-semibold hover:bg-[#22592A]"
+                        >
+                          Aprovar
+                        </button>
+                        <button
+                          onClick={() => abrirDescartar(cautelaSelecionada.id)}
+                          className="flex-1 py-2.5 rounded-lg border border-gray-300 bg-white text-black text-sm font-medium hover:bg-gray-100"
+                        >
+                          Descartar
+                        </button>
+                      </div>
+                    </>
+                  ) : null
+                }
               />
-            ))}
+            </div>
+          )}
+
+          {/* Barra de pesquisa */}
+          <div className="flex items-center gap-3 mb-8 mt-10 w-full max-w-[780px]">
+            <div className="relative flex-1">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"
+                  />
+                </svg>
+              </span>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Pesquise por nome, do solicitante, Id de cautela ou status"
+                className="w-full pl-9 pr-3 py-2 text-[13px] border border-[#D1D5DB] rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#2B8E37] focus:border-transparent"
+              />
+            </div>
+            <button className="px-4 py-2 rounded-lg bg-[#3BB14A] text-white text-[13px] font-semibold hover:bg-[#22592A] transition-colors whitespace-nowrap">
+              Pesquisar
+            </button>
+          </div>
+
+          {/* Tabela */}
+          <div className="w-full max-w-[980px] bg-white rounded-lg overflow-hidden border border-[#E5E7EB] shadow-sm relative z-0">
+            <div className="grid grid-cols-[1.8fr_0.9fr_0.75fr_1.8fr_1.25fr_1.35fr_52px] bg-[#2B8E37] text-white text-[15px] font-bold px-4 py-2">
+              <span>Solicitante</span>
+              <span>Data</span>
+              <span>Hora</span>
+              <span>Id da cautela</span>
+              <span className="flex justify-center">Status</span>
+              <span>Acesso</span>
+              <span>Editar</span>
+            </div>
+
+            {historico.length === 0 ? (
+              <div className="flex items-center justify-center py-16 text-[#6B7280] text-sm">
+                Nenhum histórico.
+              </div>
+            ) : (
+              historico
+                .slice(
+                  (paginaHistorico - 1) * ITENS_POR_PAGINA,
+                  paginaHistorico * ITENS_POR_PAGINA,
+                )
+                .map((cautela, i) => {
+                  const partes = cautela.data?.split(", ") ?? [];
+                  const data = partes[0] ?? "";
+                  const hora = partes[1] ?? "--:--";
+                  const selecionada = cautelaSelecionada?.id === cautela.id;
+                  return (
+                    <div
+                      key={cautela.id}
+                      onClick={() => abrirDetalhe(cautela, "historico")}
+                      className={`grid grid-cols-[1.8fr_0.9fr_0.75fr_1.8fr_1.25fr_1.35fr_52px] px-4 py-3 text-[14px] text-[#0A0A0A] items-center border-b border-[#F3F4F6] last:border-0 transition-colors ${
+                        selecionada
+                          ? "bg-[#E8F5EA] border-l-4 border-l-[#2B8E37]"
+                          : i % 2 === 1
+                            ? "bg-[#F9FAFB]"
+                            : "bg-white"
+                      }`}
+                    >
+                      <span className="truncate">
+                        {cautela.visitante || "—"}
+                      </span>
+                      <span className="text-[#0A0A0A]">{data}</span>
+                      <span className="text-[#0A0A0A]">{hora}</span>
+                      <span className="truncate font-mono text-[18px] text-[#0A0A0A]">
+                        {cautela.id}
+                      </span>
+                      <span className="flex justify-center">
+                        <BadgeHistorico status={statusHistorico(cautela)} />
+                      </span>
+                      <span className="truncate">
+                        {cautela.status === "Reprovado"
+                          ? "-"
+                          : (
+                                cautela as CautelaComDecisao & {
+                                  livreAcesso?: string;
+                                }
+                              ).livreAcesso === "livre"
+                            ? "Livre trânsito"
+                            : "Entrada única"}
+                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          console.log("abrindo edição", cautela.id);
+                          setCautelaEdicao(cautela);
+                          setLivreAcesso(cautela.livreAcesso ?? "entrada");
+                        }}
+                        className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                        title="Editar"
+                      >
+                        <svg
+                          width="18"
+                          height="22"
+                          viewBox="0 0 18 22"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M0 12.25V2.75C0 2.02065 0.289939 1.32139 0.805664 0.805664C1.32139 0.289939 2.02065 0 2.75 0H11.75C11.9489 0 12.1396 0.0790743 12.2803 0.219727L17.2803 5.21973C17.4209 5.36038 17.5 5.55109 17.5 5.75V18.75C17.5 19.4793 17.2101 20.1786 16.6943 20.6943C16.1786 21.2101 15.4793 21.5 14.75 21.5H9.25C8.83579 21.5 8.5 21.1642 8.5 20.75C8.5 20.3358 8.83579 20 9.25 20H14.75C15.0815 20 15.3994 19.8682 15.6338 19.6338C15.8682 19.3994 16 19.0815 16 18.75V6.06055L11.4395 1.5H2.75C2.41848 1.5 2.10063 1.63179 1.86621 1.86621C1.63179 2.10063 1.5 2.41848 1.5 2.75V12.25C1.5 12.6642 1.16421 13 0.75 13C0.335786 13 0 12.6642 0 12.25Z"
+                            fill="#525252"
+                          />
+                          <path
+                            d="M10 4.75V0.75C10 0.335786 10.3358 0 10.75 0C11.1642 0 11.5 0.335786 11.5 0.75V4.75C11.5 5.08152 11.6318 5.39937 11.8662 5.63379C12.1006 5.86821 12.4185 6 12.75 6H16.75C17.1642 6 17.5 6.33579 17.5 6.75C17.5 7.16421 17.1642 7.5 16.75 7.5H12.75C12.0207 7.5 11.3214 7.21006 10.8057 6.69434C10.2899 6.17861 10 5.47935 10 4.75Z"
+                            fill="#525252"
+                          />
+                          <path
+                            d="M10 12.8739C10 12.6936 9.96449 12.5151 9.89553 12.3485C9.82647 12.1818 9.72528 12.0298 9.59768 11.9022C9.47009 11.7746 9.31808 11.6734 9.15139 11.6043C8.9848 11.5354 8.8063 11.4999 8.626 11.4999C8.4457 11.4999 8.2672 11.5354 8.10061 11.6043C7.93392 11.6734 7.78191 11.7746 7.65432 11.9022L2.64455 16.9139C2.53308 17.0253 2.44328 17.1569 2.38088 17.3006L2.32815 17.4481L1.61819 19.8797L4.05081 19.1707L4.19827 19.118C4.34201 19.0556 4.47355 18.9658 4.58498 18.8543L9.59768 13.8456L9.6885 13.7459C9.774 13.6418 9.84373 13.5252 9.89553 13.4002C9.96459 13.2335 10 13.0543 10 12.8739ZM11.5 12.8739C11.5 13.2512 11.4256 13.6249 11.2813 13.9735C11.1729 14.2351 11.0266 14.479 10.8477 14.6971L10.6582 14.9061L5.64553 19.9159C5.31895 20.2425 4.91508 20.4816 4.4717 20.6112L1.60061 21.4481C1.3856 21.5107 1.15739 21.5144 0.940453 21.4588C0.7235 21.4032 0.525584 21.2901 0.367211 21.1317C0.208836 20.9733 0.0956886 20.7754 0.0400624 20.5584C-0.0155236 20.3415 -0.0118497 20.1133 0.0508046 19.8983L0.887719 17.0282C1.01727 16.5845 1.2571 16.1801 1.58401 15.8534L6.59377 10.8416C6.86065 10.5748 7.17771 10.363 7.52639 10.2186C7.87503 10.0742 8.24865 9.99985 8.626 9.99985C9.00335 9.99985 9.37697 10.0742 9.72561 10.2186C10.0743 10.363 10.3914 10.5748 10.6582 10.8416C10.9251 11.1085 11.1368 11.4256 11.2813 11.7743C11.4257 12.1229 11.5 12.4965 11.5 12.8739Z"
+                            fill="#525252"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  );
+                })
+            )}
+
+            {/* Paginação */}
+            {Math.ceil(historico.length / ITENS_POR_PAGINA) > 1 && (
+              <div className="flex items-center justify-center gap-1 py-3 border-t border-[#E5E7EB]">
+                <button
+                  onClick={() => setPaginaHistorico((p) => Math.max(1, p - 1))}
+                  disabled={paginaHistorico === 1}
+                  className="px-3 py-1.5 text-[13px] text-[#6B7280] hover:text-[#2B8E37] disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Anterior
+                </button>
+                {paginasVisiveis(
+                  paginaHistorico,
+                  Math.ceil(historico.length / ITENS_POR_PAGINA),
+                ).map((p, index) =>
+                  p === "..." ? (
+                    <span
+                      key={`ellipsis-${index}`}
+                      className="px-2 text-[13px] text-[#9CA3AF]"
+                    >
+                      ...
+                    </span>
+                  ) : (
+                    <button
+                      key={p}
+                      onClick={() => setPaginaHistorico(p)}
+                      className={`w-8 h-8 rounded-lg text-[13px] font-medium transition-colors ${
+                        paginaHistorico === p
+                          ? "bg-[#2B8E37] text-white"
+                          : "text-[#6B7280] hover:bg-[#F3F4F6]"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ),
+                )}
+                <button
+                  onClick={() =>
+                    setPaginaHistorico((p) =>
+                      Math.min(
+                        Math.ceil(historico.length / ITENS_POR_PAGINA),
+                        p + 1,
+                      ),
+                    )
+                  }
+                  disabled={
+                    paginaHistorico ===
+                    Math.ceil(historico.length / ITENS_POR_PAGINA)
+                  }
+                  className="px-3 py-1.5 text-[13px] text-[#6B7280] hover:text-[#2B8E37] disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Próxima
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -829,6 +1129,23 @@ export default function Gestor() {
       )}
       {modalAutorizarSaida && (
         <ModalAutorizarSaida onClose={() => setModalAutorizarSaida(false)} />
+      )}
+      {cautelaEdicao && (
+        <ModalEdicaoCautela
+          cautela={cautelaEdicao}
+          livreAcesso={livreAcesso}
+          onChangeLivreAcesso={setLivreAcesso}
+          onSalvar={async () => {
+            const atualizada = await updatePermissionType(
+              cautelaEdicao.id,
+              livreAcesso === "livre" ? "LIVRE_TRANSITO" : "ENTRADA_UNICA",
+            );
+            setCautelas((prev) =>
+              prev.map((c) => (c.id === cautelaEdicao.id ? atualizada : c)),
+            );
+          }}
+          onFechar={() => setCautelaEdicao(null)}
+        />
       )}
     </>
   );
