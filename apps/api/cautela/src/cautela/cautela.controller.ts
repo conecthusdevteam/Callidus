@@ -15,7 +15,6 @@ import { CautelaService } from './cautela.service';
 import { ApproveCautelaDto } from './dto/approve-cautela.dto';
 import { CreateCautelaDto } from './dto/create-cautela.dto';
 import { ListCautelasDto } from './dto/list-cautelas.dto';
-import { PortariaRejectCautelaDto } from './dto/portaria-reject-cautela.dto';
 import { RejectCautelaDto } from './dto/reject-cautela.dto';
 import { UpdateCautelaPermissionTypeDto } from './dto/update-cautela-permission-type.dto';
 
@@ -72,20 +71,6 @@ export class CautelaController {
     @CurrentUser() user: CurrentUserPayload,
   ) {
     return this.cautelaService.validateEntry(id, user);
-  }
-
-  @Roles(UserRole.PORTARIA)
-  @Patch(':id/invalidar-entrada')
-  rejectEntryByPortaria(
-    @Param('id') id: string,
-    @CurrentUser() user: CurrentUserPayload,
-    @Body() portariaRejectCautelaDto: PortariaRejectCautelaDto,
-  ) {
-    return this.cautelaService.rejectEntryByPortaria(
-      id,
-      user,
-      portariaRejectCautelaDto,
-    );
   }
 
   @Roles(UserRole.GESTOR)

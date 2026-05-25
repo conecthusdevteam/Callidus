@@ -2,16 +2,16 @@
 @json = application/json
 
 # Cole aqui os tokens retornados nos logins.
-@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFkbWluLmNhdXRlbGFAY2FsbGlkdXMubG9jYWwiLCJwYXBlbCI6IkFETUlOIiwic3ViIjoiNEI1NDQzM0UtRjM2Qi0xNDEwLTg2MjItMDBGODRDQTk3MUEwIiwidG9rZW5WZXJzaW9uIjowLCJpYXQiOjE3NzkxMjc0NjIsImV4cCI6MTc3OTE1NjI2Mn0.vo7SX0Cpdu1z9lvC0XWSlOYTDuQ2jcoc_ESNBVgCHxo
+@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFkbWluLmNhdXRlbGFAY2FsbGlkdXMubG9jYWwiLCJwYXBlbCI6IkFETUlOIiwic3ViIjoiN0Y0MzQzM0UtRjM2Qi0xNDEwLThBMjYtMDA1MkNGOUIyRjI1IiwidG9rZW5WZXJzaW9uIjowLCJpYXQiOjE3Nzk0Nzc4OTcsImV4cCI6MTc3OTUwNjY5N30.FHQejoG9vpAwdXE5QgdHzSZe6A4eilx9reNbp7J4MFY
 @gestorToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Imdlc3RvckBjYXV0ZWxhLmxvY2FsIiwicGFwZWwiOiJHRVNUT1IiLCJzdWIiOiJBN0I4NDMzRS1GMzZCLTE0MTAtODEzRS0wMDFGNkQyMDQyMDgiLCJ0b2tlblZlcnNpb24iOjAsImlhdCI6MTc3ODE4MTIyOCwiZXhwIjoxNzc4MjEwMDI4fQ.G286lrKfZ1d63s-v7o99W3kIDaq-rKPRbF_mRi_g3ME
-@portariaToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InBvcnRhcmlhQGNhdXRlbGEubG9jYWwiLCJwYXBlbCI6IlBPUlRBUklBIiwic3ViIjoiQjBCODQzM0UtRjM2Qi0xNDEwLTgxM0UtMDAxRjZEMjA0MjA4IiwidG9rZW5WZXJzaW9uIjowLCJpYXQiOjE3NzgxODExOTAsImV4cCI6MTc3ODIwOTk5MH0.ebmXAJXWMkd7kkMkex8aNicm-JkOxHtq-L7iGBlq4EQ
-
+@portariaToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InBvcnRhcmlhQGNhdXRlbGEubG9jYWwiLCJwYXBlbCI6IlBPUlRBUklBIiwic3ViIjoiOTE0MzQzM0UtRjM2Qi0xNDEwLThBMjYtMDA1MkNGOUIyRjI1IiwidG9rZW5WZXJzaW9uIjowLCJpYXQiOjE3Nzk0Nzc5MjYsImV4cCI6MTc3OTUwNjcyNn0.QtNOIeDb6TgG8cv6Mx011C3yLC0JlWpXWgzlruJtImc
+@solicitanteToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InNvbGljaXRhbnRlQGNhdXRlbGEubG9jYWwiLCJwYXBlbCI6IlNPTElDSVRBTlRFIiwic3ViIjoiOTM0MzQzM0UtRjM2Qi0xNDEwLThBMjYtMDA1MkNGOUIyRjI1IiwidG9rZW5WZXJzaW9uIjowLCJpYXQiOjE3Nzk0Nzc5NDQsImV4cCI6MTc3OTUwNjc0NH0.lGRjpBEiw9FonCWWI4J1Req6wnOEgXnu6D-U40m5DBo
 # Preencha estes IDs depois de listar usuários, setores e cautelas.
 @gestorId = A7B8433E-F36B-1410-813E-001F6D204208
 @outroGestorId = COLE_O_ID_DE_OUTRO_GESTOR_AQUI
 @usuarioParaAtualizarId = COLE_O_ID_DE_USUARIO_PARA_ATUALIZAR_AQUI
 @usuarioParaInativarId = COLE_O_ID_DE_USUARIO_PARA_INATIVAR_AQUI
-@setorId = 8254433E-F36B-1410-8622-00F84CA971A0
+@setorId = 9743433E-F36B-1410-8A26-0052CF9B2F25
 @setorParaAtualizarId = 8254433E-F36B-1410-8622-00F84CA971A0
 @setorParaInativarId = 7C54433E-F36B-1410-8622-00F84CA971A0
 @setorInativoId = COLE_O_ID_DE_SETOR_INATIVO_AQUI
@@ -254,17 +254,6 @@ Authorization: Bearer {{gestorToken}}
 # Resultado esperado: status APROVADA, etapaFluxo VALIDADA_PELA_PORTARIA.
 PATCH {{baseUrl}}/cautelas/{{cautelaEmAnaliseId}}/validar-entrada
 Authorization: Bearer {{portariaToken}}
-
-###
-# 22) Invalidar entrada pela portaria
-# Motivo opcional. Use uma cautela aprovada pelo gestor e ainda pendente da portaria.
-PATCH {{baseUrl}}/cautelas/{{cautelaEmAnaliseId}}/invalidar-entrada
-Authorization: Bearer {{portariaToken}}
-Content-Type: {{json}}
-
-{
-  "justificativa": "Entrada fisica nao autorizada pela portaria."
-}
 
 ###
 # 23) Alterar tipo de permissao pelo gestor

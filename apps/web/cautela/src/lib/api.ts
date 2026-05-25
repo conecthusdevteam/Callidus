@@ -34,9 +34,7 @@ export interface CreateCautelaPayload {
   proprietarioNome: string;
   documentoProprietario: string;
   empresa: string;
-  retornoItem: boolean;
   setorId: string;
-  validade?: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -44,18 +42,30 @@ export interface CreateCautelaPayload {
 // ─────────────────────────────────────────────────────────────────────────────
 
 type ApiCautelaStatus = "APROVADA" | "EM_ANALISE" | "REPROVADA" | "ENCERRADA";
+type ApiCautelaFlowStep =
+  | "SOLICITADA"
+  | "APROVADA_PELO_GESTOR"
+  | "VALIDADA_PELA_PORTARIA"
+  | "SAIDA_AUTORIZADA_PELO_GESTOR"
+  | "ENCERRADA_PELA_PORTARIA"
+  | "REPROVADA";
+
+type ApiPermissionType = "ENTRADA_UNICA" | "LIVRE_TRANSITO";
 
 interface ApiCautela {
   aprovadoEm: string | null;
-  badgeGestor: "AGUARDANDO_SAIDA" | null;
-  badgePortaria: "ACAO_NECESSARIA" | null;
+  badgeGestor: string | null;
+  badgePortaria: string | null;
+  badgeSolicitante?: string | null;
   criadoEm: string;
   documentoProprietario: string | null;
+  entradaValidadaEm?: string | null;
   encerradoEm: string | null;
   empresa: string | null;
   gestor: { nome: string } | null;
   id: string;
   itens: { descricao?: string; nomeItem: string; quantidade: number }[];
+  etapaFluxo?: ApiCautelaFlowStep;
   justificativaRejeicao: string | null;
   proprietarioEmail: string;
   proprietarioNome: string;
@@ -66,8 +76,9 @@ interface ApiCautela {
   setor: { nome: string } | null;
   status: ApiCautelaStatus;
   statusVisualGestor?: ApiCautelaStatus;
-  statusVisualPortaria?: ApiCautelaStatus | "ATENCAO";
-  validade: string | null;
+  statusVisualPortaria?: ApiCautelaStatus | "ATENCAO" | "AUTORIZADO_A_ENTRAR";
+  tipoPermissao?: ApiPermissionType;
+  tipoPermissaoAlteradoEm?: string | null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -142,8 +153,12 @@ export async function createCautela(
   return mapCautela(cautela);
 }
 
-export async function approveCautela(id: string): Promise<Cautela> {
+export async function approveCautela(
+  id: string,
+  tipoPermissao: ApiPermissionType = "ENTRADA_UNICA",
+): Promise<Cautela> {
   const cautela = await apiRequest<ApiCautela>(`/cautelas/${id}/aprovar`, {
+    body: JSON.stringify({ tipoPermissao }),
     method: "PATCH",
   });
   return mapCautela(cautela);
@@ -170,6 +185,37 @@ export async function authorizeDeparture(id: string): Promise<Cautela> {
   return mapCautela(cautela);
 }
 
+export async function validateEntry(id: string): Promise<Cautela> {
+  const cautela = await apiRequest<ApiCautela>(
+    `/cautelas/${id}/validar-entrada`,
+    {
+      method: "PATCH",
+    },
+  );
+  return mapCautela(cautela);
+}
+
+export async function updatePermissionType(
+  id: string,
+  tipoPermissao: ApiPermissionType,
+): Promise<Cautela> {
+  const cautela = await apiRequest<ApiCautela>(
+    `/cautelas/${id}/tipo-permissao`,
+    {
+      body: JSON.stringify({ tipoPermissao }),
+      method: "PATCH",
+    },
+  );
+  return mapCautela(cautela);
+}
+
+export async function markCautelaAsRead(id: string): Promise<Cautela> {
+  const cautela = await apiRequest<ApiCautela>(`/cautelas/${id}/visualizar`, {
+    method: "PATCH",
+  });
+  return mapCautela(cautela);
+}
+
 export async function closeCautela(id: string): Promise<Cautela> {
   const cautela = await apiRequest<ApiCautela>(
     `/cautelas/${id}/permitir-saida`,
@@ -190,6 +236,9 @@ async function apiRequest<T>(
 ): Promise<T> {
   const session = getStoredSession();
   const headers = new Headers(options.headers);
+  const slowRequestTimer = window.setTimeout(() => {
+    window.dispatchEvent(new Event("cautela:slow-request:start"));
+  }, 3000);
 
   if (!headers.has("Content-Type") && options.body) {
     headers.set("Content-Type", "application/json");
@@ -199,32 +248,39 @@ async function apiRequest<T>(
     headers.set("Authorization", `Bearer ${session.accessToken}`);
   }
 
-  const response = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers,
-  });
+  try {
+    const response = await fetch(`${API_URL}${path}`, {
+      ...options,
+      headers,
+    });
 
-  if (response.status === 401 && !options.skipAuth) {
-    clearSession();
-    window.dispatchEvent(new Event("auth:expired"));
-    throw new Error("Sessão expirada.");
-  }
-
-  if (!response.ok) {
-    let message = "Não foi possível completar a requisição.";
-    try {
-      const data = await response.json();
-      message = Array.isArray(data.message) ? data.message[0] : data.message;
-    } catch {
-      message = response.statusText || message;
+    if (response.status === 401 && !options.skipAuth) {
+      clearSession();
+      window.dispatchEvent(new Event("auth:expired"));
+      throw new Error("Sessão expirada.");
     }
-    throw new Error(message);
-  }
 
-  return response.json() as Promise<T>;
+    if (!response.ok) {
+      let message = "Não foi possível completar a requisição.";
+      try {
+        const data = await response.json();
+        message = Array.isArray(data.message) ? data.message[0] : data.message;
+      } catch {
+        message = response.statusText || message;
+      }
+      throw new Error(message);
+    }
+
+    return response.json() as Promise<T>;
+  } finally {
+    window.clearTimeout(slowRequestTimer);
+    window.dispatchEvent(new Event("cautela:slow-request:end"));
+  }
 }
 
 function mapCautela(cautela: ApiCautela): Cautela {
+  const tipoPermissao = cautela.tipoPermissao ?? "ENTRADA_UNICA";
+
   return {
     aprovadoEm: cautela.aprovadoEm
       ? formatDate(cautela.aprovadoEm)
@@ -236,6 +292,9 @@ function mapCautela(cautela: ApiCautela): Cautela {
       cautela.status === "ENCERRADA" && cautela.encerradoEm
         ? formatDate(cautela.encerradoEm)
         : undefined,
+    entradaValidadaEm: cautela.entradaValidadaEm
+      ? formatDate(cautela.entradaValidadaEm)
+      : undefined,
     empresa: cautela.empresa ?? "Empresa não informada",
     setorId: cautela.setor?.nome ?? "Setor não informado",
     equipamentos: cautela.itens.map((item) => ({
@@ -253,14 +312,41 @@ function mapCautela(cautela: ApiCautela): Cautela {
     status: mapStatus(cautela),
     visitante: cautela.proprietarioNome,
     proprietarioEmail: cautela.proprietarioEmail,
-    validade: cautela.validade ? formatDate(cautela.validade) : undefined,
+    etapaFluxo: cautela.etapaFluxo,
+    tipoPermissao,
+    tipoPermissaoAlteradoEm: cautela.tipoPermissaoAlteradoEm
+      ? formatDate(cautela.tipoPermissaoAlteradoEm)
+      : undefined,
+    livreAcesso: tipoPermissao === "LIVRE_TRANSITO" ? "livre" : "entrada",
+    badgeGestor: cautela.badgeGestor,
+    badgePortaria: cautela.badgePortaria,
+    badgeSolicitante: cautela.badgeSolicitante ?? null,
   };
 }
 
 function mapStatus(cautela: ApiCautela): StatusCautela {
+  const papel = getStoredSession()?.user.papel;
+
   if (cautela.saidaAutorizada || cautela.badgeGestor === "AGUARDANDO_SAIDA") {
     return "Saída Autorizada";
   }
+
+  if (
+    papel === "PORTARIA" &&
+    (cautela.statusVisualPortaria === "AUTORIZADO_A_ENTRAR" ||
+      cautela.etapaFluxo === "APROVADA_PELO_GESTOR")
+  ) {
+    return "Aprovado";
+  }
+
+  if (
+    papel === "GESTOR" &&
+    cautela.status === "EM_ANALISE" &&
+    cautela.etapaFluxo === "APROVADA_PELO_GESTOR"
+  ) {
+    return "Aprovado";
+  }
+
   const { status } = cautela;
   if (status === "APROVADA") return "Aprovado";
   if (status === "REPROVADA") return "Reprovado";

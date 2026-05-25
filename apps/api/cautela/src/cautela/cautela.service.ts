@@ -18,7 +18,6 @@ import { User } from '../user/entities/user.entity';
 import { ApproveCautelaDto } from './dto/approve-cautela.dto';
 import { CreateCautelaDto } from './dto/create-cautela.dto';
 import { ListCautelasDto } from './dto/list-cautelas.dto';
-import { PortariaRejectCautelaDto } from './dto/portaria-reject-cautela.dto';
 import { RejectCautelaDto } from './dto/reject-cautela.dto';
 import { UpdateCautelaPermissionTypeDto } from './dto/update-cautela-permission-type.dto';
 import { Cautela } from './entities/cautela.entity';
@@ -403,50 +402,6 @@ export class CautelaService {
     return this.findOne(id, currentUser);
   }
 
-  async rejectEntryByPortaria(
-    id: string,
-    currentUser: CurrentUserPayload,
-    portariaRejectCautelaDto: PortariaRejectCautelaDto,
-  ) {
-    const cautela = await this.cautelaRepository.findOne({
-      where: { id },
-    });
-
-    if (!cautela) {
-      throw new NotFoundException('Cautela não encontrada.');
-    }
-
-    this.ensureCautelaCanBeValidatedByPortaria(cautela, currentUser);
-
-    await this.cautelaRepository.manager.transaction(async (manager) => {
-      const rejectedAt = new Date();
-      const justificativa =
-        portariaRejectCautelaDto.justificativa?.trim() || null;
-
-      cautela.status = CautelaStatus.REPROVADA;
-      cautela.etapaFluxo = CautelaFlowStep.REPROVADA;
-      cautela.justificativaRejeicao = justificativa;
-      cautela.rejeitadoEm = rejectedAt;
-      cautela.respondidoEm = rejectedAt;
-      cautela.visualizadoPortariaEm = rejectedAt;
-      cautela.visualizadoSolicitanteEm = null;
-
-      await manager.getRepository(Cautela).save(cautela);
-      await manager.getRepository(CautelaEvent).save(
-        manager.getRepository(CautelaEvent).create({
-          acao: CautelaStatus.REPROVADA,
-          cautelaId: cautela.id,
-          descricao: justificativa
-            ? `Entrada da cautela invalidada pela portaria. Motivo: ${justificativa}`
-            : 'Entrada da cautela invalidada pela portaria.',
-          feitoPorId: currentUser.sub,
-        }),
-      );
-    });
-
-    return this.findOne(id, currentUser);
-  }
-
   async authorizeExit(id: string, currentUser: CurrentUserPayload) {
     const cautela = await this.cautelaRepository.findOne({
       where: { id },
@@ -758,13 +713,14 @@ export class CautelaService {
       : aguardandoValidacaoEntrada
         ? 'AUTORIZADO_A_ENTRAR'
         : cautela.status;
-    const badgePortaria = saidaAutorizada
-      ? 'AUTORIZADO_A_SAIR'
-      : aguardandoValidacaoEntrada && !cautela.visualizadoPortariaEm
-        ? 'AUTORIZADO_A_ENTRAR'
-        : cautela.tipoPermissaoAlteradoEm && !cautela.visualizadoPortariaEm
-          ? 'TIPO_PERMISSAO_EDITADO'
-          : null;
+    const badgePortaria =
+      saidaAutorizada && !cautela.visualizadoPortariaEm
+        ? 'AUTORIZADO_A_SAIR'
+        : aguardandoValidacaoEntrada && !cautela.visualizadoPortariaEm
+          ? 'AUTORIZADO_A_ENTRAR'
+          : cautela.tipoPermissaoAlteradoEm && !cautela.visualizadoPortariaEm
+            ? 'TIPO_PERMISSAO_EDITADO'
+            : null;
     const badgeGestor = saidaAutorizada
       ? 'AGUARDANDO_SAIDA'
       : cautela.etapaFluxo === CautelaFlowStep.SOLICITADA &&

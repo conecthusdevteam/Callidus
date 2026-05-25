@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Cautela, StatusCautela } from "../data/cautelaTypes";
 import { useAuth } from "../context/AuthContext";
-import { createCautela, getCautelas, closeCautela } from "../lib/api";
+import { createCautela, getCautelas, markCautelaAsRead } from "../lib/api";
 import FormularioCautela, {
   type FieldErrors,
 } from "../components/FormularioCautela";
-import { ModalEncerrada } from "../components/ModalGestor";
 import { useLocation } from "react-router-dom";
 import { AvatarStatus } from "../components/AvatarStatus";
 import { BadgeStatus } from "../components/BadgeStatus";
@@ -114,14 +113,74 @@ function CardCautelaPortaria({
 function DetalhesCautelaPortaria({
   cautela,
   onFechar,
-  onLiberarSaida,
 }: {
   cautela: Cautela;
   onFechar: () => void;
-  onLiberarSaida?: () => void;
 }) {
+  const tipoPermissaoLabel =
+    cautela.tipoPermissao === "LIVRE_TRANSITO"
+      ? "Livre trânsito"
+      : "Entrada única";
+  const permissaoEditadaLabel =
+    cautela.tipoPermissao === "LIVRE_TRANSITO"
+      ? "LIVRE TRÂNSITO"
+      : "ENTRADA ÚNICA";
+  const statusFinalizadoLabel =
+    cautela.status === "Reprovado" ? "Reprovado" : "Aprovado";
+  const statusFinalizadoEm =
+    cautela.status === "Reprovado" ? cautela.reprovadoEm : cautela.aprovadoEm;
+  const progresso = [
+    {
+      label: "Pedido realizado",
+      data: cautela.data?.split(", ")[1],
+      complete: true,
+    },
+    {
+      label:
+        cautela.status === "Reprovado"
+          ? "Cautela reprovada"
+          : "Cautela aprovada",
+      data:
+        cautela.status === "Reprovado"
+          ? cautela.reprovadoEm
+          : cautela.aprovadoEm,
+      complete:
+        cautela.status !== "Em análise" || cautela.etapaFluxo !== "SOLICITADA",
+    },
+    {
+      label:
+        cautela.status === "Encerrada"
+          ? "Saída autorizada"
+          : "Validação da portaria",
+      data: cautela.entradaValidadaEm,
+      complete:
+        cautela.status === "Aprovado" ||
+        cautela.status === "Saída Autorizada" ||
+        cautela.status === "Encerrada",
+    },
+  ];
+
   return (
-    <div className="flex flex-col h-full">
+    <div className="relative flex flex-col h-full">
+      <button
+        onClick={onFechar}
+        className="absolute right-3 top-3 z-10 text-black hover:text-gray-500"
+        aria-label="Fechar detalhes"
+      >
+        <svg
+          className="h-4 w-4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M6 18L18 6M6 6l12 12"
+          />
+        </svg>
+      </button>
       <div className="flex-1 overflow-y-auto p-6">
         <div className="mb-4">
           <BannerStatus cautela={cautela} />
@@ -131,6 +190,56 @@ function DetalhesCautelaPortaria({
             <JustificativaBox motivo={cautela.motivoNegativa} />
           </div>
         )}
+        {cautela.tipoPermissaoAlteradoEm && (
+          <div className="mb-4 text-center text-[13px] text-[#6B7280]">
+            <p className="font-semibold text-[#404040]">{tipoPermissaoLabel}</p>
+            <p className="mt-1">
+              Acesso da cautela editado para{" "}
+              <span className="font-bold">{permissaoEditadaLabel}</span> em{" "}
+              {cautela.tipoPermissaoAlteradoEm}
+            </p>
+          </div>
+        )}
+        <div className="float-right ml-5 mb-5 w-[160px]">
+          <p className="mb-4 text-[12px] font-bold text-[#404040]">
+            Acompanhe seu pedido de cautela
+          </p>
+          <div>
+            {progresso.map((item, index) => (
+              <div
+                key={item.label}
+                className="grid grid-cols-[1fr_18px_auto] gap-2"
+              >
+                <p
+                  className={`text-[11px] leading-tight ${
+                    item.complete ? "text-black" : "text-[#BDBDBD]"
+                  }`}
+                >
+                  {item.label}
+                </p>
+                <div className="flex flex-col items-center">
+                  <span
+                    className={`h-4 w-4 rounded-full ${
+                      item.complete ? "bg-[#3BB14A]" : "bg-[#BDBDBD]"
+                    }`}
+                  />
+                  {index < progresso.length - 1 && (
+                    <span
+                      className={`h-20 w-0.5 ${
+                        progresso[index + 1].complete
+                          ? "bg-[#3BB14A]"
+                          : "bg-[#BDBDBD]"
+                      }`}
+                    />
+                  )}
+                </div>
+                <p className="text-[12px] text-[#404040]">
+                  {item.data?.split(", ")[1] ?? item.data ?? ""}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
         <div className="mb-3">
           <p className="text-sm font-bold text-black">Id da cautela</p>
           <p className="text-sm text-gray-700 break-all">{cautela.id}</p>
@@ -140,7 +249,9 @@ function DetalhesCautelaPortaria({
           <p className="text-sm text-gray-700">{cautela.setorId || "-"}</p>
         </div>
         <div className="mb-3">
-          <p className="text-sm font-bold text-black">Data e hora de entrada</p>
+          <p className="text-sm font-bold text-black">
+            Data e hora da solicitação
+          </p>
           <p className="text-sm text-gray-700">{cautela.data || "-"}</p>
         </div>
         <div className="mb-3">
@@ -165,7 +276,9 @@ function DetalhesCautelaPortaria({
         )}
         {cautela.gestor && (
           <div className="mb-3">
-            <p className="text-sm font-bold text-black">Aprovado por:</p>
+            <p className="text-sm font-bold text-black">
+              {statusFinalizadoLabel} por:
+            </p>
             <p className="text-sm text-gray-700">{cautela.gestor}</p>
           </div>
         )}
@@ -175,10 +288,12 @@ function DetalhesCautelaPortaria({
             <p className="text-sm text-gray-700">{cautela.validade}</p>
           </div>
         )}
-        {cautela.aprovadoEm && (
+        {statusFinalizadoEm && (
           <div className="mb-3">
-            <p className="text-sm font-bold text-black">Aprovado em:</p>
-            <p className="text-sm text-gray-700">{cautela.aprovadoEm}</p>
+            <p className="text-sm font-bold text-black">
+              {statusFinalizadoLabel} em:
+            </p>
+            <p className="text-sm text-gray-700">{statusFinalizadoEm}</p>
           </div>
         )}
         {cautela.status === "Encerrada" && cautela.encerradaEm && (
@@ -193,22 +308,6 @@ function DetalhesCautelaPortaria({
           <p className="text-sm font-bold text-black mb-2">Cautelados:</p>
           <TabelaCautelados equipamentos={cautela.equipamentos ?? []} />
         </div>
-      </div>
-      <div className="px-6 pb-6 pt-2 flex flex-col gap-2">
-        {cautela.status === "Saída Autorizada" && onLiberarSaida && (
-          <button
-            onClick={onLiberarSaida}
-            className="w-full py-2.5 rounded-lg bg-[#F5F5F5] text-black text-sm font-semibold hover:bg-gray-300 transition-colors"
-          >
-            Liberar saída
-          </button>
-        )}
-        <button
-          onClick={onFechar}
-          className="w-full py-2.5 rounded-lg bg-[#2B8E37] text-white text-sm font-semibold hover:bg-[#22592A] transition-colors"
-        >
-          Fechar detalhes
-        </button>
       </div>
     </div>
   );
@@ -255,8 +354,7 @@ function ContadorNaoLidas({
 export default function Home() {
   const { user } = useAuth();
   const location = useLocation();
-  const canCreateCautela =
-    user?.papel === "ADMIN" || user?.papel === "SOLICITANTE";
+  const canCreateCautela = user?.papel === "SOLICITANTE";
 
   const [activeTab, setActiveTab] = useState<Tab>(() => {
     const state = location.state as { cautelaSelecionada?: Cautela } | null;
@@ -278,8 +376,6 @@ export default function Home() {
   const [cautelas, setCautelas] = useState<Cautela[]>([]);
   const [loadingCautelas, setLoadingCautelas] = useState(true);
   const [listError, setListError] = useState("");
-  const [cautelasLidas, setCautelasLidas] = useState<Set<string>>(new Set());
-  const cautelasConhecidasRef = useRef<Map<string, string>>(new Map());
   const cautelaSelecionadaRef = useRef<Cautela | null>(null);
 
   // Formulário
@@ -290,9 +386,6 @@ export default function Home() {
   const [items, setItems] = useState<
     { descricao: string; quantidade: number }[]
   >([]);
-  const [retornado, setRetornado] = useState<null | boolean>(null);
-  const [dataInicio] = useState<string>(new Date().toISOString().split("T")[0]);
-  const [dataFim, setDataFim] = useState<string>("");
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [setorId, setSetorId] = useState<string>("");
@@ -304,7 +397,6 @@ export default function Home() {
   const [showModal, setShowModal] = useState(false);
   const [itemParaExcluir, setItemParaExcluir] = useState<number | null>(null);
   const [showItemDeletedModal, setShowItemDeletedModal] = useState(false);
-  const [modalEncerrada, setModalEncerrada] = useState(false);
   const [mobileView, setMobileView] = useState<MobileView>("lista");
   const cautelasRef = useRef<Cautela[]>([]);
   const painelDetalhesRef = useRef<HTMLDivElement | null>(null);
@@ -319,35 +411,12 @@ export default function Home() {
   const carregarCautelas = useCallback(async () => {
     try {
       const data = await getCautelas();
-      const isPrimeiraCarrega = cautelasConhecidasRef.current.size === 0;
-
-      if (!isPrimeiraCarrega) {
-        data.forEach((c) => {
-          if (STATUS_RECEBIDOS.includes(c.status as StatusCautela)) {
-            const anterior = cautelasConhecidasRef.current.get(c.id);
-            const isNova = anterior === undefined;
-            const mudouStatus = anterior !== undefined && anterior !== c.status;
-            if (isNova || mudouStatus) {
-              setCautelasLidas((prev) => {
-                const n = new Set(prev);
-                n.delete(c.id);
-                return n;
-              });
-            }
-          }
-        });
-      }
-
-      cautelasConhecidasRef.current = new Map(
-        data.map((c) => [c.id, c.status]),
-      );
       setCautelas(data);
 
       const sel = cautelaSelecionadaRef.current;
       if (sel) {
         const atualizada = data.find((c) => c.id === sel.id);
-        if (atualizada && atualizada.status !== sel.status)
-          setCautelaSelecionada(atualizada);
+        if (atualizada) setCautelaSelecionada(atualizada);
       }
     } catch (error) {
       setCautelas([]);
@@ -373,7 +442,15 @@ export default function Home() {
       const cautela = (e as CustomEvent<{ cautela: Cautela }>).detail.cautela;
       setCautelaSelecionada(cautela);
       setActiveTab("recebidos");
-      setCautelasLidas((prev) => new Set([...prev, cautela.id]));
+      void markCautelaAsRead(cautela.id)
+        .then((atualizada) => {
+          setCautelas((prev) =>
+            prev.map((c) => (c.id === atualizada.id ? atualizada : c)),
+          );
+        })
+        .catch((error) => {
+          console.error("Erro ao marcar cautela como lida.", error);
+        });
     }
     window.addEventListener("cautela-selecionar", onSelecionar);
     return () => window.removeEventListener("cautela-selecionar", onSelecionar);
@@ -409,9 +486,15 @@ export default function Home() {
 
   function marcarComoLida(cautela: Cautela) {
     setCautelaSelecionada((prev) => (prev?.id === cautela.id ? null : cautela));
-    if (STATUS_RECEBIDOS.includes(cautela.status as StatusCautela)) {
-      setCautelasLidas((prev) => new Set([...prev, cautela.id]));
-    }
+    void markCautelaAsRead(cautela.id)
+      .then((atualizada) => {
+        setCautelas((prev) =>
+          prev.map((c) => (c.id === atualizada.id ? atualizada : c)),
+        );
+      })
+      .catch((error) => {
+        console.error("Erro ao marcar cautela como lida.", error);
+      });
     setMobileView("detalhe");
   }
 
@@ -424,8 +507,6 @@ export default function Home() {
     setDescricao("");
     setQuantidade("");
     setItems([]);
-    setRetornado(null);
-    setDataFim("");
     setFieldErrors({});
     setSubmitError("");
   }
@@ -436,20 +517,6 @@ export default function Home() {
     setItemParaExcluir(null);
     setShowItemDeletedModal(true);
     setTimeout(() => setShowItemDeletedModal(false), 3000);
-  }
-
-  async function handleConfirmarSaida() {
-    if (!cautelaSelecionada) return;
-    try {
-      const encerrada = await closeCautela(cautelaSelecionada.id);
-      setCautelas((prev) =>
-        prev.map((c) => (c.id === encerrada.id ? encerrada : c)),
-      );
-      setCautelaSelecionada(encerrada);
-    } catch (error) {
-      console.error("Erro ao encerrar cautela.", error);
-    }
-    setModalEncerrada(true);
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -473,15 +540,6 @@ export default function Home() {
     if (items.length === 0) {
       newErrors.items = "Adicione ao menos um item à lista.";
     }
-    if (retornado === null)
-      newErrors.retornado = "Selecione se o item será retornado.";
-    if (retornado === true && !dataFim)
-      newErrors.dataFim = "Informe a data de retorno.";
-    else if (retornado === true && dataFim.length < 10)
-      newErrors.dataFim = "Data inválida.";
-    const dataFimISO = dataFim
-      ? dataFim.split("/").reverse().join("-")
-      : undefined;
     setFieldErrors(newErrors);
     if (Object.keys(newErrors).length === 0) {
       setSubmitting(true);
@@ -495,9 +553,7 @@ export default function Home() {
           proprietarioNome: nome,
           documentoProprietario: documento,
           empresa,
-          retornoItem: retornado === true,
           setorId,
-          validade: retornado ? dataFimISO : undefined,
         });
         await carregarCautelas();
         setShowModal(true);
@@ -525,7 +581,7 @@ export default function Home() {
   const totalNaoLidas = cautelas.filter(
     (c) =>
       STATUS_RECEBIDOS.includes(c.status as StatusCautela) &&
-      !cautelasLidas.has(c.id),
+      c.badgeSolicitante,
   ).length;
   const mostrarBolinha = totalNaoLidas > 0;
 
@@ -548,11 +604,6 @@ export default function Home() {
     setQuantidade,
     items,
     setItems,
-    retornado,
-    setRetornado,
-    dataInicio,
-    dataFim,
-    setDataFim,
     fieldErrors,
     setFieldErrors,
     submitError,
@@ -586,7 +637,7 @@ export default function Home() {
           cautela={cautela}
           isNaoLida={
             STATUS_RECEBIDOS.includes(cautela.status as StatusCautela) &&
-            !cautelasLidas.has(cautela.id)
+            Boolean(cautela.badgeSolicitante)
           }
           onClick={() => marcarComoLida(cautela)}
         />
@@ -602,11 +653,6 @@ export default function Home() {
       <DetalhesCautelaPortaria
         cautela={cautelaSelecionada}
         onFechar={() => setCautelaSelecionada(null)}
-        onLiberarSaida={
-          cautelaSelecionada.status === "Saída Autorizada"
-            ? handleConfirmarSaida
-            : undefined
-        }
       />
     </div>
   ) : null;
@@ -767,11 +813,6 @@ export default function Home() {
                     setMobileView("lista");
                     setCautelaSelecionada(null);
                   }}
-                  onLiberarSaida={
-                    cautelaSelecionada.status === "Saída Autorizada"
-                      ? handleConfirmarSaida
-                      : undefined
-                  }
                 />
               </div>
             </div>
@@ -885,10 +926,6 @@ export default function Home() {
             </p>
           </div>
         </ModalOverlay>
-      )}
-
-      {modalEncerrada && (
-        <ModalEncerrada onClose={() => setModalEncerrada(false)} />
       )}
     </div>
   );

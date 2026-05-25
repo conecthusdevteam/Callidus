@@ -7,6 +7,7 @@ interface DetalhesCautelaProps {
   variant?: "recebida" | "historico";
   titulo?: string;
   cabecalho?: React.ReactNode;
+  mostrarAcompanhamento?: boolean;
 }
 
 export default function DetalhesCautela({
@@ -16,6 +17,7 @@ export default function DetalhesCautela({
   variant = "recebida",
   titulo,
   cabecalho,
+  mostrarAcompanhamento = false,
 }: DetalhesCautelaProps) {
   const bannerLabel =
     cautela.status === "Saída Autorizada"
@@ -47,6 +49,51 @@ export default function DetalhesCautela({
       return "bg-[#F4F4F4] border border-[#A3A3A3] text-[#525252]";
     return "bg-[#FCE96A] border border-[#F5D800] text-[#111827]";
   };
+
+  const tipoPermissaoLabel =
+    cautela.tipoPermissao === "LIVRE_TRANSITO"
+      ? "Livre trânsito"
+      : "Entrada única";
+
+  const statusFinalizadoLabel =
+    cautela.status === "Reprovado" ? "Reprovado" : "Aprovado";
+  const statusFinalizadoEm =
+    cautela.status === "Reprovado" ? cautela.reprovadoEm : cautela.aprovadoEm;
+  const permissaoEditadaLabel =
+    cautela.tipoPermissao === "LIVRE_TRANSITO"
+      ? "LIVRE TRÂNSITO"
+      : "ENTRADA ÚNICA";
+
+  const progresso = [
+    {
+      label: "Pedido realizado",
+      data: cautela.data?.split(", ")[1],
+      complete: true,
+    },
+    {
+      label:
+        cautela.status === "Reprovado"
+          ? "Cautela reprovada"
+          : "Cautela aprovada",
+      data:
+        cautela.status === "Reprovado"
+          ? cautela.reprovadoEm
+          : cautela.aprovadoEm,
+      complete:
+        cautela.status !== "Em análise" || cautela.etapaFluxo !== "SOLICITADA",
+    },
+    {
+      label:
+        cautela.status === "Encerrada"
+          ? "Saída autorizada"
+          : "Validação da portaria",
+      data: cautela.entradaValidadaEm,
+      complete:
+        cautela.status === "Aprovado" ||
+        cautela.status === "Saída Autorizada" ||
+        cautela.status === "Encerrada",
+    },
+  ];
 
   return (
     <div className="relative bg-white rounded-sm shadow-2xl w-full overflow-hidden border border-black">
@@ -82,12 +129,12 @@ export default function DetalhesCautela({
       )}
 
       {titulo && (
-        <div className="px-6 pt-5 pb-2 text-center">
-          <h2 className="text-[18px] font-bold text-black">{titulo}</h2>
+        <div className="px-5 pt-4 pb-2 text-center">
+          <h2 className="text-[16px] font-bold text-black">{titulo}</h2>
         </div>
       )}
 
-      {cabecalho && <div className="px-6 py-4">{cabecalho}</div>}
+      {cabecalho && <div className="px-5 py-3">{cabecalho}</div>}
 
       {/* Badge status */}
       {!titulo && (
@@ -110,21 +157,43 @@ export default function DetalhesCautela({
             </svg>
             {badgeLabel()}
           </div>
+          {cautela.status === "Reprovado" && cautela.motivoNegativa && (
+            <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-left">
+              <p className="text-[13px] font-bold text-red-700">
+                Justificativa:
+              </p>
+              <p className="mt-1 text-[13px] text-red-700">
+                {cautela.motivoNegativa}
+              </p>
+            </div>
+          )}
+          {cautela.tipoPermissaoAlteradoEm && (
+            <>
+              <div className="mt-2 text-center text-[13px] font-semibold text-[#404040]">
+                {tipoPermissaoLabel}
+              </div>
+              <div className="mt-1 text-center text-[13px] text-[#6B7280]">
+                Acesso da cautela editado para{" "}
+                <span className="font-bold">{permissaoEditadaLabel}</span> em{" "}
+                {cautela.tipoPermissaoAlteradoEm}
+              </div>
+            </>
+          )}
         </div>
       )}
 
-      <div className="px-6 pb-5">
+      <div className="px-5 pb-4">
         {/* Id */}
         <p className="text-[12px] text-[#6B7280] mb-0.5 pt-2">Id da Cautela:</p>
-        <p className="text-[16px] font-bold text-black mb-4">{cautela.id}</p>
+        <p className="text-[14px] font-bold text-black mb-3">{cautela.id}</p>
 
         {/* Data e Hora */}
-        <div className="flex gap-8 mb-4">
+        <div className="flex gap-8 mb-3">
           <div>
             <p className="text-[12px] text-[#6B7280] mb-0.5">
               Data da solicitação
             </p>
-            <p className="text-[16px] font-bold text-black">
+            <p className="text-[14px] font-bold text-black">
               {cautela.data?.split(", ")[0] ?? "—"}
             </p>
           </div>
@@ -132,7 +201,7 @@ export default function DetalhesCautela({
             <p className="text-[12px] text-[#6B7280] mb-0.5">
               Hora da solicitação
             </p>
-            <p className="text-[16px] font-bold text-black">
+            <p className="text-[14px] font-bold text-black">
               {cautela.data?.split(", ")[1] ?? "—"}
             </p>
           </div>
@@ -140,53 +209,108 @@ export default function DetalhesCautela({
 
         {/* Setor */}
         <p className="text-[12px] text-[#6B7280] mb-0.5">Setor</p>
-        <p className="text-[16px] font-bold text-black mb-4">
+        <p className="text-[14px] font-bold text-black mb-3">
           {cautela.setorId || "-"}
         </p>
 
+        {mostrarAcompanhamento && (
+          <div className="float-right ml-5 mb-5 w-[160px]">
+            <p className="text-[12px] font-bold text-[#404040] mb-4">
+              Acompanhe seu pedido de cautela
+            </p>
+            <div className="space-y-0">
+              {progresso.map((item, index) => (
+                <div
+                  key={item.label}
+                  className="grid grid-cols-[1fr_18px_auto] gap-2"
+                >
+                  <p
+                    className={`text-[11px] leading-tight ${
+                      item.complete ? "text-black" : "text-[#BDBDBD]"
+                    }`}
+                  >
+                    {item.label}
+                  </p>
+                  <div className="flex flex-col items-center">
+                    <span
+                      className={`h-4 w-4 rounded-full ${
+                        item.complete ? "bg-[#3BB14A]" : "bg-[#BDBDBD]"
+                      }`}
+                    />
+                    {index < progresso.length - 1 && (
+                      <span
+                        className={`h-20 w-0.5 ${
+                          progresso[index + 1].complete
+                            ? "bg-[#3BB14A]"
+                            : "bg-[#BDBDBD]"
+                        }`}
+                      />
+                    )}
+                  </div>
+                  <p className="text-[12px] text-[#404040]">
+                    {item.data?.split(", ")[1] ?? item.data ?? ""}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Proprietário */}
         <p className="text-[12px] text-[#6B7280] mb-0.5">Proprietário:</p>
-        <p className="text-[16px] font-bold text-black mb-4">
+        <p className="text-[14px] font-bold text-black mb-3">
           {cautela.visitante || "-"}
         </p>
 
         {/* Documento */}
         <p className="text-[12px] text-[#6B7280] mb-0.5">Documento/Matrícula</p>
-        <p className="text-[16px] font-bold text-black mb-4">
+        <p className="text-[14px] font-bold text-black mb-3">
           {cautela.documento || "-"}
         </p>
 
         {/* Email */}
         <p className="text-[12px] text-[#6B7280] mb-0.5">Email</p>
-        <p className="text-[16px] font-bold text-black mb-4">
+        <p className="text-[14px] font-bold text-black mb-3">
           {cautela.proprietarioEmail || "-"}
         </p>
 
         {/* Empresa */}
         <p className="text-[12px] text-[#6B7280] mb-0.5">Empresa</p>
-        <p className="text-[16px] font-bold text-black mb-4">
+        <p className="text-[14px] font-bold text-black mb-3">
           {cautela.empresa || "-"}
         </p>
 
         {/* Aprovado por — só no histórico */}
         {variant === "historico" && cautela.gestor && (
           <>
-            <p className="text-[12px] text-[#6B7280] mb-0.5">Aprovado por</p>
-            <p className="text-[16px] font-bold text-black mb-4">
+            <p className="text-[12px] text-[#6B7280] mb-0.5">
+              {statusFinalizadoLabel} por
+            </p>
+            <p className="text-[14px] font-bold text-black mb-3">
               {cautela.gestor}
             </p>
+            {statusFinalizadoEm && (
+              <>
+                <p className="text-[12px] text-[#6B7280] mb-0.5">
+                  {statusFinalizadoLabel} em
+                </p>
+                <p className="text-[14px] font-bold text-black mb-3">
+                  {statusFinalizadoEm}
+                </p>
+              </>
+            )}
           </>
         )}
 
         {/* Tabela cautelados */}
-        <div className="rounded-lg overflow-hidden mb-5 border border-[#E5E7EB]">
+        <div className="rounded-md overflow-hidden mb-4 border border-[#E5E7EB]">
           <table className="w-full">
             <thead>
               <tr className="bg-[#0E9F6E] text-white">
-                <th className="px-4 py-2.5 text-left text-[18px] font-bold">
+                <th className="px-3 py-2 text-left text-[13px] font-bold">
                   Descrição
                 </th>
-                <th className="px-4 py-2.5 text-right text-[18px] font-bold">
+                <th className="px-3 py-2 text-right text-[13px] font-bold">
                   Quantidade
                 </th>
               </tr>
@@ -197,10 +321,10 @@ export default function DetalhesCautela({
                   key={i}
                   className={`border-t border-[#F3F4F6] ${i % 2 === 1 ? "bg-[#F9FAFB]" : "bg-white"}`}
                 >
-                  <td className="px-4 py-3 text-[18px] text-[#111827]">
+                  <td className="px-3 py-2 text-[13px] text-[#111827]">
                     {eq.descricao}
                   </td>
-                  <td className="px-4 py-3 text-[18px] text-[#111827] text-right">
+                  <td className="px-3 py-2 text-[13px] text-[#111827] text-right">
                     {eq.quantidade ?? 1}
                   </td>
                 </tr>

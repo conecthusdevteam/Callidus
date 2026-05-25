@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Cautela, StatusCautela } from "../data/cautelaTypes";
-import { getCautelas, closeCautela } from "../lib/api";
+import {
+  getCautelas,
+  closeCautela,
+  validateEntry,
+  markCautelaAsRead,
+} from "../lib/api";
 import { useLocation } from "react-router-dom";
 import { AvatarStatus } from "../components/AvatarStatus";
 import { BadgeStatus } from "../components/BadgeStatus";
@@ -13,7 +18,6 @@ import { ModalEncerrada } from "../components/ModalGestor";
 import { matchesSearch } from "../lib/cautelaUtils";
 import DetalhesCautela from "../components/DetalhesCautela";
 
-const STATUS_ATIVAS: StatusCautela[] = ["Aprovado", "Saída Autorizada"];
 const STATUS_HISTORICO: StatusCautela[] = [
   "Encerrada",
   "Reprovado",
@@ -23,6 +27,13 @@ const STATUS_HISTORICO: StatusCautela[] = [
 const ITENS_POR_PAGINA = 9;
 
 type MobileView = "lista" | "detalhe";
+
+function isCautelaAtivaPortaria(cautela: Cautela) {
+  return (
+    cautela.status === "Saída Autorizada" ||
+    cautela.etapaFluxo === "APROVADA_PELO_GESTOR"
+  );
+}
 
 // ─── Badge inline para tabela ─────────────────────────────────────────────────
 
@@ -96,6 +107,77 @@ function paginasVisiveis(
   if (pagina < totalPaginas - 2) pages.push("...");
   pages.push(totalPaginas);
   return pages;
+}
+
+function CautelaPrint({ cautela }: { cautela: Cautela | null }) {
+  if (!cautela) return null;
+  const [data = "—", hora = "—"] = cautela.data?.split(", ") ?? [];
+  const titulo =
+    cautela.status === "Reprovado"
+      ? "REPROVADA"
+      : cautela.status === "Encerrada"
+        ? "ENCERRADA"
+        : "APROVADA";
+  const responsavelLabel =
+    cautela.status === "Reprovado" ? "Reprovado por" : "Aprovado por";
+
+  return (
+    <div className="cautela-print-area">
+      <div className="cautela-print-card">
+        <h1>{titulo}</h1>
+        <p className="print-label">Id da Cautela:</p>
+        <p className="print-value">{cautela.id}</p>
+
+        <div className="print-grid">
+          <div>
+            <p className="print-label">Data da solicitação</p>
+            <p className="print-value">{data}</p>
+          </div>
+          <div>
+            <p className="print-label">Hora da solicitação</p>
+            <p className="print-value">{hora}</p>
+          </div>
+        </div>
+
+        <p className="print-label">Setor</p>
+        <p className="print-value">{cautela.setorId || "-"}</p>
+        <p className="print-label">Proprietário:</p>
+        <p className="print-value">{cautela.visitante || "-"}</p>
+        <p className="print-label">Documento/Matrícula</p>
+        <p className="print-value">{cautela.documento || "-"}</p>
+        <p className="print-label">Email</p>
+        <p className="print-value">{cautela.proprietarioEmail || "-"}</p>
+        <p className="print-label">Empresa</p>
+        <p className="print-value">{cautela.empresa || "-"}</p>
+        <p className="print-label">{responsavelLabel}</p>
+        <p className="print-value">{cautela.gestor || "-"}</p>
+
+        {cautela.status === "Reprovado" && cautela.motivoNegativa && (
+          <>
+            <p className="print-label">Justificativa</p>
+            <p className="print-value">{cautela.motivoNegativa}</p>
+          </>
+        )}
+
+        <table>
+          <thead>
+            <tr>
+              <th>Descrição</th>
+              <th>Quantidade</th>
+            </tr>
+          </thead>
+          <tbody>
+            {cautela.equipamentos.map((item, index) => (
+              <tr key={`${item.descricao}-${index}`}>
+                <td>{item.descricao}</td>
+                <td>{item.quantidade ?? 1}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 }
 
 // ─── Banner do card ───────────────────────────────────────────────────────────
@@ -241,8 +323,36 @@ function DetalhesCautelaPortaria({
   onAprovarEntrada?: () => void;
   onAprovarSaida?: () => void;
 }) {
+  const tipoPermissaoLabel =
+    cautela.tipoPermissao === "LIVRE_TRANSITO"
+      ? "Livre trânsito"
+      : "Entrada única";
+  const statusFinalizadoLabel =
+    cautela.status === "Reprovado" ? "Reprovado" : "Aprovado";
+  const statusFinalizadoEm =
+    cautela.status === "Reprovado" ? cautela.reprovadoEm : cautela.aprovadoEm;
+
   return (
-    <div className="flex flex-col h-full">
+    <div className="relative flex flex-col h-full">
+      <button
+        onClick={onFechar}
+        className="absolute right-3 top-3 z-10 text-black hover:text-gray-500"
+        aria-label="Fechar detalhes"
+      >
+        <svg
+          className="h-4 w-4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M6 18L18 6M6 6l12 12"
+          />
+        </svg>
+      </button>
       <div className="flex-1 overflow-y-auto p-6">
         <div className="mb-4">
           <BannerStatus cautela={cautela} />
@@ -251,6 +361,11 @@ function DetalhesCautelaPortaria({
           <div className="mb-4">
             <JustificativaBox motivo={cautela.motivoNegativa} />
           </div>
+        )}
+        {cautela.tipoPermissaoAlteradoEm && (
+          <p className="mb-4 text-center text-sm font-semibold text-[#404040]">
+            {tipoPermissaoLabel}
+          </p>
         )}
         <div className="mb-3">
           <p className="text-sm font-bold text-black">Id da cautela</p>
@@ -261,7 +376,9 @@ function DetalhesCautelaPortaria({
           <p className="text-sm text-gray-700">{cautela.setorId || "-"}</p>
         </div>
         <div className="mb-3">
-          <p className="text-sm font-bold text-black">Data e hora de entrada</p>
+          <p className="text-sm font-bold text-black">
+            Data e hora da solicitação
+          </p>
           <p className="text-sm text-gray-700">{cautela.data || "-"}</p>
         </div>
         <div className="mb-3">
@@ -286,14 +403,18 @@ function DetalhesCautelaPortaria({
         )}
         {cautela.gestor && (
           <div className="mb-3">
-            <p className="text-sm font-bold text-black">Aprovado por:</p>
+            <p className="text-sm font-bold text-black">
+              {statusFinalizadoLabel} por:
+            </p>
             <p className="text-sm text-gray-700">{cautela.gestor}</p>
           </div>
         )}
-        {cautela.aprovadoEm && (
+        {statusFinalizadoEm && (
           <div className="mb-3">
-            <p className="text-sm font-bold text-black">Aprovado em:</p>
-            <p className="text-sm text-gray-700">{cautela.aprovadoEm}</p>
+            <p className="text-sm font-bold text-black">
+              {statusFinalizadoLabel} em:
+            </p>
+            <p className="text-sm text-gray-700">{statusFinalizadoEm}</p>
           </div>
         )}
         {cautela.validade && (
@@ -334,10 +455,10 @@ function DetalhesCautelaPortaria({
           </button>
         )}
         <button
-          onClick={onFechar}
-          className="w-full py-2.5 rounded-lg bg-[#F5F5F5] text-black text-sm font-semibold hover:bg-gray-300 transition-colors"
+          onClick={() => window.print()}
+          className="w-full py-2.5 rounded-lg border border-gray-300 bg-white text-black text-sm font-semibold hover:bg-gray-100 transition-colors"
         >
-          Fechar detalhes
+          Imprimir
         </button>
       </div>
     </div>
@@ -363,7 +484,6 @@ export default function Portaria() {
   const [origemDetalhe, setOrigemDetalhe] = useState<"ativas" | "historico">(
     "ativas",
   );
-  const [cautelasLidas, setCautelasLidas] = useState<Set<string>>(new Set());
   const [modalEncerrada, setModalEncerrada] = useState(false);
   const [mobileView, setMobileView] = useState<MobileView>("lista");
   const [searchTerm, setSearchTerm] = useState("");
@@ -400,9 +520,7 @@ export default function Portaria() {
   useEffect(() => {
     function onSelecionar(e: Event) {
       const cautela = (e as CustomEvent<{ cautela: Cautela }>).detail.cautela;
-      const origem = STATUS_ATIVAS.includes(cautela.status as StatusCautela)
-        ? "ativas"
-        : "historico";
+      const origem = isCautelaAtivaPortaria(cautela) ? "ativas" : "historico";
       abrirDetalhe(cautela, origem);
     }
     window.addEventListener("cautela-selecionar", onSelecionar);
@@ -422,16 +540,24 @@ export default function Portaria() {
   function abrirDetalhe(cautela: Cautela, origem: "ativas" | "historico") {
     setCautelaSelecionada(cautela);
     setOrigemDetalhe(origem);
-    setCautelasLidas((prev) => new Set([...prev, cautela.id]));
+    void markCautelaAsRead(cautela.id)
+      .then((atualizada) => {
+        setCautelas((prev) =>
+          prev.map((c) => (c.id === atualizada.id ? atualizada : c)),
+        );
+      })
+      .catch((error) => {
+        console.error("Erro ao marcar cautela como lida.", error);
+      });
     setMobileView("detalhe");
   }
 
   // ── Listas ──
-  const cautelasAtivas = cautelas.filter((c) =>
-    STATUS_ATIVAS.includes(c.status as StatusCautela),
-  );
-  const cautelasHistorico = cautelas.filter((c) =>
-    STATUS_HISTORICO.includes(c.status as StatusCautela),
+  const cautelasAtivas = cautelas.filter(isCautelaAtivaPortaria);
+  const cautelasHistorico = cautelas.filter(
+    (c) =>
+      STATUS_HISTORICO.includes(c.status as StatusCautela) &&
+      !isCautelaAtivaPortaria(c),
   );
   const cautelasFiltradas = searchTerm.trim()
     ? cautelasAtivas.filter((c) => matchesSearch(c, searchTerm))
@@ -449,14 +575,24 @@ export default function Portaria() {
     paginaHistorico * ITENS_POR_PAGINA,
   );
 
-  const totalNaoLidas = cautelasAtivas.filter(
-    (c) => !cautelasLidas.has(c.id),
+  const totalNaoLidas = cautelasAtivas.filter((c) =>
+    Boolean(c.badgePortaria),
   ).length;
 
   // ── Ações ──
   async function handleAprovarEntrada(id: string) {
-    setCautelasLidas((prev) => new Set([...prev, id]));
-    setCautelaSelecionada(null);
+    try {
+      setActionError("");
+      const aprovada = await validateEntry(id);
+      setCautelas((prev) => prev.map((c) => (c.id === id ? aprovada : c)));
+      setCautelaSelecionada(aprovada);
+    } catch (error) {
+      setActionError(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível aprovar a entrada.",
+      );
+    }
   }
 
   async function handleAprovarSaida(id: string) {
@@ -488,11 +624,11 @@ export default function Portaria() {
         <CardCautelaPortaria
           key={cautela.id}
           cautela={cautela}
-          isNaoLida={!cautelasLidas.has(cautela.id)}
+          isNaoLida={Boolean(cautela.badgePortaria)}
           isSelected={cautelaSelecionada?.id === cautela.id}
           onClick={() => abrirDetalhe(cautela, "ativas")}
           onAprovarEntrada={
-            cautela.status === "Aprovado"
+            cautela.etapaFluxo === "APROVADA_PELO_GESTOR"
               ? (id) => void handleAprovarEntrada(id)
               : undefined
           }
@@ -508,6 +644,7 @@ export default function Portaria() {
 
   return (
     <div className="min-h-screen md:h-screen pt-[60px] pl-0 md:pl-[70px] bg-[#F5F7F6] relative overflow-x-hidden md:overflow-hidden">
+      <CautelaPrint cautela={cautelaSelecionada} />
       {actionError && (
         <div className="fixed left-[90px] right-5 top-[76px] z-40 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
           {actionError}
@@ -518,7 +655,7 @@ export default function Portaria() {
       <div className="hidden md:flex h-[calc(100vh-60px)]">
         {/* Coluna esquerda — Cautelas autorizadas */}
         <div
-          className={`w-[560px] flex-shrink-0 px-6 pt-6 pb-4 flex flex-col h-full relative ${
+          className={`w-[450px] flex-shrink-0 px-6 pt-6 pb-4 flex flex-col h-full relative ${
             cautelaSelecionada && origemDetalhe === "ativas" ? "z-10" : "z-0"
           }`}
         >
@@ -552,9 +689,9 @@ export default function Portaria() {
                 onClick={() => setCautelaSelecionada(null)}
               />
               <div
-                className="fixed top-22 w-[500px] z-20 overflow-y-auto"
+                className="fixed top-22 w-[420px] z-20 overflow-y-auto"
                 style={{
-                  left: origemDetalhe === "ativas" ? "620px" : undefined,
+                  left: origemDetalhe === "ativas" ? "470px" : undefined,
                   right: origemDetalhe === "historico" ? "24px" : undefined,
                   maxHeight: "calc(100vh - 100px)",
                 }}
@@ -566,7 +703,8 @@ export default function Portaria() {
                   variant="historico"
                   acoes={
                     <>
-                      {cautelaSelecionada.status === "Aprovado" && (
+                      {cautelaSelecionada.etapaFluxo ===
+                        "APROVADA_PELO_GESTOR" && (
                         <button
                           onClick={() =>
                             void handleAprovarEntrada(cautelaSelecionada.id)
@@ -586,6 +724,12 @@ export default function Portaria() {
                           Aprovar saída
                         </button>
                       )}
+                      <button
+                        onClick={() => window.print()}
+                        className="w-full py-2.5 rounded-lg border border-gray-300 bg-white text-black text-sm font-semibold hover:bg-gray-100 transition-colors"
+                      >
+                        Imprimir
+                      </button>
                     </>
                   }
                 />
@@ -625,15 +769,16 @@ export default function Portaria() {
           </div>
 
           {/* Tabela */}
-          <div className="w-5/6 bg-white rounded-lg overflow-hidden border border-[#E5E7EB] shadow-sm relative z-0">
+          <div className="w-full max-w-[980px] bg-white rounded-lg overflow-hidden border border-[#E5E7EB] shadow-sm relative z-0">
             {/* Cabeçalho */}
-            <div className="grid grid-cols-[2fr_1fr_1fr_2fr_1.5fr_1.5fr_48px] bg-[#2B8E37] text-white text-[18px] font-bold px-4 py-1.5">
+            <div className="grid grid-cols-[1.8fr_0.9fr_0.75fr_1.8fr_1.25fr_1.25fr_1.35fr] bg-[#2B8E37] text-white text-[15px] font-bold px-4 py-2">
               <span>Solicitante</span>
               <span>Data</span>
               <span>Hora</span>
               <span>Id da cautela</span>
               <span className="flex justify-center">Status</span>
-              <span className="flex justify-center">Aprovador</span>
+              <span>Acesso</span>
+              <span>Aprovador</span>
             </div>
 
             {/* Linhas */}
@@ -651,7 +796,7 @@ export default function Portaria() {
                   <div
                     key={cautela.id}
                     onClick={() => abrirDetalhe(cautela, "historico")}
-                    className={`grid grid-cols-[2fr_1fr_1fr_2fr_1.5fr_1.5fr] px-4 py-3 text-[18px] text-[#111827] items-center cursor-pointer transition-colors border-b border-[#F3F4F6] last:border-0 ${
+                    className={`grid grid-cols-[1.8fr_0.9fr_0.75fr_1.8fr_1.25fr_1.25fr_1.35fr] px-4 py-3 text-[14px] text-[#111827] items-center cursor-pointer transition-colors border-b border-[#F3F4F6] last:border-0 ${
                       selecionada
                         ? "bg-[#E8F5EA] border-l-4 border-l-[#2B8E37]"
                         : i % 2 === 1
@@ -667,6 +812,13 @@ export default function Portaria() {
                     </span>
                     <span className="flex justify-center">
                       <BadgeTabela status={cautela.status as StatusCautela} />
+                    </span>
+                    <span className="truncate">
+                      {cautela.status === "Reprovado"
+                        ? "-"
+                        : cautela.livreAcesso === "livre"
+                          ? "Livre trânsito"
+                          : "Entrada única"}
                     </span>
                     <span className="truncate">{cautela.gestor || "—"}</span>
                   </div>
@@ -825,7 +977,7 @@ export default function Portaria() {
                     setCautelaSelecionada(null);
                   }}
                   onAprovarEntrada={
-                    cautelaSelecionada.status === "Aprovado"
+                    cautelaSelecionada.etapaFluxo === "APROVADA_PELO_GESTOR"
                       ? () => void handleAprovarEntrada(cautelaSelecionada.id)
                       : undefined
                   }

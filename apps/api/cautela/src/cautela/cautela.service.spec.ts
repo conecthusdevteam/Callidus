@@ -184,28 +184,6 @@ describe('CautelaService', () => {
     expect(cautela.visualizadoSolicitanteEm).toBeNull();
   });
 
-  it('permite portaria invalidar entrada sem justificativa obrigatoria', async () => {
-    const { cautelaEventRepository, cautelaRepository, service } =
-      makeService();
-    const cautela = makeCautela({
-      etapaFluxo: CautelaFlowStep.APROVADA_PELO_GESTOR,
-    });
-
-    cautelaRepository.findOne.mockResolvedValue(cautela);
-    jest.spyOn(service, 'findOne').mockResolvedValue({ id: cautela.id });
-
-    await service.rejectEntryByPortaria(cautela.id, portariaUser, {});
-
-    expect(cautela.status).toBe(CautelaStatus.REPROVADA);
-    expect(cautela.justificativaRejeicao).toBeNull();
-    expect(cautelaEventRepository.save).toHaveBeenCalledWith(
-      expect.objectContaining({
-        acao: CautelaStatus.REPROVADA,
-        feitoPorId: portariaUser.sub,
-      }),
-    );
-  });
-
   it('bloqueia autorizacao de saida para cautela de livre transito', async () => {
     const { cautelaRepository, service } = makeService();
     const cautela = makeCautela({

@@ -6,7 +6,7 @@ interface ModalEdicaoCautelaProps {
   cautela: Cautela;
   livreAcesso: "livre" | "entrada";
   onChangeLivreAcesso: (valor: "livre" | "entrada") => void;
-  onSalvar: () => void;
+  onSalvar: () => void | Promise<void>;
   onFechar: () => void;
 }
 
@@ -18,13 +18,26 @@ export default function ModalEdicaoCautela({
   onFechar,
 }: ModalEdicaoCautelaProps) {
   const [sucesso, setSucesso] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState("");
 
-  function handleSalvar() {
-    setSucesso(true);
-    setTimeout(() => {
-      setSucesso(false);
-      onSalvar();
-    }, 3000);
+  async function handleSalvar() {
+    try {
+      setErro("");
+      setSalvando(true);
+      await onSalvar();
+      setSucesso(true);
+      setTimeout(() => {
+        setSucesso(false);
+        onFechar();
+      }, 3000);
+    } catch (error) {
+      setErro(
+        error instanceof Error ? error.message : "Não foi possível editar.",
+      );
+    } finally {
+      setSalvando(false);
+    }
   }
 
   return (
@@ -81,7 +94,7 @@ export default function ModalEdicaoCautela({
               cabecalho={
                 <div className="flex items-center gap-4">
                   <p className="text-[13px] text-[#404040]">
-                    O item será retornado?
+                    Tipo de permissão
                   </p>
                   <label className="flex items-center gap-2 text-[13px] cursor-pointer">
                     <input
@@ -105,11 +118,15 @@ export default function ModalEdicaoCautela({
               }
               acoes={
                 <div className="flex gap-3">
+                  {erro && (
+                    <p className="basis-full text-sm text-red-500">{erro}</p>
+                  )}
                   <button
                     onClick={handleSalvar}
+                    disabled={salvando}
                     className="flex-1 py-2.5 rounded-lg bg-[#3BB14A] text-white text-sm font-semibold hover:bg-[#22592A] transition-colors"
                   >
-                    Editar
+                    {salvando ? "Editando..." : "Editar"}
                   </button>
                   <button
                     onClick={onFechar}

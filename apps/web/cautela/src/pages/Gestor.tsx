@@ -5,12 +5,16 @@ import {
   getCautelas,
   rejectCautela,
   authorizeDeparture,
+  updatePermissionType,
+  markCautelaAsRead,
 } from "../lib/api";
 import StatusBadge from "../components/StatusBadge";
 import {
   BannerAguardandoSaida,
   JustificativaBox,
 } from "../components/BannerStatus";
+import { AvatarStatus } from "../components/AvatarStatus";
+import { BadgeStatus } from "../components/BadgeStatus";
 import { TabelaCautelados } from "../components/TabelaCautelados";
 import { CardCautelaHistorico } from "../components/CardCautelaHistorico";
 import { matchesSearch } from "../lib/cautelaUtils";
@@ -44,6 +48,10 @@ function DetalhesConteudo({
   cautela: CautelaComDecisao;
   onAutorizarSaida?: () => void;
 }) {
+  const tipoPermissaoLabel =
+    cautela.tipoPermissao === "LIVRE_TRANSITO"
+      ? "Livre trânsito"
+      : "Entrada única";
   const statusExibido =
     cautela.decisaoLocal === "aprovado"
       ? "Aprovado"
@@ -132,6 +140,11 @@ function DetalhesConteudo({
               <JustificativaBox motivo={cautela.motivoNegativa ?? "—"} />
             </div>
           )}
+          {cautela.tipoPermissaoAlteradoEm && (
+            <p className="mt-2 text-center text-sm font-semibold text-[#404040]">
+              {tipoPermissaoLabel}
+            </p>
+          )}
         </div>
       )}
 
@@ -144,7 +157,9 @@ function DetalhesConteudo({
         <p className="text-base text-black">{cautela.setorId || "-"}</p>
       </div>
       <div className="mb-4">
-        <p className="text-base font-bold text-black">Data e hora de entrada</p>
+        <p className="text-base font-bold text-black">
+          Data e hora da solicitação
+        </p>
         <p className="text-base text-black">{cautela.data}</p>
       </div>
       <div className="mb-4">
@@ -219,12 +234,13 @@ function CardCautelaRecebida({
   onDescartar: (id: string) => void;
 }) {
   const isAtencao = cautela.status === "Saída Autorizada";
+  const status = cautela.status as StatusCautela;
 
   return (
     <div className="flex justify-center">
       <div
         onClick={onClick}
-        className={`rounded-lg cursor-pointer transition-all w-full min-h-[320px] ${
+        className={`rounded-lg p-5 cursor-pointer transition-all hover:shadow-md mb-3 w-full ${
           isAtencao
             ? "border border-red-300 bg-[#FFF5F5]"
             : isNaoLida
@@ -232,9 +248,9 @@ function CardCautelaRecebida({
               : "border border-amber-200 bg-white"
         }`}
       >
-        <div className="flex justify-center pt-3 pb-1">
+        <div className="flex justify-center mb-3">
           <span
-            className={`w-full text-center mx-4 px-4 py-1 rounded-xl text-[13px] font-semibold ${
+            className={`w-full text-center px-3 py-1 rounded text-[12px] font-bold uppercase tracking-wide ${
               isAtencao
                 ? "bg-red-100 border border-red-300 text-red-600"
                 : "bg-[#FCE96A] border border-amber-300 text-[#111827]"
@@ -246,98 +262,83 @@ function CardCautelaRecebida({
           </span>
         </div>
 
-        <div className="p-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-14 h-14 rounded-full bg-[#FCE96A] border border-[#FDE68A] flex items-center justify-center flex-shrink-0">
-                <svg
-                  width="28"
-                  height="30"
-                  viewBox="0 0 24 20"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M20.2842 3.20833C20.2842 2.82156 20.1304 2.45074 19.857 2.17725C19.5835 1.90385 19.2126 1.75 18.8259 1.75H4.82586C4.4392 1.75008 4.0682 1.90383 3.79478 2.17725C3.52138 2.45072 3.36753 2.82163 3.36753 3.20833V13.1546C3.36775 13.6541 3.25175 14.1471 3.02801 14.5936L1.78159 17.0762L1.78045 17.0773C1.75815 17.1217 1.74756 17.1712 1.74969 17.2209C1.7519 17.2707 1.76674 17.3198 1.79299 17.3621C1.81926 17.4045 1.8565 17.4394 1.90008 17.4635C1.94384 17.4877 1.99367 17.5003 2.04364 17.5H21.6092C21.6591 17.5003 21.708 17.4876 21.7516 17.4635C21.7954 17.4394 21.8324 17.4046 21.8587 17.3621C21.8851 17.3197 21.8998 17.2708 21.902 17.2209C21.9042 17.1711 21.8937 17.1218 21.8713 17.0773L20.6249 14.5947C20.4011 14.1481 20.284 13.6542 20.2842 13.1546V3.20833ZM22.0342 13.1558C22.0341 13.3828 22.0874 13.6067 22.1891 13.8097L23.4333 16.29C23.5905 16.6021 23.6663 16.9493 23.6509 17.2983C23.6354 17.6478 23.53 17.9878 23.3456 18.285C23.1611 18.5822 22.9033 18.827 22.597 18.9959C22.2925 19.1639 21.9502 19.2503 21.6024 19.2489L2.04933 19.25C1.70173 19.2514 1.35912 19.1639 1.05471 18.9959C0.748601 18.827 0.490561 18.5821 0.306171 18.285C0.121823 17.9879 0.0174742 17.6477 0.00197172 17.2983C-0.0134178 16.9495 0.061518 16.6031 0.218443 16.2912L1.46372 13.8097L1.5298 13.6536C1.5876 13.4944 1.6176 13.326 1.61753 13.1558V3.20833C1.61753 2.3575 1.95589 1.54161 2.55747 0.939941C3.15908 0.338335 3.97507 8.19042e-05 4.82586 0H18.8259C19.6767 0 20.4926 0.338359 21.0943 0.939941C21.6959 1.54162 22.0342 2.35743 22.0342 3.20833V13.1558Z"
-                    fill="#0A0A0A"
-                  />
-                  <path
-                    d="M21.223 12.8182C21.706 12.8184 22.098 13.2101 22.098 13.6932C22.098 14.1763 21.706 14.5679 21.223 14.5682H2.42984C1.94659 14.5682 1.55484 14.1764 1.55484 13.6932C1.55484 13.2099 1.94659 12.8182 2.42984 12.8182H21.223Z"
-                    fill="#0A0A0A"
-                  />
-                </svg>
-              </div>
-              <p className="text-[18px] font-bold text-[#111827] truncate">
+        <div className="flex items-start justify-between gap-3 mb-2">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <AvatarStatus status={status} />
+            <div>
+              <p className="text-[18px] font-bold leading-tight text-[#404040] truncate">
                 {cautela.visitante || "Nome do solicitante"}
               </p>
             </div>
-            <StatusBadge status="Em análise" />
           </div>
+          <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-1">
+            <BadgeStatus status={isAtencao ? "Aprovado" : "Em análise"} />
+          </div>
+        </div>
 
-          <p className="text-[18px] text-[#404040]">
-            Data: {cautela.data || "00/00/0000"}
-          </p>
-          <p className="text-[18px] text-[#404040] mb-3">
-            Ciente:{" "}
-            <span className="font-bold">
-              {(cautela.gestor || "").toUpperCase()}
-            </span>
-          </p>
+        <p className="text-[15px] text-[#404040] mt-1">
+          Data: {cautela.data || "00/00/0000"}
+        </p>
+        <p className="text-[15px] text-[#404040] mt-0.5">
+          Ciente:{" "}
+          <span className="font-bold">
+            {(cautela.gestor || "").toUpperCase()}
+          </span>
+        </p>
 
-          <hr className="border-black mb-3" />
+        <hr className="border-black my-3" />
 
-          <p className="text-[16px] font-medium text-[#404040] mb-1">
-            Cautelados:
-          </p>
-          <ul className="mb-3 space-y-0.5">
-            {cautela.equipamentos.slice(0, 3).map((eq, i) => (
-              <li
-                key={i}
-                className="text-[16px] text-[#404040] flex items-start gap-1"
-              >
-                <span>•</span>
-                {eq.descricao} - {eq.quantidade ?? 1}
-              </li>
-            ))}
-            {cautela.equipamentos.length > 3 && (
-              <li className="text-[11px] text-[#9CA3AF]">
-                +{cautela.equipamentos.length - 3} item(ns)
-              </li>
-            )}
-          </ul>
-
-          <div
-            className="flex items-center justify-between gap-2"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {!isAtencao ? (
-              <div className="flex gap-2">
-                <button
-                  onClick={() => onAprovar(cautela.id)}
-                  className="px-4 py-1.5 rounded-lg bg-[#3BB14A] text-white text-[13px] font-semibold hover:bg-[#22592A] transition-colors"
-                >
-                  Aprovar
-                </button>
-                <button
-                  onClick={() => onDescartar(cautela.id)}
-                  className="px-4 py-1.5 rounded-lg bg-[#FAFAFA] border border-gray-400 text-black text-[13px] font-medium hover:bg-gray-100 transition-colors"
-                >
-                  Descartar
-                </button>
-              </div>
-            ) : (
-              <div />
-            )}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onClick();
-              }}
-              className="text-[13px] px-3 py-1.5 bg-gray-100 rounded-lg text-[#171717] font-medium hover:underline whitespace-nowrap"
+        <p className="text-[14px] font-medium text-[#404040] mb-1">
+          Cautelados:
+        </p>
+        <ul className="mb-3 space-y-0.5">
+          {cautela.equipamentos.slice(0, 3).map((eq, i) => (
+            <li
+              key={i}
+              className="text-[14px] text-[#404040] flex items-start gap-1"
             >
-              Ver detalhes
-            </button>
-          </div>
+              <span>•</span>
+              {eq.descricao} - {eq.quantidade ?? 1}
+            </li>
+          ))}
+          {cautela.equipamentos.length > 3 && (
+            <li className="text-[11px] text-[#9CA3AF]">
+              +{cautela.equipamentos.length - 3} item(ns)
+            </li>
+          )}
+        </ul>
+
+        <div
+          className="flex items-center justify-between gap-2 mt-3"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {!isAtencao ? (
+            <div className="flex gap-2">
+              <button
+                onClick={() => onAprovar(cautela.id)}
+                className="px-5 py-2 rounded-lg bg-[#3BB14A] text-white text-sm font-semibold hover:bg-[#22592A] transition-colors"
+              >
+                Aprovar
+              </button>
+              <button
+                onClick={() => onDescartar(cautela.id)}
+                className="px-5 py-2 rounded-lg bg-[#FAFAFA] border border-gray-400 text-black text-sm font-medium hover:bg-gray-100 transition-colors"
+              >
+                Descartar
+              </button>
+            </div>
+          ) : (
+            <div />
+          )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onClick();
+            }}
+            className="text-[13px] px-4 py-2 bg-gray-100 rounded-lg text-[#171717] font-medium hover:underline whitespace-nowrap"
+          >
+            Ver detalhes
+          </button>
         </div>
       </div>
     </div>
@@ -395,6 +396,25 @@ function BadgeHistorico({ status }: { status: StatusCautela }) {
   return null;
 }
 
+function paginasVisiveis(paginaAtual: number, totalPaginas: number) {
+  const paginas: Array<number | "..."> = [];
+
+  for (let pagina = 1; pagina <= totalPaginas; pagina += 1) {
+    const deveExibir =
+      pagina === 1 ||
+      pagina === totalPaginas ||
+      Math.abs(pagina - paginaAtual) <= 1;
+
+    if (deveExibir) {
+      paginas.push(pagina);
+    } else if (paginas[paginas.length - 1] !== "...") {
+      paginas.push("...");
+    }
+  }
+
+  return paginas;
+}
+
 // ─── Gestor ───────────────────────────────────────────────────────────────────
 
 export default function Gestor() {
@@ -409,13 +429,11 @@ export default function Gestor() {
   const [modalAutorizarSaida, setModalAutorizarSaida] = useState(false);
   const [mobileView, setMobileView] = useState<MobileView>("lista");
   const [searchTerm, setSearchTerm] = useState("");
-  const [cautelasLidas, setCautelasLidas] = useState<Set<string>>(new Set());
-  const [recebidasLidas, setRecebidasLidas] = useState<Set<string>>(new Set());
   const [origemDetalhe, setOrigemDetalhe] = useState<"recebidas" | "historico">(
     "recebidas",
   );
   const [paginaHistorico, setPaginaHistorico] = useState(1);
-  const ITENS_POR_PAGINA = 10;
+  const ITENS_POR_PAGINA = 9;
   const [livreAcesso, setLivreAcesso] = useState<"livre" | "entrada">(
     "entrada",
   );
@@ -510,19 +528,29 @@ export default function Gestor() {
   ) {
     setCautelaSelecionada(cautela);
     setOrigemDetalhe(origem);
-    setCautelasLidas((prev) => new Set([...prev, cautela.id]));
-    setRecebidasLidas((prev) => new Set([...prev, cautela.id]));
+    void markCautelaAsRead(cautela.id)
+      .then((atualizada) => {
+        setCautelas((prev) =>
+          prev.map((c) => (c.id === atualizada.id ? atualizada : c)),
+        );
+      })
+      .catch((error) => {
+        console.error("Erro ao marcar cautela como lida.", error);
+      });
   }
 
   const totalRecebidasNaoLidas = recebidas.filter(
-    (c) => !recebidasLidas.has(c.id),
+    (c) => c.badgeGestor === "NOVA_CAUTELA_SOLICITADA",
   ).length;
   const mostrarBolinhaGestor = totalRecebidasNaoLidas > 0;
 
   async function aprovar(id: string) {
     try {
       setActionError("");
-      const atualizada = await approveCautela(id);
+      const atualizada = await approveCautela(
+        id,
+        livreAcesso === "livre" ? "LIVRE_TRANSITO" : "ENTRADA_UNICA",
+      );
       setCautelas((prev) => prev.map((c) => (c.id === id ? atualizada : c)));
     } catch (error) {
       setActionError(
@@ -611,14 +639,7 @@ export default function Gestor() {
                 Histórico
               </button>
               <button
-                onClick={() => {
-                  setActiveTab("recebidas");
-                  setRecebidasLidas((prev) => {
-                    const n = new Set(prev);
-                    recebidas.forEach((c) => n.add(c.id));
-                    return n;
-                  });
-                }}
+                onClick={() => setActiveTab("recebidas")}
                 className={`absolute top-0 left-0 w-1/2 h-[68px] text-[18px] font-bold leading-[100%] rounded-t-[5px] transition-all ${activeTab === "recebidas" ? "bg-[#22592A] text-white" : "bg-[#C4EEC9] text-[#22592A]"}`}
               >
                 <div className="flex items-center justify-center gap-2 w-full h-full">
@@ -644,7 +665,7 @@ export default function Gestor() {
                       key={c.id}
                       cautela={c}
                       index={i}
-                      isNaoLida={!cautelasLidas.has(c.id)}
+                      isNaoLida={c.badgeGestor === "NOVA_CAUTELA_SOLICITADA"}
                       onClick={() => {
                         abrirDetalhe(c, "recebidas");
                         setMobileView("detalhe");
@@ -775,13 +796,9 @@ export default function Gestor() {
         )}
 
         {/* Coluna esquerda — Recebidos */}
-        <div
-          className={`w-[560px] flex-shrink-0 flex flex-col h-[calc(100vh-60px)] pt-4 pb-0 relative ${
-            cautelaSelecionada && origemDetalhe === "recebidas" ? "z-10" : "z-0"
-          }`}
-        >
+        <div className="w-[450px] flex-shrink-0 flex flex-col h-[calc(100vh-60px)] pt-6 pb-4 px-6 relative z-0">
           <div
-            className="bg-[#22592A] px-5 py-4 flex-shrink-0 rounded-t-md mx-4 flex items-center justify-between"
+            className="bg-[#22592A] px-5 py-4 flex-shrink-0 rounded-t-xl flex items-center justify-between"
             style={{ boxShadow: "4px 0 8px rgba(0,0,0,0.25)" }}
           >
             <h2 className="text-white font-bold text-[18px]">Recebidos</h2>
@@ -791,7 +808,7 @@ export default function Gestor() {
             />
           </div>
           <div
-            className="flex-1 h-0 overflow-y-auto mx-4 mb-0 bg-[#E5E7EB] flex flex-col gap-3 p-4 pb-8 rounded-b-lg border border-gray-200"
+            className="flex-1 h-0 overflow-y-auto bg-[#E5E7EB] flex flex-col gap-3 p-4 pb-8 rounded-b-xl border border-gray-200"
             style={{ boxShadow: "4px 0 8px rgba(0,0,0,0.25)" }}
           >
             {recebidas.length === 0 && (
@@ -804,7 +821,7 @@ export default function Gestor() {
                 key={c.id}
                 cautela={c}
                 index={i}
-                isNaoLida={!cautelasLidas.has(c.id)}
+                isNaoLida={c.badgeGestor === "NOVA_CAUTELA_SOLICITADA"}
                 onClick={() => abrirDetalhe(c, "recebidas")}
                 onAprovar={aprovar}
                 onDescartar={abrirDescartar}
@@ -814,7 +831,7 @@ export default function Gestor() {
         </div>
 
         {/* Área central — tabela de histórico */}
-        <div className="flex-1 relative flex flex-col items-center pt-[24px] px-6 pb-4 z-0">
+        <div className="flex-1 relative flex flex-col items-center pt-[24px] px-6 pb-4 z-20">
           {/* Overlay */}
           {cautelaSelecionada && (
             <div
@@ -825,15 +842,27 @@ export default function Gestor() {
           )}
 
           {cautelaSelecionada && origemDetalhe === "historico" && (
-            <div className="fixed inset-0 z-20 flex items-center pt-15 justify-center pointer-events-none">
+            <div className="fixed inset-0 z-50 flex items-center pt-15 justify-center pointer-events-none">
               <div
-                className="w-[500px] max-h-[calc(100vh-120px)] overflow-y-auto pointer-events-auto"
+                className="w-[420px] max-h-[calc(100vh-120px)] overflow-y-auto pointer-events-auto"
                 onClick={(e) => e.stopPropagation()}
               >
                 <DetalhesCautela
                   cautela={cautelaSelecionada}
                   onFechar={() => setCautelaSelecionada(null)}
                   variant="historico"
+                  acoes={
+                    cautelaSelecionada.status === "Aprovado" ? (
+                      <button
+                        onClick={() =>
+                          void handleAutorizarSaida(cautelaSelecionada.id)
+                        }
+                        className="w-full py-2.5 rounded-lg bg-[#3BB14A] text-white text-sm font-semibold hover:bg-green-600 transition-colors"
+                      >
+                        Autorizar saída
+                      </button>
+                    ) : null
+                  }
                 />
               </div>
             </div>
@@ -842,8 +871,8 @@ export default function Gestor() {
           {/* Recebidas — painel ao lado da aba */}
           {cautelaSelecionada && origemDetalhe === "recebidas" && (
             <div
-              className="fixed top-20 w-[500px] z-20 overflow-y-auto"
-              style={{ left: "630px", maxHeight: "calc(100vh - 100px)" }}
+              className="fixed top-20 w-[420px] z-50 overflow-y-auto"
+              style={{ left: "470px", maxHeight: "calc(100vh - 100px)" }}
               onClick={(e) => e.stopPropagation()}
             >
               <DetalhesCautela
@@ -931,8 +960,8 @@ export default function Gestor() {
           </div>
 
           {/* Tabela */}
-          <div className="w-5/6 bg-white rounded-lg overflow-hidden border border-[#E5E7EB] shadow-sm relative z-0">
-            <div className="grid grid-cols-[2fr_1fr_1fr_2fr_1.5fr_1.5fr_48px] bg-[#2B8E37] text-white text-[18px] font-bold px-4 py-1.5">
+          <div className="w-full max-w-[980px] bg-white rounded-lg overflow-hidden border border-[#E5E7EB] shadow-sm relative z-0">
+            <div className="grid grid-cols-[1.8fr_0.9fr_0.75fr_1.8fr_1.25fr_1.35fr_52px] bg-[#2B8E37] text-white text-[15px] font-bold px-4 py-2">
               <span>Solicitante</span>
               <span>Data</span>
               <span>Hora</span>
@@ -961,7 +990,7 @@ export default function Gestor() {
                     <div
                       key={cautela.id}
                       onClick={() => abrirDetalhe(cautela, "historico")}
-                      className={`grid grid-cols-[2fr_1fr_1fr_2fr_1.5fr_1.5fr_48px] px-2 py-3 text-[18px] text-[#0A0A0A] items-center border-b border-[#F3F4F6] last:border-0 transition-colors ${
+                      className={`grid grid-cols-[1.8fr_0.9fr_0.75fr_1.8fr_1.25fr_1.35fr_52px] px-4 py-3 text-[14px] text-[#0A0A0A] items-center border-b border-[#F3F4F6] last:border-0 transition-colors ${
                         selecionada
                           ? "bg-[#E8F5EA] border-l-4 border-l-[#2B8E37]"
                           : i % 2 === 1
@@ -981,20 +1010,22 @@ export default function Gestor() {
                         <BadgeHistorico status={statusHistorico(cautela)} />
                       </span>
                       <span className="truncate">
-                        {(
-                          cautela as CautelaComDecisao & {
-                            livreAcesso?: string;
-                          }
-                        ).livreAcesso === "livre"
-                          ? "Livre trânsito"
-                          : "-"}
+                        {cautela.status === "Reprovado"
+                          ? "-"
+                          : (
+                                cautela as CautelaComDecisao & {
+                                  livreAcesso?: string;
+                                }
+                              ).livreAcesso === "livre"
+                            ? "Livre trânsito"
+                            : "Entrada única"}
                       </span>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           console.log("abrindo edição", cautela.id);
                           setCautelaEdicao(cautela);
-                          setLivreAcesso("entrada");
+                          setLivreAcesso(cautela.livreAcesso ?? "entrada");
                         }}
                         className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
                         title="Editar"
@@ -1027,7 +1058,7 @@ export default function Gestor() {
 
             {/* Paginação */}
             {Math.ceil(historico.length / ITENS_POR_PAGINA) > 1 && (
-              <div className="flex items-center justify-center gap-1 py-3">
+              <div className="flex items-center justify-center gap-1 py-3 border-t border-[#E5E7EB]">
                 <button
                   onClick={() => setPaginaHistorico((p) => Math.max(1, p - 1))}
                   disabled={paginaHistorico === 1}
@@ -1035,22 +1066,31 @@ export default function Gestor() {
                 >
                   Anterior
                 </button>
-                {Array.from(
-                  { length: Math.ceil(historico.length / ITENS_POR_PAGINA) },
-                  (_, i) => i + 1,
-                ).map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setPaginaHistorico(p)}
-                    className={`w-8 h-8 rounded-lg text-[13px] font-medium transition-colors ${
-                      paginaHistorico === p
-                        ? "bg-[#2B8E37] text-white"
-                        : "text-[#6B7280] hover:bg-[#F3F4F6]"
-                    }`}
-                  >
-                    {p}
-                  </button>
-                ))}
+                {paginasVisiveis(
+                  paginaHistorico,
+                  Math.ceil(historico.length / ITENS_POR_PAGINA),
+                ).map((p, index) =>
+                  p === "..." ? (
+                    <span
+                      key={`ellipsis-${index}`}
+                      className="px-2 text-[13px] text-[#9CA3AF]"
+                    >
+                      ...
+                    </span>
+                  ) : (
+                    <button
+                      key={p}
+                      onClick={() => setPaginaHistorico(p)}
+                      className={`w-8 h-8 rounded-lg text-[13px] font-medium transition-colors ${
+                        paginaHistorico === p
+                          ? "bg-[#2B8E37] text-white"
+                          : "text-[#6B7280] hover:bg-[#F3F4F6]"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ),
+                )}
                 <button
                   onClick={() =>
                     setPaginaHistorico((p) =>
@@ -1095,15 +1135,14 @@ export default function Gestor() {
           cautela={cautelaEdicao}
           livreAcesso={livreAcesso}
           onChangeLivreAcesso={setLivreAcesso}
-          onSalvar={() => {
-            setCautelas((prev) =>
-              prev.map((c) =>
-                c.id === cautelaEdicao.id
-                  ? { ...c, livreAcesso: livreAcesso }
-                  : c,
-              ),
+          onSalvar={async () => {
+            const atualizada = await updatePermissionType(
+              cautelaEdicao.id,
+              livreAcesso === "livre" ? "LIVRE_TRANSITO" : "ENTRADA_UNICA",
             );
-            setCautelaEdicao(null);
+            setCautelas((prev) =>
+              prev.map((c) => (c.id === cautelaEdicao.id ? atualizada : c)),
+            );
           }}
           onFechar={() => setCautelaEdicao(null)}
         />
