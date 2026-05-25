@@ -33,7 +33,7 @@ export class Stencil {
   thickness!: number;
 
   @Column()
-  addressing!: number;
+  addressing!: string;
 
   @Column()
   lineName!: string;

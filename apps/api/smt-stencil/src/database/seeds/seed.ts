@@ -169,7 +169,7 @@ function generateStencilData(index: number): Partial<Stencil> {
   const manufactureId = MANUFACTURE_IDS[random(0, MANUFACTURE_IDS.length - 1)];
   const country = COUNTRIES[random(0, COUNTRIES.length - 1)];
   const thickness = randomFloat(0.05, 0.15, 6);
-  const addressing = random(1, 100);
+  const addressing = String(random(1, 100)).padStart(3, '0');
   const lineName = LINE_NAMES[random(0, LINE_NAMES.length - 1)];
   const status = STATUSES[random(0, STATUSES.length - 1)];
   const createdAt = randomDateForToday();
