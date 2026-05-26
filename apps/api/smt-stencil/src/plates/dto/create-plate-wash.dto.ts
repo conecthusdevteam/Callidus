@@ -3,13 +3,6 @@ import { IsNumber, IsString } from 'class-validator';
 
 export class CreatePlateWashDto {
   @ApiProperty({
-    description: 'The ID of the plate to be washed',
-    example: 'plate_SOypWQVWYl1XUGKRyAZyV',
-  })
-  @IsString()
-  plateId!: string;
-
-  @ApiProperty({
     description: 'The name of the operator performing the wash',
     example: 'John Doe',
   })  

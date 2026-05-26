@@ -1,5 +1,5 @@
 @baseUrl=http://localhost:5000
-@stencilId=stencil_SOypWQVWYl1XUGKRyAZyV
+@stencilId=st_0-KP4r02k2Ex5p_FkBGGo
 @missingStencilId=stencil_missing
 @seedStencilCode=REST-STENCIL-1778695640
 @missingStencilCode=QR-INEXISTENTE
@@ -55,6 +55,15 @@ GET {{baseUrl}}/stencils/lines
 
 ### Get stencil by id - success
 GET {{baseUrl}}/stencils/{{stencilId}}
+
+### Get stencil wash analytics - 30 days
+GET {{baseUrl}}/stencils/{{stencilId}}/wash-analytics?days=30
+
+### Get stencil wash analytics - 60 days
+GET {{baseUrl}}/stencils/{{stencilId}}/wash-analytics?days=60
+
+### Get stencil wash analytics - 90 days
+GET {{baseUrl}}/stencils/{{stencilId}}/wash-analytics?days=90
 
 ### Get stencil by QR code - success
 GET {{baseUrl}}/stencils/stencilCode/{{seedStencilCode}}

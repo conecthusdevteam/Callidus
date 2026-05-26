@@ -224,6 +224,54 @@ describe('StencilsService', () => {
     });
   });
 
+  it('returns 30-day analytics with planned, anomalous and multiple classifications', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-05-26T12:00:00.000Z'));
+
+    const washes = [
+      makeWash('planned_1', '2026-05-23T15:30:00.000Z'),
+      makeWash('anomalous_1', '2026-05-24T17:00:00.000Z'),
+      makeWash('multiple_1', '2026-05-25T15:15:00.000Z'),
+      makeWash('multiple_2', '2026-05-25T18:00:00.000Z'),
+    ];
+    const stencil = makeStencil({ washes });
+    const repository = makeRepository({
+      findOne: jest.fn().mockResolvedValue(stencil),
+    });
+    const washRepository = makeWashRepository({
+      find: jest
+        .fn()
+        .mockResolvedValueOnce(washes)
+        .mockResolvedValueOnce([]),
+    });
+
+    const result = await makeService(repository, washRepository).findWashAnalytics(
+      stencil.id,
+    );
+
+    expect(result).toMatchObject({
+      period: { days: 30 },
+      counts: {
+        planned: 1,
+        anomalous: 1,
+        multiple: 2,
+        total: 4,
+      },
+    });
+    expect(result?.time_points.map((point) => point.category)).toEqual([
+      'planned',
+      'anomalous',
+      'multiple',
+      'multiple',
+    ]);
+    expect(result?.interval_bars.at(-1)).toMatchObject({
+      day_label: '25/05',
+      interval_minutes: 165,
+      category: 'multiple',
+    });
+
+    jest.useRealTimers();
+  });
+
   it('does not mark anomaly when stencil has one wash in Manaus reserved hours', async () => {
     const result = await makeServiceWithStencil(
       makeStencil({

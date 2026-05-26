@@ -164,6 +164,22 @@ export class StencilsController {
     return wash;
   }
 
+  @Get(':id/wash-analytics')
+  @ApiOperation({ summary: 'Retrieve stencil wash analytics for the selected period' })
+  @ApiResponse({ status: 200, description: 'Returns classified wash analytics.' })
+  @ApiResponse({ status: 404, description: 'Stencil not found.' })
+  async findWashAnalytics(
+    @Param('id') id: string,
+    @Query('days') days?: string,
+  ) {
+    const analytics = await this.stencilsService.findWashAnalytics(
+      id,
+      days ? Number(days) : undefined,
+    );
+    if (!analytics) throw new NotFoundException();
+    return analytics;
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Retrieve a specific stencil' })
   @ApiResponse({ status: 200, description: 'Returns the requested stencil.' })
