@@ -53,7 +53,6 @@ const emptyPlateFilters: HistoryPlateFilters = {
 function formatDate(iso?: string | null) {
   if (!iso) return "-";
   return new Intl.DateTimeFormat("pt-BR", {
-    timeZone: "America/Manaus",
   }).format(new Date(iso));
 }
 
@@ -62,7 +61,6 @@ function formatTime(iso?: string | null) {
   return new Intl.DateTimeFormat("pt-BR", {
     hour: "2-digit",
     minute: "2-digit",
-    timeZone: "America/Manaus",
   }).format(new Date(iso));
 }
 
