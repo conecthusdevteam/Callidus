@@ -7,7 +7,7 @@ export class DateConverterInterceptor implements NestInterceptor {
     intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
         return next.handle().pipe(
             map(data => {
-                const dateFields = ['created_at', 'updated_at'];
+                const dateFields = ['createdAt', 'updatedAt'];
 
                 const convertDates = (obj: any) => {
                     if (!obj) return;
