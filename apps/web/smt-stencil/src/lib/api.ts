@@ -42,7 +42,7 @@ export const stencilsApi = {
       throw new Error("[SIMULAÇÃO] SGS indisponível");
     }
     const washesResponse = await apiRequest<ApiTodayStencilWashesResponse>(
-      "/stencils/washes/today?limit=100",
+      "/stencils/washes/today",
     );
     return withTodayStencilCountsAndAnomalies(
       getPaginatedRows(washesResponse).map(normalizeTodayStencilWash),
@@ -57,7 +57,7 @@ export const platesApi = {
       throw new Error("[SIMULAÇÃO] CLP indisponível");
     }
     const washesResponse = await apiRequest<ApiTodayPlateWashesResponse>(
-      "/plates/washes/today?limit=100",
+      "/plates/washes/today",
     );
     return withTodayPlateCounts(
       getPaginatedRows(washesResponse).map(normalizeTodayPlateWash),
@@ -385,7 +385,6 @@ function withTodayPlateCounts(washes: ApiPlate[]): ApiPlate[] {
 function isOutsideStencilReservedHours(iso: string) {
   const hour = Number(
     new Intl.DateTimeFormat("pt-BR", {
-      timeZone: "America/Manaus",
       hour: "2-digit",
       hour12: false,
     }).format(new Date(iso)),
