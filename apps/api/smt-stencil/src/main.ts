@@ -18,6 +18,16 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    }),
+  );
+
+  app.useGlobalInterceptors(new DateConverterInterceptor());
+
   if (process.env.NODE_ENV !== 'hml') {
     const config = new DocumentBuilder()
     .setTitle('LSP API documentation')
@@ -37,18 +47,8 @@ async function bootstrap() {
     });
   }
 
-  app.useGlobalInterceptors(new DateConverterInterceptor());
-
-  app.useGlobalPipes(
-    new ValidationPipe({
-      transform: true,
-      whitelist: true,
-      forbidNonWhitelisted: true,
-    }),
-  );
   const port = process.env.PORT ?? 3000;
   await app.listen(port, '0.0.0.0');
-
   console.log(`Application running on port ${port}`);
 }
 bootstrap();
