@@ -2,17 +2,16 @@ import type { ApiStencil, ApiPlate } from "@/lib/api";
 import type { StencilWash, PlacaWash } from "@/data/mockWashes";
 
 function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", {
-    timeZone: "America/Manaus",
-  }).format(new Date(iso));
+  if (!iso) return "—";
+  const [year, month, day] = iso.split('T')[0].split('-');
+  return `${day}/${month}/${year}`;
 }
 
 function formatTime(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "America/Manaus",
-  }).format(new Date(iso));
+  if (!iso) return "—";
+  const timePart = iso.split('T')[1];
+  const [hours, minutes] = timePart.split(':');
+  return `${hours}:${minutes}`;
 }
 
 export function mapStencilApiToWash(s: ApiStencil): StencilWash {
