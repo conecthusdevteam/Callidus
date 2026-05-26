@@ -433,7 +433,7 @@ export default function Gestor() {
     "recebidas",
   );
   const [paginaHistorico, setPaginaHistorico] = useState(1);
-  const ITENS_POR_PAGINA = 9;
+  const ITENS_POR_PAGINA = 8;
   const [livreAcesso, setLivreAcesso] = useState<"livre" | "entrada">(
     "entrada",
   );
@@ -796,7 +796,7 @@ export default function Gestor() {
         )}
 
         {/* Coluna esquerda — Recebidos */}
-        <div className="w-[450px] flex-shrink-0 flex flex-col h-[calc(100vh-60px)] pt-6 pb-4 px-6 relative z-0">
+        <div className="w-[550px] flex-shrink-0 flex flex-col h-[calc(100vh-60px)] pt-6 pb-4 px-6 relative z-0">
           <div
             className="bg-[#22592A] px-5 py-4 flex-shrink-0 rounded-t-xl flex items-center justify-between"
             style={{ boxShadow: "4px 0 8px rgba(0,0,0,0.25)" }}
@@ -842,37 +842,44 @@ export default function Gestor() {
           )}
 
           {cautelaSelecionada && origemDetalhe === "historico" && (
-            <div className="fixed inset-0 z-50 flex items-center pt-15 justify-center pointer-events-none">
+            <>
               <div
-                className="w-[420px] max-h-[calc(100vh-120px)] overflow-y-auto pointer-events-auto"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <DetalhesCautela
-                  cautela={cautelaSelecionada}
-                  onFechar={() => setCautelaSelecionada(null)}
-                  variant="historico"
-                  acoes={
-                    cautelaSelecionada.status === "Aprovado" ? (
-                      <button
-                        onClick={() =>
-                          void handleAutorizarSaida(cautelaSelecionada.id)
-                        }
-                        className="w-full py-2.5 rounded-lg bg-[#3BB14A] text-white text-sm font-semibold hover:bg-green-600 transition-colors"
-                      >
-                        Autorizar saída
-                      </button>
-                    ) : null
-                  }
-                />
+                className="fixed inset-0 z-[5]"
+                style={{ backgroundColor: "rgba(0,0,0,0.35)" }}
+                onClick={() => setCautelaSelecionada(null)}
+              />
+              <div className="fixed inset-0 z-50 flex items-center pt-15 justify-center pointer-events-none">
+                <div
+                  className="w-[420px] max-h-[calc(100vh-120px)] overflow-y-auto pointer-events-auto"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <DetalhesCautela
+                    cautela={cautelaSelecionada}
+                    onFechar={() => setCautelaSelecionada(null)}
+                    variant="historico"
+                    acoes={
+                      cautelaSelecionada.status === "Aprovado" ? (
+                        <button
+                          onClick={() =>
+                            void handleAutorizarSaida(cautelaSelecionada.id)
+                          }
+                          className="w-full py-2.5 rounded-lg bg-[#3BB14A] text-white text-sm font-semibold hover:bg-green-600 transition-colors"
+                        >
+                          Liberar saída
+                        </button>
+                      ) : null
+                    }
+                  />
+                </div>
               </div>
-            </div>
+            </>
           )}
 
           {/* Recebidas — painel ao lado da aba */}
           {cautelaSelecionada && origemDetalhe === "recebidas" && (
             <div
               className="fixed top-20 w-[420px] z-50 overflow-y-auto"
-              style={{ left: "470px", maxHeight: "calc(100vh - 100px)" }}
+              style={{ left: "620px", maxHeight: "calc(100vh - 100px)" }}
               onClick={(e) => e.stopPropagation()}
             >
               <DetalhesCautela
@@ -960,14 +967,14 @@ export default function Gestor() {
           </div>
 
           {/* Tabela */}
-          <div className="w-full max-w-[980px] bg-white rounded-lg overflow-hidden border border-[#E5E7EB] shadow-sm relative z-0">
+          <div className="w-full max-w-[1200px] bg-white rounded-lg overflow-hidden border border-[#E5E7EB] shadow-sm relative z-0">
             <div className="grid grid-cols-[1.8fr_0.9fr_0.75fr_1.8fr_1.25fr_1.35fr_52px] bg-[#2B8E37] text-white text-[15px] font-bold px-4 py-2">
               <span>Solicitante</span>
               <span>Data</span>
               <span>Hora</span>
-              <span>Id da cautela</span>
+              <span className="flex justify-center">Id da cautela</span>
               <span className="flex justify-center">Status</span>
-              <span>Acesso</span>
+              <span className="flex justify-center">Acesso</span>
               <span>Editar</span>
             </div>
 
@@ -998,18 +1005,18 @@ export default function Gestor() {
                             : "bg-white"
                       }`}
                     >
-                      <span className="truncate">
+                      <span className="text-[18px] truncate">
                         {cautela.visitante || "—"}
                       </span>
-                      <span className="text-[#0A0A0A]">{data}</span>
-                      <span className="text-[#0A0A0A]">{hora}</span>
-                      <span className="truncate font-mono text-[18px] text-[#0A0A0A]">
+                      <span className="text-[18px] text-[#0A0A0A]">{data}</span>
+                      <span className="text-[18px] text-[#0A0A0A]">{hora}</span>
+                      <span className="text-[18px] text-[#0A0A0A]">
                         {cautela.id}
                       </span>
                       <span className="flex justify-center">
                         <BadgeHistorico status={statusHistorico(cautela)} />
                       </span>
-                      <span className="truncate">
+                      <span className="flex justify-center truncate text-[18px]">
                         {cautela.status === "Reprovado"
                           ? "-"
                           : (
@@ -1027,7 +1034,7 @@ export default function Gestor() {
                           setCautelaEdicao(cautela);
                           setLivreAcesso(cautela.livreAcesso ?? "entrada");
                         }}
-                        className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                        className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors flex justify-center"
                         title="Editar"
                       >
                         <svg
@@ -1057,7 +1064,7 @@ export default function Gestor() {
             )}
 
             {/* Paginação */}
-            {Math.ceil(historico.length / ITENS_POR_PAGINA) > 1 && (
+            {historico.length > ITENS_POR_PAGINA && (
               <div className="flex items-center justify-center gap-1 py-3 border-t border-[#E5E7EB]">
                 <button
                   onClick={() => setPaginaHistorico((p) => Math.max(1, p - 1))}

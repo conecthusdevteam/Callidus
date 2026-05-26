@@ -468,6 +468,7 @@ export default function Home() {
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
+      if (window.innerWidth < 768) return; // ignora no mobile
       if (
         cautelaSelecionada &&
         painelDetalhesRef.current &&
@@ -476,12 +477,8 @@ export default function Home() {
         setCautelaSelecionada(null);
       }
     }
-
     document.addEventListener("mousedown", handleClickOutside);
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [cautelaSelecionada]);
 
   function marcarComoLida(cautela: Cautela) {
@@ -720,7 +717,7 @@ export default function Home() {
   return (
     <div className="min-h-screen md:h-screen pt-[60px] pl-0 md:pl-[70px] bg-[#F5F7F6] relative overflow-x-hidden md:overflow-hidden">
       {/* ══ DESKTOP ══ */}
-      <div className="hidden md:flex h-[calc(100vh-60px)]">
+      <div className="hidden lg:flex h-[calc(100vh-60px)]">
         <div className="w-[560px] flex-shrink-0 px-8 pt-8 pb-4 flex flex-col h-full">
           <div
             className="flex flex-col h-full bg-white rounded-xl border border-[#E5E7EB] overflow-hidden"
@@ -762,23 +759,18 @@ export default function Home() {
       </div>
 
       {/* ══ MOBILE ══ */}
-      <div className="md:hidden flex flex-col h-[calc(100vh-60px)] pt-[40px] overflow-hidden">
+      <div className="lg:hidden flex flex-col h-[calc(100vh-60px)] pt-[40px]">
         {mobileView === "lista" && (
-          <>
-            <div className="relative mx-3 mt-2 flex-shrink-0">
+          <div className="flex-1 overflow-y-auto">
+            <div className="relative mx-3 mt-2 h-[56px] flex-shrink-0">
               {abaRecebidos(true)}
               {abaEnviados(true)}
             </div>
-            <div
-              className="mx-3 bg-[#E5E7EB] rounded-t-[5px] border border-[#E5E7EB] flex-shrink-0"
-              style={{ maxHeight: "35vh" }}
-            >
-              <div className="overflow-y-auto h-full">{listaCards}</div>
+            <div className="mx-3 mt-1 bg-[#E5E7EB] rounded-b-lg border border-[#E5E7EB]">
+              {listaCards}
             </div>
-            <div className="flex-1 overflow-y-auto px-3 pb-4 pt-2">
-              {formularioSection}
-            </div>
-          </>
+            <div className="px-3 pb-4 pt-4">{formularioSection}</div>
+          </div>
         )}
 
         {mobileView === "detalhe" && cautelaSelecionada && (
@@ -786,8 +778,8 @@ export default function Home() {
             <div className="relative flex items-center justify-center px-4 py-3 mt-2 flex-shrink-0">
               <button
                 onClick={() => {
-                  setMobileView("lista");
                   setCautelaSelecionada(null);
+                  setMobileView("lista");
                 }}
                 className="absolute left-4 text-gray-600"
               >

@@ -21,13 +21,15 @@ export default function DetalhesCautela({
 }: DetalhesCautelaProps) {
   const bannerLabel =
     cautela.status === "Saída Autorizada"
-      ? "Atenção - Solicitação de saída"
-      : "Nova cautela solicitada";
+      ? "Autorizado a sair"
+      : "Autorizado a entrar";
 
   const bannerClass =
     cautela.status === "Saída Autorizada"
-      ? "bg-red-100 text-red-600"
-      : "bg-[#FCE96A] text-[#111827]";
+      ? "bg-[#FCE96A] text-[#171717]"
+      : cautela.status === "Aprovado"
+        ? "bg-[#D1FAE5] text-[#171717]"
+        : "bg-[#FCE96A] text-[#111827]";
 
   const badgeLabel = () => {
     if (cautela.status === "Aprovado")
@@ -117,16 +119,18 @@ export default function DetalhesCautela({
         </svg>
       </button>
 
-      {/* Banner — só para recebidas */}
-      {variant === "recebida" && (
-        <div className="px-4 pt-10 pb-1">
-          <div
-            className={`w-full text-center py-1 text-[13px] font-bold rounded-lg ${bannerClass}`}
-          >
-            {bannerLabel}
+      {(variant === "recebida" ||
+        cautela.status === "Saída Autorizada" ||
+        cautela.status === "Aprovado") &&
+        !titulo && (
+          <div className="px-4 pt-8 pb-0">
+            <div
+              className={`w-full text-center py-1 text-[13px] font-bold rounded-lg ${bannerClass}`}
+            >
+              {bannerLabel}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {titulo && (
         <div className="px-5 pt-4 pb-2 text-center">
@@ -139,7 +143,13 @@ export default function DetalhesCautela({
       {/* Badge status */}
       {!titulo && (
         <div
-          className={`px-4 pb-2 ${variant !== "recebida" ? "pt-8" : "pt-2"}`}
+          className={`px-4 pb-2 ${
+            cautela.status === "Saída Autorizada" ||
+            cautela.status === "Aprovado" ||
+            variant === "recebida"
+              ? "pt-1"
+              : "pt-8"
+          }`}
         >
           <div
             className={`w-full text-center py-1.5 text-[13px] font-semibold flex items-center justify-center gap-1.5 rounded-lg ${badgeClass()}`}
@@ -307,10 +317,10 @@ export default function DetalhesCautela({
           <table className="w-full">
             <thead>
               <tr className="bg-[#0E9F6E] text-white">
-                <th className="px-3 py-2 text-left text-[13px] font-bold">
+                <th className="px-3 py-2 text-left text-[18px] font-bold">
                   Descrição
                 </th>
-                <th className="px-3 py-2 text-right text-[13px] font-bold">
+                <th className="px-3 py-2 text-right text-[18px] font-bold">
                   Quantidade
                 </th>
               </tr>
@@ -321,10 +331,10 @@ export default function DetalhesCautela({
                   key={i}
                   className={`border-t border-[#F3F4F6] ${i % 2 === 1 ? "bg-[#F9FAFB]" : "bg-white"}`}
                 >
-                  <td className="px-3 py-2 text-[13px] text-[#111827]">
+                  <td className="px-3 py-2 text-[18px] text-[#111827]">
                     {eq.descricao}
                   </td>
-                  <td className="px-3 py-2 text-[13px] text-[#111827] text-right">
+                  <td className="px-3 py-2 text-[18px] text-[#111827] text-right">
                     {eq.quantidade ?? 1}
                   </td>
                 </tr>
