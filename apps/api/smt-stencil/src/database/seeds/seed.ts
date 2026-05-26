@@ -86,13 +86,36 @@ function randomDateForPastDay(date: Date): Date {
 
 function randomDateForToday(): Date {
   const now = new Date();
-  
   const currentHourUTC = now.getUTCHours();
   const currentMinutesUTC = now.getUTCMinutes();
   
   const MIN_HOUR_UTC = 11;
   const MAX_HOUR_UTC = 21;
-  
+
+  const PEAK_HOURS = [
+    { start: 15, end: 16 },
+    { start: 20, end: 21 }
+  ];
+
+  const usePeakHour = Math.random() < 0.65;
+
+  if (usePeakHour) {
+    const peak = PEAK_HOURS[random(0, PEAK_HOURS.length - 1)];
+    let hours = random(peak.start, peak.end);
+
+    if (hours > currentHourUTC) {
+      hours = currentHourUTC;
+    }
+
+    const isTopOfHour = hours === peak.end;
+    const minutes = isTopOfHour ? 0 : random(0, 59);
+    const seconds = random(0, 59);
+
+    const date = new Date(now);
+    date.setUTCHours(hours, minutes, seconds, 0);
+    return date;
+  }
+
   if (currentHourUTC >= MAX_HOUR_UTC) {
     const hours = random(MIN_HOUR_UTC, MAX_HOUR_UTC);
     const minutes = random(0, hours === MAX_HOUR_UTC ? 0 : 59);
@@ -141,9 +164,23 @@ function getLastWeekdays(): Date[] {
   return weekdays.reverse();
 }
 
-function generateWashDates(washCount: number): Date[] {
+function generateWashDates(washCount: number, forceSingleWash: boolean = false): Date[] {
   const weekdays = getLastWeekdays();
   const dates: Date[] = [];
+
+  if (forceSingleWash) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const dayIndex = random(0, weekdays.length - 1);
+    const selectedDay = weekdays[dayIndex];
+    const isToday = selectedDay.getTime() === today.getTime();
+
+    const washDate = isToday ? randomDateForToday() : randomDateForPastDay(selectedDay);
+    dates.push(washDate);
+
+    return dates;
+  }
   
   for (let i = 0; i < washCount; i++) {
     const dayIndex = random(0, weekdays.length - 1);
@@ -215,8 +252,8 @@ function generatePlateData(index: number): Partial<Plate> {
   return plate;
 }
 
-function generateStencilWashes(stencilId: string, washCount: number): Partial<StencilWash>[] {
-  const washDates = generateWashDates(washCount);
+function generateStencilWashes(stencilId: string, washCount: number, forceSingleWash: boolean = false): Partial<StencilWash>[] {
+  const washDates = generateWashDates(washCount, forceSingleWash);
   
   return washDates.map((date) => {
     const wash = new StencilWash();
@@ -227,8 +264,8 @@ function generateStencilWashes(stencilId: string, washCount: number): Partial<St
   });
 }
 
-function generatePlateWashes(plateId: string, washCount: number): Partial<PlateWash>[] {
-  const washDates = generateWashDates(washCount);
+function generatePlateWashes(plateId: string, washCount: number, forceSingleWash: boolean = false): Partial<PlateWash>[] {
+  const washDates = generateWashDates(washCount, forceSingleWash);
   
   return washDates.map((date) => {
     const wash = new PlateWash();
@@ -338,19 +375,43 @@ async function runSeed() {
     // ============================================
     console.log('\n🧼 Generating Washes for Stencils (last 5 weekdays)...');
     let stencilWashesInserted = 0;
-    
-    for (const stencil of createdStencils) {
-      const washCount = random(3, 8);
-      const washes = generateStencilWashes(stencil.id, washCount);
-      
-      for (const washData of washes) {
-        const wash = stencilWashRepo.create(washData);
-        await stencilWashRepo.save(wash);
-        stencilWashesInserted++;
+    let singleWashCount = 0;
+    let multiWashCount = 0;
+
+    const totalStencilsCount = createdStencils.length;
+    const singleWashTarget = Math.floor(totalStencilsCount * 0.8);
+
+    for (let i = 0; i < createdStencils.length; i++) {
+      const stencil = createdStencils[i];
+
+      const useSingleWash = i < singleWashTarget;
+
+      if (useSingleWash) {
+        const washes = generateStencilWashes(stencil.id, 1, true);
+        for (const washData of washes) {
+          const wash = stencilWashRepo.create(washData);
+          await stencilWashRepo.save(wash);
+          stencilWashesInserted++;
+          singleWashCount++;
+        } 
+      } else {
+          const washCount = random(3, 8);
+          const washes = generateStencilWashes(stencil.id, washCount, false);
+          for (const washData of washes) {
+            const wash = stencilWashRepo.create(washData);
+            await stencilWashRepo.save(wash);
+            stencilWashesInserted++;
+            multiWashCount++;
+          }
+        }
+
+        if ((i + 1) % 10 === 0) {
+          console.log(`   ✅ Processed ${i + 1}/${totalStencilsCount} stencils`);
+        }
       }
-    }
-    
-    console.log(`   ✅ Stencil Washes: ${stencilWashesInserted} inserted`);
+
+      console.log(`   ✅ Stencil Washes: ${stencilWashesInserted} inserted`);
+      console.log(`   📊 Distribution: ${singleWashCount} stencils with 1 wash (concentrated), ${multiWashCount} with multiple washes`);
 
     // ============================================
     // 2. SEED DE PLATES (35 registers)
@@ -391,19 +452,42 @@ async function runSeed() {
     // ============================================
     console.log('\n🧼 Generating Washes for Plates (last 5 weekdays)...');
     let plateWashesInserted = 0;
-    
-    for (const plate of createdPlates) {
-      const washCount = random(3, 8);
-      const washes = generatePlateWashes(plate.id, washCount);
-      
-      for (const washData of washes) {
-        const wash = plateWashRepo.create(washData);
-        await plateWashRepo.save(wash);
-        plateWashesInserted++;
+    let plateSingleWashCount = 0;
+    let plateMultiWashCount = 0;
+
+    const totalPlatesCount = createdPlates.length;
+    const plateSingleWashTarget = Math.floor(totalPlatesCount * 0.8);
+
+    for (let i = 0; i < createdPlates.length; i++) {
+      const plate = createdPlates[i];
+      const useSingleWash = i < plateSingleWashTarget;
+
+      if (useSingleWash) {
+        const washes = generatePlateWashes(plate.id, 1, true);
+        for (const washData of washes) {
+          const wash = plateWashRepo.create(washData);
+          await plateWashRepo.save(wash);
+          plateWashesInserted++;
+          plateSingleWashCount++;
+        }
+      } else {
+        const washCount = random(3, 8);
+        const washes = generatePlateWashes(plate.id, washCount, false);
+        for (const washData of washes) {
+          const wash = plateWashRepo.create(washData);
+          await plateWashRepo.save(wash);
+          plateWashesInserted++;
+          plateMultiWashCount++;
+        }
+      }
+
+      if ((i + 1) % 10 === 0) {
+        console.log(`   ✅ Processed ${i + 1}/${totalPlatesCount} plates`);
       }
     }
-    
+        
     console.log(`   ✅ Plate Washes: ${plateWashesInserted} inserted`);
+    console.log(`   📊 Distribution: ${plateSingleWashCount} plates with 1 wash (concentrated), ${plateMultiWashCount} with multiple washes`);
 
     // ============================================
     // 3. FINAL VERIFICATION
