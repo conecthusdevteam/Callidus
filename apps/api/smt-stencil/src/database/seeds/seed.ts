@@ -86,39 +86,40 @@ function randomDateForPastDay(date: Date): Date {
 
 function randomDateForToday(): Date {
   const now = new Date();
-  const currentHour = now.getHours();
-  const currentMinutes = now.getMinutes();
-  const currentSeconds = now.getSeconds();
   
-  if (currentHour < 7) {
+  const currentHourUTC = now.getUTCHours();
+  const currentMinutesUTC = now.getUTCMinutes();
+  
+  const MIN_HOUR_UTC = 11;
+  const MAX_HOUR_UTC = 21;
+  
+  if (currentHourUTC >= MAX_HOUR_UTC) {
+    const hours = random(MIN_HOUR_UTC, MAX_HOUR_UTC);
+    const minutes = random(0, hours === MAX_HOUR_UTC ? 0 : 59);
+    const seconds = random(0, 59);
+    
     const date = new Date(now);
-    date.setHours(7, 0, 0, 0);
+    date.setUTCHours(hours, minutes, seconds, 0);
     return date;
   }
   
-  let hours: number;
-  let minutes: number;
-  let seconds: number;
+  if (currentHourUTC < MIN_HOUR_UTC) {
+    const date = new Date(now);
+    date.setUTCHours(MIN_HOUR_UTC, 0, 0, 0);
+    return date;
+  }
   
-  if (currentHour >= 17) {
-    hours = random(7, 17);
-    minutes = random(0, hours === 17 ? 0 : 59);
+  const hours = random(MIN_HOUR_UTC, currentHourUTC);
+  let minutes = random(0, 59);
+  let seconds = random(0, 59);
+  
+  if (hours === currentHourUTC) {
+    minutes = random(0, currentMinutesUTC);
     seconds = random(0, 59);
-  } else {
-    hours = random(7, currentHour);
-    
-    if (hours === currentHour) {
-      minutes = random(0, currentMinutes);
-      seconds = random(0, hours === currentHour && minutes === currentMinutes ? currentSeconds : 59);
-    } else {
-      minutes = random(0, 59);
-      seconds = random(0, 59);
-    }
   }
   
   const date = new Date(now);
-  date.setHours(0, 0, 0, 0);
-  date.setHours(hours, minutes, seconds);
+  date.setUTCHours(hours, minutes, seconds, 0);
   
   return date;
 }
