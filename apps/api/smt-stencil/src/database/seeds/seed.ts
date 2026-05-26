@@ -67,14 +67,17 @@ const PHASES = [1, 2];
 
 const STATUSES = [WashStatus.ACTIVE, WashStatus.INACTIVE];
 
+  const MIN_HOUR_UTC = 11;
+  const MAX_HOUR_UTC = 21;
+
 function isWeekday(date: Date): boolean {
   const day = date.getDay();
   return day !== 0 && day !== 6;
 }
 
 function randomDateForPastDay(date: Date): Date {
-  const hours = random(7, 17);
-  const minutes = random(0, hours === 17 ? 0 : 59);
+  const hours = random(MIN_HOUR_UTC, MAX_HOUR_UTC);
+  const minutes = random(0, hours === MAX_HOUR_UTC ? 0 : 59);
   const seconds = random(0, 59);
   
   const result = new Date(date);
@@ -88,9 +91,7 @@ function randomDateForToday(): Date {
   const now = new Date();
   const currentHourUTC = now.getUTCHours();
   const currentMinutesUTC = now.getUTCMinutes();
-  
-  const MIN_HOUR_UTC = 11;
-  const MAX_HOUR_UTC = 21;
+  const currentSecondsUTC = now.getUTCSeconds();
 
   const PEAK_HOURS = [
     { start: 15, end: 16 },
@@ -107,12 +108,20 @@ function randomDateForToday(): Date {
       hours = currentHourUTC;
     }
 
-    const isTopOfHour = hours === peak.end;
-    const minutes = isTopOfHour ? 0 : random(0, 59);
-    const seconds = random(0, 59);
+    const isCurrentHour = hours === currentHourUTC;
+    const minutes = isCurrentHour
+    ? random(0, currentMinutesUTC)
+    : random(0, hours === peak.end ? 0 : 59);
+
+    const seconds = random(0, isCurrentHour && minutes === currentMinutesUTC ? currentSecondsUTC : 59);
 
     const date = new Date(now);
     date.setUTCHours(hours, minutes, seconds, 0);
+
+    if (date > now) {
+      return new Date(now);
+    }
+
     return date;
   }
 
@@ -138,11 +147,15 @@ function randomDateForToday(): Date {
   
   if (hours === currentHourUTC) {
     minutes = random(0, currentMinutesUTC);
-    seconds = random(0, 59);
+    seconds = random(0, currentSecondsUTC);
   }
   
   const date = new Date(now);
   date.setUTCHours(hours, minutes, seconds, 0);
+  
+  if (date > now) {
+    return new Date(now);
+  }
   
   return date;
 }
