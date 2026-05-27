@@ -8,6 +8,7 @@ interface DetalhesCautelaProps {
   titulo?: string;
   cabecalho?: React.ReactNode;
   mostrarAcompanhamento?: boolean;
+  ocultarBanner?: boolean;
 }
 
 export default function DetalhesCautela({
@@ -18,6 +19,7 @@ export default function DetalhesCautela({
   titulo,
   cabecalho,
   mostrarAcompanhamento = false,
+  ocultarBanner = false,
 }: DetalhesCautelaProps) {
   const bannerLabel =
     cautela.status === "Saída Autorizada"
@@ -51,11 +53,6 @@ export default function DetalhesCautela({
       return "bg-[#F4F4F4] border border-[#A3A3A3] text-[#525252]";
     return "bg-[#FCE96A] border border-[#F5D800] text-[#111827]";
   };
-
-  const tipoPermissaoLabel =
-    cautela.tipoPermissao === "LIVRE_TRANSITO"
-      ? "Livre trânsito"
-      : "Entrada única";
 
   const statusFinalizadoLabel =
     cautela.status === "Reprovado" ? "Reprovado" : "Aprovado";
@@ -119,9 +116,10 @@ export default function DetalhesCautela({
         </svg>
       </button>
 
-      {(variant === "recebida" ||
-        cautela.status === "Saída Autorizada" ||
-        cautela.status === "Aprovado") &&
+      {!ocultarBanner &&
+        (variant === "recebida" ||
+          cautela.status === "Saída Autorizada" ||
+          cautela.status === "Aprovado") &&
         !titulo && (
           <div className="px-4 pt-8 pb-0">
             <div
@@ -143,7 +141,7 @@ export default function DetalhesCautela({
       {/* Badge status */}
       {!titulo && (
         <div
-          className={`px-4 pb-2 ${
+          className={`px-4 pb-2 pt-8 ${
             cautela.status === "Saída Autorizada" ||
             cautela.status === "Aprovado" ||
             variant === "recebida"
@@ -179,10 +177,7 @@ export default function DetalhesCautela({
           )}
           {cautela.tipoPermissaoAlteradoEm && (
             <>
-              <div className="mt-2 text-center text-[13px] font-semibold text-[#404040]">
-                {tipoPermissaoLabel}
-              </div>
-              <div className="mt-1 text-center text-[13px] text-[#6B7280]">
+              <div className="mt-2 text-center text-[13px] text-[#6B7280]">
                 Acesso da cautela editado para{" "}
                 <span className="font-bold">{permissaoEditadaLabel}</span> em{" "}
                 {cautela.tipoPermissaoAlteradoEm}

@@ -445,6 +445,11 @@ export default function Gestor() {
     try {
       const data = await getCautelas();
       setCautelas(data);
+      setCautelaSelecionada((prev) => {
+        if (!prev) return prev;
+        const atualizada = data.find((c) => c.id === prev.id);
+        return atualizada ?? prev;
+      });
     } catch (error) {
       console.error("Erro ao carregar cautelas.", error);
       setCautelas([]);
@@ -514,6 +519,12 @@ export default function Gestor() {
     return () => window.removeEventListener("cautela-search", onSearch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cautelas]);
+
+  useEffect(() => {
+    if (!actionError) return;
+    const timer = setTimeout(() => setActionError(""), 6000);
+    return () => clearTimeout(timer);
+  }, [actionError]);
 
   const isSomenteLeitura = (c: CautelaComDecisao) =>
     c.decisaoLocal !== undefined ||
@@ -854,7 +865,7 @@ export default function Gestor() {
                 style={{ backgroundColor: "rgba(0,0,0,0.35)" }}
                 onClick={() => setCautelaSelecionada(null)}
               />
-              <div className="fixed inset-0 z-50 flex items-center pt-15 justify-center pointer-events-none">
+              <div className="fixed inset-0 z-50 flex items-center pt-10 justify-center pointer-events-none">
                 <div
                   className="w-[420px] max-h-[calc(100vh-120px)] overflow-y-auto pointer-events-auto"
                   onClick={(e) => e.stopPropagation()}
@@ -863,6 +874,7 @@ export default function Gestor() {
                     cautela={cautelaSelecionada}
                     onFechar={() => setCautelaSelecionada(null)}
                     variant="historico"
+                    ocultarBanner
                     acoes={
                       cautelaSelecionada.status === "Aprovado" ? (
                         <button

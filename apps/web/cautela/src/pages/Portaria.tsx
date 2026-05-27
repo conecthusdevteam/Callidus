@@ -537,6 +537,12 @@ export default function Portaria() {
     return () => window.removeEventListener("cautela-search", onSearch);
   }, []);
 
+  useEffect(() => {
+    if (!actionError) return;
+    const timer = setTimeout(() => setActionError(""), 6000);
+    return () => clearTimeout(timer);
+  }, [actionError]);
+
   function abrirDetalhe(cautela: Cautela, origem: "ativas" | "historico") {
     setCautelaSelecionada(cautela);
     setOrigemDetalhe(origem);
@@ -689,7 +695,7 @@ export default function Portaria() {
                 onClick={() => setCautelaSelecionada(null)}
               />
               <div
-                className="fixed top-35 w-[450px] z-20 overflow-y-auto"
+                className="fixed top-21 w-[480px] z-20 overflow-y-auto"
                 style={{
                   left: origemDetalhe === "ativas" ? "620px" : "50%",
                   transform:

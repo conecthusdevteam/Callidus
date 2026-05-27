@@ -117,10 +117,6 @@ function DetalhesCautelaPortaria({
   cautela: Cautela;
   onFechar: () => void;
 }) {
-  const tipoPermissaoLabel =
-    cautela.tipoPermissao === "LIVRE_TRANSITO"
-      ? "Livre trânsito"
-      : "Entrada única";
   const permissaoEditadaLabel =
     cautela.tipoPermissao === "LIVRE_TRANSITO"
       ? "LIVRE TRÂNSITO"
@@ -192,7 +188,6 @@ function DetalhesCautelaPortaria({
         )}
         {cautela.tipoPermissaoAlteradoEm && (
           <div className="mb-4 text-center text-[13px] text-[#6B7280]">
-            <p className="font-semibold text-[#404040]">{tipoPermissaoLabel}</p>
             <p className="mt-1">
               Acesso da cautela editado para{" "}
               <span className="font-bold">{permissaoEditadaLabel}</span> em{" "}
@@ -368,6 +363,7 @@ export default function Home() {
   const [loadingCautelas, setLoadingCautelas] = useState(true);
   const [listError, setListError] = useState("");
   const cautelaSelecionadaRef = useRef<Cautela | null>(null);
+  const [actionError, setActionError] = useState("");
 
   // Formulário
   const [documento, setDocumento] = useState("");
@@ -404,11 +400,11 @@ export default function Home() {
       const data = await getCautelas();
       setCautelas(data);
 
-      const sel = cautelaSelecionadaRef.current;
-      if (sel) {
-        const atualizada = data.find((c) => c.id === sel.id);
-        if (atualizada) setCautelaSelecionada(atualizada);
-      }
+      setCautelaSelecionada((prev) => {
+        if (!prev) return prev;
+        const atualizada = data.find((c) => c.id === prev.id);
+        return atualizada ?? prev;
+      });
     } catch (error) {
       setCautelas([]);
       setListError(
@@ -471,6 +467,12 @@ export default function Home() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [cautelaSelecionada]);
+
+  useEffect(() => {
+    if (!actionError) return;
+    const timer = setTimeout(() => setActionError(""), 6000);
+    return () => clearTimeout(timer);
+  }, [actionError]);
 
   function marcarComoLida(cautela: Cautela) {
     setCautelaSelecionada((prev) => (prev?.id === cautela.id ? null : cautela));
