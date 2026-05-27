@@ -206,36 +206,27 @@ function DetalhesCautelaPortaria({
           </p>
           <div>
             {progresso.map((item, index) => (
-              <div
-                key={item.label}
-                className="grid grid-cols-[1fr_18px_auto] gap-2"
-              >
-                <p
-                  className={`text-[11px] leading-tight ${
-                    item.complete ? "text-black" : "text-[#BDBDBD]"
-                  }`}
-                >
-                  {item.label}
-                </p>
-                <div className="flex flex-col items-center">
+              <div key={item.label} className="flex gap-2 items-start">
+                <div className="flex flex-col min-w-0 text-right flex-1">
+                  <p
+                    className={`text-[11px] leading-tight ${item.complete ? "text-black" : "text-[#BDBDBD]"}`}
+                  >
+                    {item.label}
+                  </p>
+                  <p className="text-[12px] text-[#404040] mt-0.5">
+                    {item.data?.split(", ")[1] ?? item.data ?? ""}
+                  </p>
+                </div>
+                <div className="flex flex-col items-center flex-shrink-0">
                   <span
-                    className={`h-4 w-4 rounded-full ${
-                      item.complete ? "bg-[#3BB14A]" : "bg-[#BDBDBD]"
-                    }`}
+                    className={`h-4 w-4 rounded-full flex-shrink-0 ${item.complete ? "bg-[#3BB14A]" : "bg-[#BDBDBD]"}`}
                   />
                   {index < progresso.length - 1 && (
                     <span
-                      className={`h-20 w-0.5 ${
-                        progresso[index + 1].complete
-                          ? "bg-[#3BB14A]"
-                          : "bg-[#BDBDBD]"
-                      }`}
+                      className={`w-0.5 h-16 ${progresso[index + 1].complete ? "bg-[#3BB14A]" : "bg-[#BDBDBD]"}`}
                     />
                   )}
                 </div>
-                <p className="text-[12px] text-[#404040]">
-                  {item.data?.split(", ")[1] ?? item.data ?? ""}
-                </p>
               </div>
             ))}
           </div>

@@ -643,7 +643,7 @@ export default function Portaria() {
   );
 
   return (
-    <div className="min-h-screen md:h-screen pt-[60px] pl-0 md:pl-[70px] bg-[#F5F7F6] relative overflow-x-hidden md:overflow-hidden">
+    <div className="min-h-screen lg:h-screen pt-[60px] pl-[70px] lg:pl-[70px] bg-[#F5F7F6] relative overflow-x-hidden lg:overflow-hidden">
       <CautelaPrint cautela={cautelaSelecionada} />
       {actionError && (
         <div className="fixed left-[90px] right-5 top-[76px] z-40 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
@@ -652,7 +652,7 @@ export default function Portaria() {
       )}
 
       {/* ══ DESKTOP ══ */}
-      <div className="hidden md:flex h-[calc(100vh-60px)]">
+      <div className="hidden lg:flex h-[calc(100vh-60px)]">
         {/* Coluna esquerda — Cautelas autorizadas */}
         <div
           className={`w-[550px] flex-shrink-0 px-6 pt-6 pb-4 flex flex-col h-full relative ${
@@ -779,9 +779,9 @@ export default function Portaria() {
           </div>
 
           {/* Tabela */}
-          <div className="w-full max-w-[1200px] bg-white rounded-lg border border-[#E5E7EB] shadow-sm relative z-0">
+          <div className="w-full max-w-[1200px] bg-white rounded-lg border border-[#E5E7EB] shadow-sm relative z-0 overflow-x-auto">
             {/* Cabeçalho */}
-            <div className="grid grid-cols-[1.8fr_0.9fr_0.75fr_1.8fr_1.25fr_1.25fr_1.35fr] bg-[#2B8E37] text-white text-[15px] font-bold px-4 py-2 rounded-t-lg">
+            <div className="grid grid-cols-[1.8fr_0.9fr_0.75fr_1.8fr_1.25fr_1.25fr_1.35fr] bg-[#2B8E37] text-white text-[15px] font-bold px-4 py-1.5 min-w-[800px]">
               <span>Solicitante</span>
               <span>Data</span>
               <span>Hora</span>
@@ -810,7 +810,7 @@ export default function Portaria() {
                     <div
                       key={cautela.id}
                       onClick={() => abrirDetalhe(cautela, "historico")}
-                      className={`grid grid-cols-[1.8fr_0.9fr_0.75fr_1.8fr_1.25fr_1.25fr_1.35fr] px-4 py-3 text-[14px] text-[#111827] items-center cursor-pointer transition-colors border-b border-[#F3F4F6] last:border-0 ${
+                      className={`grid grid-cols-[1.8fr_0.9fr_0.75fr_1.8fr_1.25fr_1.25fr_1.35fr] px-4 py-3 text-[14px] min-w-[800px] text-[#111827] items-center cursor-pointer transition-colors border-b border-[#F3F4F6] last:border-0 ${
                         selecionada
                           ? "bg-[#E8F5EA] border-l-4 border-l-[#2B8E37]"
                           : i % 2 === 1
@@ -896,7 +896,7 @@ export default function Portaria() {
       </div>
 
       {/* ══ MOBILE ══ */}
-      <div className="md:hidden flex flex-col h-[calc(100vh-60px)] pt-[40px] overflow-hidden">
+      <div className="lg:hidden flex flex-col h-[calc(100vh-60px)] pt-[40px] overflow-hidden">
         {mobileView === "lista" && (
           <div className="flex-1 overflow-y-auto">
             {/* Ativas */}
