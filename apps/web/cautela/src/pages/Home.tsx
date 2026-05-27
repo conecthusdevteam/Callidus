@@ -117,10 +117,6 @@ function DetalhesCautelaPortaria({
   cautela: Cautela;
   onFechar: () => void;
 }) {
-  const tipoPermissaoLabel =
-    cautela.tipoPermissao === "LIVRE_TRANSITO"
-      ? "Livre trânsito"
-      : "Entrada única";
   const permissaoEditadaLabel =
     cautela.tipoPermissao === "LIVRE_TRANSITO"
       ? "LIVRE TRÂNSITO"
@@ -192,7 +188,6 @@ function DetalhesCautelaPortaria({
         )}
         {cautela.tipoPermissaoAlteradoEm && (
           <div className="mb-4 text-center text-[13px] text-[#6B7280]">
-            <p className="font-semibold text-[#404040]">{tipoPermissaoLabel}</p>
             <p className="mt-1">
               Acesso da cautela editado para{" "}
               <span className="font-bold">{permissaoEditadaLabel}</span> em{" "}
@@ -206,36 +201,27 @@ function DetalhesCautelaPortaria({
           </p>
           <div>
             {progresso.map((item, index) => (
-              <div
-                key={item.label}
-                className="grid grid-cols-[1fr_18px_auto] gap-2"
-              >
-                <p
-                  className={`text-[11px] leading-tight ${
-                    item.complete ? "text-black" : "text-[#BDBDBD]"
-                  }`}
-                >
-                  {item.label}
-                </p>
-                <div className="flex flex-col items-center">
+              <div key={item.label} className="flex gap-2 items-start">
+                <div className="flex flex-col min-w-0 text-right flex-1">
+                  <p
+                    className={`text-[11px] leading-tight ${item.complete ? "text-black" : "text-[#BDBDBD]"}`}
+                  >
+                    {item.label}
+                  </p>
+                  <p className="text-[12px] text-[#404040] mt-0.5">
+                    {item.data?.split(", ")[1] ?? item.data ?? ""}
+                  </p>
+                </div>
+                <div className="flex flex-col items-center flex-shrink-0">
                   <span
-                    className={`h-4 w-4 rounded-full ${
-                      item.complete ? "bg-[#3BB14A]" : "bg-[#BDBDBD]"
-                    }`}
+                    className={`h-4 w-4 rounded-full flex-shrink-0 ${item.complete ? "bg-[#3BB14A]" : "bg-[#BDBDBD]"}`}
                   />
                   {index < progresso.length - 1 && (
                     <span
-                      className={`h-20 w-0.5 ${
-                        progresso[index + 1].complete
-                          ? "bg-[#3BB14A]"
-                          : "bg-[#BDBDBD]"
-                      }`}
+                      className={`w-0.5 h-16 ${progresso[index + 1].complete ? "bg-[#3BB14A]" : "bg-[#BDBDBD]"}`}
                     />
                   )}
                 </div>
-                <p className="text-[12px] text-[#404040]">
-                  {item.data?.split(", ")[1] ?? item.data ?? ""}
-                </p>
               </div>
             ))}
           </div>
@@ -377,6 +363,7 @@ export default function Home() {
   const [loadingCautelas, setLoadingCautelas] = useState(true);
   const [listError, setListError] = useState("");
   const cautelaSelecionadaRef = useRef<Cautela | null>(null);
+  const [actionError, setActionError] = useState("");
 
   // Formulário
   const [documento, setDocumento] = useState("");
@@ -413,11 +400,11 @@ export default function Home() {
       const data = await getCautelas();
       setCautelas(data);
 
-      const sel = cautelaSelecionadaRef.current;
-      if (sel) {
-        const atualizada = data.find((c) => c.id === sel.id);
-        if (atualizada) setCautelaSelecionada(atualizada);
-      }
+      setCautelaSelecionada((prev) => {
+        if (!prev) return prev;
+        const atualizada = data.find((c) => c.id === prev.id);
+        return atualizada ?? prev;
+      });
     } catch (error) {
       setCautelas([]);
       setListError(
@@ -468,6 +455,7 @@ export default function Home() {
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
+      if (window.innerWidth < 768) return; // ignora no mobile
       if (
         cautelaSelecionada &&
         painelDetalhesRef.current &&
@@ -476,13 +464,15 @@ export default function Home() {
         setCautelaSelecionada(null);
       }
     }
-
     document.addEventListener("mousedown", handleClickOutside);
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [cautelaSelecionada]);
+
+  useEffect(() => {
+    if (!actionError) return;
+    const timer = setTimeout(() => setActionError(""), 6000);
+    return () => clearTimeout(timer);
+  }, [actionError]);
 
   function marcarComoLida(cautela: Cautela) {
     setCautelaSelecionada((prev) => (prev?.id === cautela.id ? null : cautela));
@@ -720,7 +710,7 @@ export default function Home() {
   return (
     <div className="min-h-screen md:h-screen pt-[60px] pl-0 md:pl-[70px] bg-[#F5F7F6] relative overflow-x-hidden md:overflow-hidden">
       {/* ══ DESKTOP ══ */}
-      <div className="hidden md:flex h-[calc(100vh-60px)]">
+      <div className="hidden lg:flex h-[calc(100vh-60px)]">
         <div className="w-[560px] flex-shrink-0 px-8 pt-8 pb-4 flex flex-col h-full">
           <div
             className="flex flex-col h-full bg-white rounded-xl border border-[#E5E7EB] overflow-hidden"
@@ -762,23 +752,18 @@ export default function Home() {
       </div>
 
       {/* ══ MOBILE ══ */}
-      <div className="md:hidden flex flex-col h-[calc(100vh-60px)] pt-[40px] overflow-hidden">
+      <div className="lg:hidden flex flex-col h-[calc(100vh-60px)] pt-[40px]">
         {mobileView === "lista" && (
-          <>
-            <div className="relative mx-3 mt-2 flex-shrink-0">
+          <div className="flex-1 overflow-y-auto">
+            <div className="relative mx-3 mt-2 h-[56px] flex-shrink-0">
               {abaRecebidos(true)}
               {abaEnviados(true)}
             </div>
-            <div
-              className="mx-3 bg-[#E5E7EB] rounded-t-[5px] border border-[#E5E7EB] flex-shrink-0"
-              style={{ maxHeight: "35vh" }}
-            >
-              <div className="overflow-y-auto h-full">{listaCards}</div>
+            <div className="mx-3 mt-1 bg-[#E5E7EB] rounded-b-lg border border-[#E5E7EB]">
+              {listaCards}
             </div>
-            <div className="flex-1 overflow-y-auto px-3 pb-4 pt-2">
-              {formularioSection}
-            </div>
-          </>
+            <div className="px-3 pb-4 pt-4">{formularioSection}</div>
+          </div>
         )}
 
         {mobileView === "detalhe" && cautelaSelecionada && (
@@ -786,8 +771,8 @@ export default function Home() {
             <div className="relative flex items-center justify-center px-4 py-3 mt-2 flex-shrink-0">
               <button
                 onClick={() => {
-                  setMobileView("lista");
                   setCautelaSelecionada(null);
+                  setMobileView("lista");
                 }}
                 className="absolute left-4 text-gray-600"
               >

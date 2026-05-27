@@ -24,7 +24,7 @@ const STATUS_HISTORICO: StatusCautela[] = [
   "Aprovado",
   "Saída Autorizada",
 ];
-const ITENS_POR_PAGINA = 9;
+const ITENS_POR_PAGINA = 8;
 
 type MobileView = "lista" | "detalhe";
 
@@ -231,7 +231,7 @@ function CardCautelaPortaria({
   return (
     <div
       onClick={onClick}
-      className={`rounded-lg p-5 cursor-pointer transition-all hover:shadow-md mb-3 ${borderClass}`}
+      className={`rounded-lg p-5 cursor-pointer transition-all hover:shadow-md mb-3 w-full max-w-[460px] mx-auto ${borderClass}`}
     >
       <BannerCard status={status} />
 
@@ -537,6 +537,12 @@ export default function Portaria() {
     return () => window.removeEventListener("cautela-search", onSearch);
   }, []);
 
+  useEffect(() => {
+    if (!actionError) return;
+    const timer = setTimeout(() => setActionError(""), 6000);
+    return () => clearTimeout(timer);
+  }, [actionError]);
+
   function abrirDetalhe(cautela: Cautela, origem: "ativas" | "historico") {
     setCautelaSelecionada(cautela);
     setOrigemDetalhe(origem);
@@ -585,7 +591,7 @@ export default function Portaria() {
       setActionError("");
       const aprovada = await validateEntry(id);
       setCautelas((prev) => prev.map((c) => (c.id === id ? aprovada : c)));
-      setCautelaSelecionada(aprovada);
+      setCautelaSelecionada(null);
     } catch (error) {
       setActionError(
         error instanceof Error
@@ -600,7 +606,7 @@ export default function Portaria() {
       setActionError("");
       const encerrada = await closeCautela(id);
       setCautelas((prev) => prev.map((c) => (c.id === id ? encerrada : c)));
-      setCautelaSelecionada(encerrada);
+      setCautelaSelecionada(null);
     } catch (error) {
       setActionError(
         error instanceof Error ? error.message : "Não foi possível encerrar.",
@@ -643,7 +649,7 @@ export default function Portaria() {
   );
 
   return (
-    <div className="min-h-screen md:h-screen pt-[60px] pl-0 md:pl-[70px] bg-[#F5F7F6] relative overflow-x-hidden md:overflow-hidden">
+    <div className="min-h-screen lg:h-screen pt-[60px] pl-[70px] lg:pl-[70px] bg-[#F5F7F6] relative overflow-x-hidden lg:overflow-hidden">
       <CautelaPrint cautela={cautelaSelecionada} />
       {actionError && (
         <div className="fixed left-[90px] right-5 top-[76px] z-40 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
@@ -652,10 +658,10 @@ export default function Portaria() {
       )}
 
       {/* ══ DESKTOP ══ */}
-      <div className="hidden md:flex h-[calc(100vh-60px)]">
+      <div className="hidden lg:flex h-[calc(100vh-60px)]">
         {/* Coluna esquerda — Cautelas autorizadas */}
         <div
-          className={`w-[450px] flex-shrink-0 px-6 pt-6 pb-4 flex flex-col h-full relative ${
+          className={`w-[550px] flex-shrink-0 px-6 pt-6 pb-4 flex flex-col h-full relative ${
             cautelaSelecionada && origemDetalhe === "ativas" ? "z-10" : "z-0"
           }`}
         >
@@ -689,10 +695,14 @@ export default function Portaria() {
                 onClick={() => setCautelaSelecionada(null)}
               />
               <div
-                className="fixed top-22 w-[420px] z-20 overflow-y-auto"
+                className="fixed top-21 w-[480px] z-20 overflow-y-auto"
                 style={{
-                  left: origemDetalhe === "ativas" ? "470px" : undefined,
-                  right: origemDetalhe === "historico" ? "24px" : undefined,
+                  left: origemDetalhe === "ativas" ? "620px" : "50%",
+                  transform:
+                    origemDetalhe === "historico"
+                      ? "translateX(-50%)"
+                      : undefined,
+                  right: undefined,
                   maxHeight: "calc(100vh - 100px)",
                 }}
                 onClick={(e) => e.stopPropagation()}
@@ -758,76 +768,91 @@ export default function Portaria() {
               <input
                 type="text"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setPaginaHistorico(1);
+                }}
                 placeholder="Pesquise por nome, do solicitante, Id de cautela ou status"
                 className="w-full pl-9 pr-3 py-2 text-[13px] border border-[#D1D5DB] rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#2B8E37] focus:border-transparent"
               />
             </div>
-            <button className="px-4 py-2 rounded-lg bg-[#3BB14A] text-white text-[13px] font-semibold hover:bg-[#22592A] transition-colors whitespace-nowrap">
+            <button
+              onClick={() => setPaginaHistorico(1)}
+              className="px-4 py-2 rounded-lg bg-[#3BB14A] text-white text-[13px] font-semibold hover:bg-[#22592A] transition-colors whitespace-nowrap"
+            >
               Pesquisar
             </button>
           </div>
 
           {/* Tabela */}
-          <div className="w-full max-w-[980px] bg-white rounded-lg overflow-hidden border border-[#E5E7EB] shadow-sm relative z-0">
+          <div className="w-full max-w-[1200px] bg-white rounded-lg border border-[#E5E7EB] shadow-sm relative z-0 overflow-x-auto">
             {/* Cabeçalho */}
-            <div className="grid grid-cols-[1.8fr_0.9fr_0.75fr_1.8fr_1.25fr_1.25fr_1.35fr] bg-[#2B8E37] text-white text-[15px] font-bold px-4 py-2">
+            <div className="grid grid-cols-[1.8fr_0.9fr_0.75fr_1.8fr_1.25fr_1.25fr_1.35fr] bg-[#2B8E37] text-white text-[15px] font-bold px-4 py-1.5 min-w-[800px]">
               <span>Solicitante</span>
               <span>Data</span>
               <span>Hora</span>
               <span>Id da cautela</span>
               <span className="flex justify-center">Status</span>
-              <span>Acesso</span>
-              <span>Aprovador</span>
+              <span className="flex justify-center">Acesso</span>
+              <span className="flex justify-center">Aprovador</span>
             </div>
 
             {/* Linhas */}
-            {historicoFiltrado.length === 0 ? (
-              <div className="flex items-center justify-center py-16 text-[#6B7280] text-sm">
-                {searchTerm
-                  ? `Nenhum resultado para "${searchTerm}".`
-                  : "Nenhum histórico."}
-              </div>
-            ) : (
-              itensPaginaHistorico.map((cautela, i) => {
-                const { data, hora } = formatarData(cautela.data);
-                const selecionada = cautelaSelecionada?.id === cautela.id;
-                return (
-                  <div
-                    key={cautela.id}
-                    onClick={() => abrirDetalhe(cautela, "historico")}
-                    className={`grid grid-cols-[1.8fr_0.9fr_0.75fr_1.8fr_1.25fr_1.25fr_1.35fr] px-4 py-3 text-[14px] text-[#111827] items-center cursor-pointer transition-colors border-b border-[#F3F4F6] last:border-0 ${
-                      selecionada
-                        ? "bg-[#E8F5EA] border-l-4 border-l-[#2B8E37]"
-                        : i % 2 === 1
-                          ? "bg-[#F9FAFB] hover:bg-[#F0FDF4]"
-                          : "bg-white hover:bg-[#F0FDF4]"
-                    }`}
-                  >
-                    <span className="truncate">{cautela.visitante || "—"}</span>
-                    <span className="text-[#0A0A0A]">{data}</span>
-                    <span className="text-[#0A0A0A]">{hora}</span>
-                    <span className="truncate font-mono text-[18px] text-[#0A0A0A]">
-                      {cautela.id}
-                    </span>
-                    <span className="flex justify-center">
-                      <BadgeTabela status={cautela.status as StatusCautela} />
-                    </span>
-                    <span className="truncate">
-                      {cautela.status === "Reprovado"
-                        ? "-"
-                        : cautela.livreAcesso === "livre"
-                          ? "Livre trânsito"
-                          : "Entrada única"}
-                    </span>
-                    <span className="truncate">{cautela.gestor || "—"}</span>
-                  </div>
-                );
-              })
-            )}
+            <div
+              className="overflow-y-auto"
+              style={{ maxHeight: "calc(100vh - 320px)" }}
+            >
+              {historicoFiltrado.length === 0 ? (
+                <div className="flex items-center justify-center py-16 text-[#6B7280] text-sm">
+                  {searchTerm
+                    ? `Nenhum resultado para "${searchTerm}".`
+                    : "Nenhum histórico."}
+                </div>
+              ) : (
+                itensPaginaHistorico.map((cautela, i) => {
+                  const { data, hora } = formatarData(cautela.data);
+                  const selecionada = cautelaSelecionada?.id === cautela.id;
+                  return (
+                    <div
+                      key={cautela.id}
+                      onClick={() => abrirDetalhe(cautela, "historico")}
+                      className={`grid grid-cols-[1.8fr_0.9fr_0.75fr_1.8fr_1.25fr_1.25fr_1.35fr] px-4 py-3 text-[14px] min-w-[800px] text-[#111827] items-center cursor-pointer transition-colors border-b border-[#F3F4F6] last:border-0 ${
+                        selecionada
+                          ? "bg-[#E8F5EA] border-l-4 border-l-[#2B8E37]"
+                          : i % 2 === 1
+                            ? "bg-[#F9FAFB] hover:bg-[#F0FDF4]"
+                            : "bg-white hover:bg-[#F0FDF4]"
+                      }`}
+                    >
+                      <span className="truncate">
+                        {cautela.visitante || "—"}
+                      </span>
+                      <span className="text-[#0A0A0A]">{data}</span>
+                      <span className="text-[#0A0A0A]">{hora}</span>
+                      <span className="text-[18px] text-[#0A0A0A]">
+                        {cautela.id}
+                      </span>
+                      <span className="flex justify-center">
+                        <BadgeTabela status={cautela.status as StatusCautela} />
+                      </span>
+                      <span className="flex justify-center truncate">
+                        {cautela.status === "Reprovado"
+                          ? "-"
+                          : cautela.livreAcesso === "livre"
+                            ? "Livre trânsito"
+                            : "Entrada única"}
+                      </span>
+                      <span className="flex justify-center truncate">
+                        {cautela.gestor || "—"}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
 
             {/* Paginação dentro da tabela */}
-            {totalPaginasHistorico > 1 && (
+            {historicoFiltrado.length > ITENS_POR_PAGINA && (
               <div className="flex items-center justify-center gap-1 py-3 border-t border-[#E5E7EB]">
                 <button
                   onClick={() => setPaginaHistorico((p) => Math.max(1, p - 1))}
@@ -877,7 +902,7 @@ export default function Portaria() {
       </div>
 
       {/* ══ MOBILE ══ */}
-      <div className="md:hidden flex flex-col h-[calc(100vh-60px)] pt-[40px] overflow-hidden">
+      <div className="lg:hidden flex flex-col h-[calc(100vh-60px)] pt-[40px] overflow-hidden">
         {mobileView === "lista" && (
           <div className="flex-1 overflow-y-auto">
             {/* Ativas */}
