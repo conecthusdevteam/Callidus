@@ -1,1 +1,97 @@
 @import "tailwindcss";
+
+.cautela-print-area {
+  display: none;
+}
+
+@media print {
+  @page {
+    margin: 0;
+  }
+
+  html,
+  body {
+    margin: 0;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .cautela-print-area,
+  .cautela-print-area * {
+    visibility: visible !important;
+  }
+
+  .cautela-print-area {
+    display: block;
+    position: absolute;
+    inset: 0;
+    background: white;
+    padding: 24px;
+  }
+
+  .cautela-print-card {
+    width: 100%;
+    max-width: 720px;
+    margin: 0 auto;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 24px;
+    font-family: Arial, sans-serif;
+    color: #111827;
+  }
+
+  .cautela-print-card h1 {
+    margin: 0 0 24px;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .print-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+
+  .print-label {
+    margin: 0 0 4px;
+    color: #6b7280;
+    font-size: 12px;
+  }
+
+  .print-value {
+    margin: 0 0 12px;
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .cautela-print-card table {
+    width: 100%;
+    margin-top: 16px;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+
+  .cautela-print-card th {
+    background: #0e9f6e;
+    color: white;
+    padding: 10px 12px;
+    text-align: left;
+  }
+
+  .cautela-print-card th:last-child,
+  .cautela-print-card td:last-child {
+    text-align: right;
+  }
+
+  .cautela-print-card td {
+    padding: 12px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .cautela-print-card tr:nth-child(even) td {
+    background: #f5f5f5;
+  }
+}

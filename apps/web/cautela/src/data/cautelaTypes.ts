@@ -1,33 +1,43 @@
-export type StatusCautela = "Aprovado" | "Reprovado" | "Em análise";
-export type TipoCautela = "comida" | "equipamento" | "smt";
-export type DirecaoCautela = "enviado" | "recebido";
+export type StatusCautela =
+  | "Em análise"
+  | "Aprovado"
+  | "Reprovado"
+  | "Saída Autorizada"
+  | "Encerrada";
 
 export interface Equipamento {
   descricao: string;
-  serie: string;
   quantidade?: number;
+  serie?: string;
 }
 
 export interface Cautela {
   id: string;
-  data: string;
-  gestor: string;
   status: StatusCautela;
-  visitante: string;
   empresa: string;
-  tipo: TipoCautela;
+  visitante: string;
+  proprietarioEmail: string;
+  documento?: string;
+  gestor: string;
+  data: string;
   equipamentos: Equipamento[];
-  direcao: DirecaoCautela;
-  aprovadoEm?: string;
-  reprovadoEm?: string;
-  motivoNegativa?: string;
-  proprietarioEmail?: string;
-  validade?: string;
-}
+  setorId: string;
+  criadoEm?: string;
 
-export interface TipoCautelaConfig {
-  id: TipoCautela;
-  titulo: string;
-  descricao: string;
-  itens: string[];
+  aprovadoEm?: string;
+  entradaValidadaEm?: string;
+  reprovadoEm?: string;
+  encerradaEm?: string;
+  validade?: string;
+  tipoPermissaoAlteradoEm?: string;
+
+  motivoNegativa?: string;
+  direcao?: "enviado" | "recebido";
+  tipo?: string;
+  etapaFluxo?: string;
+  tipoPermissao?: "ENTRADA_UNICA" | "LIVRE_TRANSITO";
+  livreAcesso?: "livre" | "entrada";
+  badgeGestor?: string | null;
+  badgePortaria?: string | null;
+  badgeSolicitante?: string | null;
 }

@@ -1,8 +1,35 @@
 @baseUrl = http://localhost:3000
 @json = application/json
 
+# Cole aqui os tokens retornados nos logins.
+@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFkbWluLmNhdXRlbGFAY2FsbGlkdXMubG9jYWwiLCJwYXBlbCI6IkFETUlOIiwic3ViIjoiN0Y0MzQzM0UtRjM2Qi0xNDEwLThBMjYtMDA1MkNGOUIyRjI1IiwidG9rZW5WZXJzaW9uIjowLCJpYXQiOjE3Nzk0Nzc4OTcsImV4cCI6MTc3OTUwNjY5N30.FHQejoG9vpAwdXE5QgdHzSZe6A4eilx9reNbp7J4MFY
+@gestorToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Imdlc3RvckBjYXV0ZWxhLmxvY2FsIiwicGFwZWwiOiJHRVNUT1IiLCJzdWIiOiJBN0I4NDMzRS1GMzZCLTE0MTAtODEzRS0wMDFGNkQyMDQyMDgiLCJ0b2tlblZlcnNpb24iOjAsImlhdCI6MTc3ODE4MTIyOCwiZXhwIjoxNzc4MjEwMDI4fQ.G286lrKfZ1d63s-v7o99W3kIDaq-rKPRbF_mRi_g3ME
+@portariaToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InBvcnRhcmlhQGNhdXRlbGEubG9jYWwiLCJwYXBlbCI6IlBPUlRBUklBIiwic3ViIjoiOTE0MzQzM0UtRjM2Qi0xNDEwLThBMjYtMDA1MkNGOUIyRjI1IiwidG9rZW5WZXJzaW9uIjowLCJpYXQiOjE3Nzk0Nzc5MjYsImV4cCI6MTc3OTUwNjcyNn0.QtNOIeDb6TgG8cv6Mx011C3yLC0JlWpXWgzlruJtImc
+@solicitanteToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InNvbGljaXRhbnRlQGNhdXRlbGEubG9jYWwiLCJwYXBlbCI6IlNPTElDSVRBTlRFIiwic3ViIjoiOTM0MzQzM0UtRjM2Qi0xNDEwLThBMjYtMDA1MkNGOUIyRjI1IiwidG9rZW5WZXJzaW9uIjowLCJpYXQiOjE3Nzk0Nzc5NDQsImV4cCI6MTc3OTUwNjc0NH0.lGRjpBEiw9FonCWWI4J1Req6wnOEgXnu6D-U40m5DBo
+# Preencha estes IDs depois de listar usuários, setores e cautelas.
+@gestorId = A7B8433E-F36B-1410-813E-001F6D204208
+@outroGestorId = COLE_O_ID_DE_OUTRO_GESTOR_AQUI
+@usuarioParaAtualizarId = COLE_O_ID_DE_USUARIO_PARA_ATUALIZAR_AQUI
+@usuarioParaInativarId = COLE_O_ID_DE_USUARIO_PARA_INATIVAR_AQUI
+@setorId = 9743433E-F36B-1410-8A26-0052CF9B2F25
+@setorParaAtualizarId = 8254433E-F36B-1410-8622-00F84CA971A0
+@setorParaInativarId = 7C54433E-F36B-1410-8622-00F84CA971A0
+@setorInativoId = COLE_O_ID_DE_SETOR_INATIVO_AQUI
+@cautelaEmAnaliseId = COLE_O_ID_DA_CAUTELA_EM_ANALISE_AQUI
+@cautelaAprovadaId = COLE_O_ID_DA_CAUTELA_APROVADA_AQUI
+# Depois de rodar "Autorizar saida", normalmente este ID deve ser igual ao @cautelaAprovadaId.
+@cautelaSaidaAutorizadaId = 7A2E433E-F36B-1410-8B27-0051659C6E99
+@cautelaEncerradaId = 7A2E433E-F36B-1410-8B27-0051659C6E99
+@cautelaReprovadaId = COLE_O_ID_DA_CAUTELA_REPROVADA_AQUI
+@cautelaDeOutroGestorId = COLE_O_ID_DA_CAUTELA_DE_OUTRO_GESTOR_AQUI
+@cautelaDeOutraPortariaId = COLE_O_ID_DA_CAUTELA_DE_OUTRA_PORTARIA_AQUI
+
 ###
-# 1) Criar o primeiro ADMIN
+# 0) Health check
+GET {{baseUrl}}/
+
+###
+# 1) Criar primeiro ADMIN
 # Só funciona enquanto não existir nenhum usuário na base.
 POST {{baseUrl}}/users
 Content-Type: {{json}}
@@ -16,21 +43,18 @@ Content-Type: {{json}}
 
 ###
 # 2) Login ADMIN
-# Copie manualmente o accessToken retornado para a variável abaixo.
 POST {{baseUrl}}/auth/login
 Content-Type: {{json}}
 
 {
-  "email": "admin@cautela.local",
+  "email": "admin.cautela@callidus.local",
   "senha": "123456"
 }
 
 ###
-@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFkbWluQGNhdXRlbGEubG9jYWwiLCJwYXBlbCI6IkFETUlOIiwic3ViIjoiNDBENzQyM0UtRjM2Qi0xNDEwLTg1MDgtMDA4NkUyNUM3NUVDIiwidG9rZW5WZXJzaW9uIjowLCJpYXQiOjE3NzcwNTIyMzgsImV4cCI6MTc3NzA4MTAzOH0.a4yX_MQEw4zwqGcNGVNMXNmXwiNzrJMX_0odLnXj3EE
-
-###
 # 3) Criar GESTOR
 POST {{baseUrl}}/users
+Authorization: Bearer {{adminToken}}
 Content-Type: {{json}}
 
 {
@@ -43,6 +67,7 @@ Content-Type: {{json}}
 ###
 # 4) Criar PORTARIA
 POST {{baseUrl}}/users
+Authorization: Bearer {{adminToken}}
 Content-Type: {{json}}
 
 {
@@ -53,15 +78,26 @@ Content-Type: {{json}}
 }
 
 ###
-# 5) Listar usuários para pegar o id do gestor
+# 5) Criar SOLICITANTE
+POST {{baseUrl}}/users
+Authorization: Bearer {{adminToken}}
+Content-Type: {{json}}
+
+{
+  "nome": "Solicitante Teste",
+  "email": "solicitante@cautela.local",
+  "senha": "123456",
+  "papel": "SOLICITANTE"
+}
+
+###
+# 6) Listar usuários
+# Use para preencher @gestorId se não estiver usando seed.
 GET {{baseUrl}}/users
 Authorization: Bearer {{adminToken}}
 
 ###
-@gestorId = 43D7423E-F36B-1410-8508-0086E25C75EC
-
-###
-# 6) Criar setor
+# 7) Criar setor
 POST {{baseUrl}}/sectors
 Authorization: Bearer {{adminToken}}
 Content-Type: {{json}}
@@ -73,12 +109,13 @@ Content-Type: {{json}}
 }
 
 ###
-# 7) Listar setores
+# 8) Listar setores
+# Use para preencher @setorId.
 GET {{baseUrl}}/sectors
 Authorization: Bearer {{adminToken}}
 
 ###
-# 8) Login PORTARIA
+# 9) Login PORTARIA
 POST {{baseUrl}}/auth/login
 Content-Type: {{json}}
 
@@ -88,127 +125,278 @@ Content-Type: {{json}}
 }
 
 ###
-@portariaToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InBvcnRhcmlhQGNhdXRlbGEubG9jYWwiLCJwYXBlbCI6IlBPUlRBUklBIiwic3ViIjoiNDVENzQyM0UtRjM2Qi0xNDEwLTg1MDgtMDA4NkUyNUM3NUVDIiwidG9rZW5WZXJzaW9uIjowLCJpYXQiOjE3NzcwNTI2NDUsImV4cCI6MTc3NzA4MTQ0NX0.a3-4b618aZnx5a082htiz9EyeQCn6rEV4eqokTpjevM
+# 10) Login GESTOR
+POST {{baseUrl}}/auth/login
+Content-Type: {{json}}
+
+{
+  "email": "gestor.ti@callidus.local",
+  "senha": "123456"
+}
 
 ###
-# 9) Listar setores com usuário da portaria
-GET {{baseUrl}}/sectors
-Authorization: Bearer {{portariaToken}}
+# 11) Login SOLICITANTE
+POST {{baseUrl}}/auth/login
+Content-Type: {{json}}
+
+{
+  "email": "solicitante@cautela.local",
+  "senha": "123456"
+}
 
 ###
-@setorId = 4CD7423E-F36B-1410-8508-0086E25C75EC
-
-###
-# 10) Criar cautela
+# 12) Criar cautela pelo solicitante
+# Valida: empresa, documentoProprietario e itens com descricao + quantidade.
 POST {{baseUrl}}/cautelas
-Authorization: Bearer {{portariaToken}}
+Authorization: Bearer {{solicitanteToken}}
 Content-Type: {{json}}
 
 {
   "setorId": "{{setorId}}",
   "proprietarioNome": "Lucas Araujo",
-  "proprietarioEmail": "lucas@teste.com",
-  "retornoItem": true,
-  "validade": "2026-04-30T18:00:00.000Z",
+  "empresa": "Callidus",
+  "documentoProprietario": "12345678900",
+  "proprietarioEmail": "lucas@conecthus.org.br",
   "itens": [
     {
-      "nomeItem": "Notebook Dell",
+      "descricao": "Carregador IPhone",
       "quantidade": 1
     },
     {
-      "nomeItem": "Mouse",
+      "descricao": "IPhone",
       "quantidade": 1
     }
   ]
 }
 
 ###
-# 11) Criar cautela sem retorno
+# 13) Criar cautela simples
 POST {{baseUrl}}/cautelas
-Authorization: Bearer {{portariaToken}}
+Authorization: Bearer {{solicitanteToken}}
 Content-Type: {{json}}
 
 {
   "setorId": "{{setorId}}",
   "proprietarioNome": "Visitante Sem Retorno",
-  "proprietarioEmail": "visitante@teste.com",
-  "retornoItem": false,
+  "empresa": "Fornecedor Sem Retorno",
+  "documentoProprietario": "98765432100",
+  "proprietarioEmail": "visitante.sem.retorno@teste.com",
   "itens": [
     {
-      "nomeItem": "Capacete",
+      "descricao": "Capacete de seguranca",
       "quantidade": 1
     }
   ]
 }
 
 ###
-# 12) Listar cautelas da portaria
+# 14) Compatibilidade: criar cautela usando o campo antigo nomeItem
+POST {{baseUrl}}/cautelas
+Authorization: Bearer {{solicitanteToken}}
+Content-Type: {{json}}
+
+{
+  "setorId": "{{setorId}}",
+  "proprietarioNome": "Visitante Legado",
+  "empresa": "Empresa Legado",
+  "documentoProprietario": "11222333444",
+  "proprietarioEmail": "visitante.legado@teste.com",
+  "itens": [
+    {
+      "nomeItem": "Projetor Epson",
+      "quantidade": 1
+    }
+  ]
+}
+
+###
+# 15) Listar cautelas da portaria
+# Verifique: empresa, documentoProprietario, itens[].descricao, statusVisualPortaria,
+# badgePortaria, badgeGestor, saidaAutorizada, dataStatus e acoesDisponiveis.
 GET {{baseUrl}}/cautelas
 Authorization: Bearer {{portariaToken}}
 
 ###
-# 13) Listar só cautelas em análise
+# 16) Listar cautelas do gestor
+# Verifique cautelas EM_ANALISE aguardando aprovacao.
+GET {{baseUrl}}/cautelas
+Authorization: Bearer {{gestorToken}}
+
+###
+# 17) Listar cautelas em analise
 GET {{baseUrl}}/cautelas?respondidas=false
+Authorization: Bearer {{gestorToken}}
+
+###
+# 18) Detalhe de cautela em analise
+# Use uma cautela EM_ANALISE e preencha @cautelaEmAnaliseId.
+GET {{baseUrl}}/cautelas/{{cautelaEmAnaliseId}}
+Authorization: Bearer {{gestorToken}}
+
+###
+# 19) Aprovar cautela pelo gestor
+# Resultado esperado: status EM_ANALISE, etapaFluxo APROVADA_PELO_GESTOR.
+PATCH {{baseUrl}}/cautelas/{{cautelaEmAnaliseId}}/aprovar
+Authorization: Bearer {{gestorToken}}
+Content-Type: {{json}}
+
+{
+  "tipoPermissao": "ENTRADA_UNICA"
+}
+
+###
+# 20) Detalhe apos aprovacao do gestor
+GET {{baseUrl}}/cautelas/{{cautelaEmAnaliseId}}
+Authorization: Bearer {{gestorToken}}
+
+###
+# 21) Validar entrada pela portaria
+# Resultado esperado: status APROVADA, etapaFluxo VALIDADA_PELA_PORTARIA.
+PATCH {{baseUrl}}/cautelas/{{cautelaEmAnaliseId}}/validar-entrada
 Authorization: Bearer {{portariaToken}}
 
 ###
-# 14) Login GESTOR
-POST {{baseUrl}}/auth/login
+# 23) Alterar tipo de permissao pelo gestor
+PATCH {{baseUrl}}/cautelas/{{cautelaAprovadaId}}/tipo-permissao
+Authorization: Bearer {{gestorToken}}
 Content-Type: {{json}}
 
 {
-  "email": "gestor@cautela.local",
-  "senha": "123456"
+  "tipoPermissao": "ENTRADA_UNICA"
 }
 
 ###
-@gestorToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Imdlc3RvckBjYXV0ZWxhLmxvY2FsIiwicGFwZWwiOiJHRVNUT1IiLCJzdWIiOiI0M0Q3NDIzRS1GMzZCLTE0MTAtODUwOC0wMDg2RTI1Qzc1RUMiLCJ0b2tlblZlcnNpb24iOjIsImlhdCI6MTc3NzA1MjUxOSwiZXhwIjoxNzc3MDgxMzE5fQ.QHZDVMXJUnbdL4YXNSZ3zhsFEO2fAp2L0N1yvvZ4O-E
+# 24) Marcar cautela como visualizada pelo usuario autenticado
+PATCH {{baseUrl}}/cautelas/{{cautelaAprovadaId}}/visualizar
+Authorization: Bearer {{solicitanteToken}}
 
 ###
-# 15) Listar cautelas do gestor
+# 25) Autorizar saida pelo gestor
+# Resultado esperado:
+# status continua APROVADA;
+# saidaAutorizada = true;
+# badgeGestor = AGUARDANDO_SAIDA;
+# badgePortaria = ACAO_NECESSARIA;
+# statusVisualPortaria = ATENCAO;
+# evento SAIDA_AUTORIZADA no detalhe.
+# Depois de executar este passo com sucesso, copie este mesmo ID para @cautelaSaidaAutorizadaId.
+PATCH {{baseUrl}}/cautelas/{{cautelaAprovadaId}}/autorizar-saida
+Authorization: Bearer {{gestorToken}}
+
+###
+# 20) Portaria consulta cautelas apos autorizacao de saida
+# Deve aparecer com statusVisualPortaria ATENCAO e badgePortaria ACAO_NECESSARIA.
 GET {{baseUrl}}/cautelas
+Authorization: Bearer {{portariaToken}}
+
+###
+# 21) Detalhe da cautela com saida autorizada pela portaria
+GET {{baseUrl}}/cautelas/{{cautelaAprovadaId}}
+Authorization: Bearer {{portariaToken}}
+
+###
+# 22) Permitir saida pela portaria
+# Resultado esperado: status ENCERRADA, encerradoEm preenchido, badges nulos.
+# Use o mesmo ID autorizado no passo 19.
+PATCH {{baseUrl}}/cautelas/{{cautelaSaidaAutorizadaId}}/permitir-saida
+Authorization: Bearer {{portariaToken}}
+
+###
+# 23) Detalhe da cautela encerrada
+# Verifique aprovadoEm, saidaAutorizadaEm, encerradoEm e eventos.
+GET {{baseUrl}}/cautelas/{{cautelaSaidaAutorizadaId}}
+Authorization: Bearer {{portariaToken}}
+
+###
+# 24) Buscar por ID
+GET {{baseUrl}}/cautelas?search={{cautelaEncerradaId}}
+Authorization: Bearer {{portariaToken}}
+
+###
+# 25) Buscar por nome do proprietario
+GET {{baseUrl}}/cautelas?search=Lucas
+Authorization: Bearer {{portariaToken}}
+
+###
+# 26) Buscar por empresa
+GET {{baseUrl}}/cautelas?search=Callidus
+Authorization: Bearer {{portariaToken}}
+
+###
+# 27) Buscar por status ENCERRADA
+GET {{baseUrl}}/cautelas?search=ENCERRADA
+Authorization: Bearer {{portariaToken}}
+
+###
+# 28) Filtrar por status ENCERRADA
+GET {{baseUrl}}/cautelas?status=ENCERRADA
+Authorization: Bearer {{portariaToken}}
+
+###
+# 29) Polling: buscar cautelas atualizadas desde uma data
+GET {{baseUrl}}/cautelas?updatedSince=2026-01-01T00:00:00.000Z
+Authorization: Bearer {{portariaToken}}
+
+###
+# 30) Fluxo negativo: portaria tentando autorizar saida
+# Esperado: 403.
+PATCH {{baseUrl}}/cautelas/{{cautelaAprovadaId}}/autorizar-saida
+Authorization: Bearer {{portariaToken}}
+
+###
+# 31) Fluxo negativo: gestor tentando permitir saida
+# Esperado: 403.
+PATCH {{baseUrl}}/cautelas/{{cautelaSaidaAutorizadaId}}/permitir-saida
 Authorization: Bearer {{gestorToken}}
 
 ###
-@cautelaId = 4ED7423E-F36B-1410-8508-0086E25C75EC
-###
-# 16) Ver detalhes da cautela
-GET {{baseUrl}}/cautelas/{{cautelaId}}
+# 32) Fluxo negativo: autorizar saida de cautela em analise
+# Esperado: 409.
+PATCH {{baseUrl}}/cautelas/{{cautelaEmAnaliseId}}/autorizar-saida
 Authorization: Bearer {{gestorToken}}
 
 ###
-# 17) Aprovar cautela
-PATCH {{baseUrl}}/cautelas/{{cautelaId}}/aprovar
+# 33) Fluxo negativo: permitir saida sem autorizacao previa
+# Use uma cautela APROVADA sem saidaAutorizadaEm.
+# Esperado: 409.
+PATCH {{baseUrl}}/cautelas/{{cautelaAprovadaId}}/permitir-saida
+Authorization: Bearer {{portariaToken}}
+
+###
+# 34) Fluxo negativo: autorizar saida de cautela encerrada
+# Esperado: 409.
+PATCH {{baseUrl}}/cautelas/{{cautelaEncerradaId}}/autorizar-saida
 Authorization: Bearer {{gestorToken}}
 
 ###
-# 18) Reprovar cautela
-# Use esta requisição em vez da aprovação quando quiser validar o fluxo de rejeição.
-PATCH {{baseUrl}}/cautelas/{{cautelaId}}/reprovar
+# 35) Fluxo negativo: permitir saida de cautela encerrada novamente
+# Esperado: 409.
+PATCH {{baseUrl}}/cautelas/{{cautelaEncerradaId}}/permitir-saida
+Authorization: Bearer {{portariaToken}}
+
+###
+# 36) Fluxo de rejeicao em cautela separada
+# Use uma cautela EM_ANALISE diferente da usada para aprovacao.
+PATCH {{baseUrl}}/cautelas/{{cautelaEmAnaliseId}}/reprovar
 Authorization: Bearer {{gestorToken}}
 Content-Type: {{json}}
 
 {
-  "justificativa": "Equipamento sem autorização do setor."
+  "justificativa": "Equipamento sem autorizacao do setor."
 }
 
 ###
-# 19) Consultar histórico da cautela após decisão
-GET {{baseUrl}}/cautelas/{{cautelaId}}
-Authorization: Bearer {{gestorToken}}
-
-###
-# 20) Testar refresh token
+# 37) Refresh token
 # Cole manualmente o refreshToken retornado no login.
 POST {{baseUrl}}/auth/refresh
 Content-Type: {{json}}
 
 {
-  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Imdlc3RvckBjYXV0ZWxhLmxvY2FsIiwicGFwZWwiOiJHRVNUT1IiLCJzdWIiOiI0M0Q3NDIzRS1GMzZCLTE0MTAtODUwOC0wMDg2RTI1Qzc1RUMiLCJ0b2tlblZlcnNpb24iOjEsImp0aSI6IjY1MDAxYmI0LTcyYmYtNDgyNy1hOGUxLTk5MDdiOGFkY2JiNCIsInR5cGUiOiJyZWZyZXNoIiwiaWF0IjoxNzc3MDUyMTQ2LCJleHAiOjE3Nzc2NTY5NDZ9.b9Vgn7nNqvvtD7xoXB0V321ogTaARPsHMyIB7vS1ZB8"
+  "refreshToken": "COLE_O_REFRESH_TOKEN_AQUI"
 }
 
 ###
-# 21) Encerrar sessão atual
+# 38) Encerrar sessao atual
 POST {{baseUrl}}/auth/logout
 Authorization: Bearer {{gestorToken}}
 Content-Type: {{json}}
@@ -216,7 +404,431 @@ Content-Type: {{json}}
 {}
 
 ###
-# 22) Encerrar todas as sessões
+# 39) Encerrar todas as sessoes
 POST {{baseUrl}}/auth/logout-all
 Authorization: Bearer {{gestorToken}}
 
+###
+# 40) Permissao: portaria tentando criar cautela
+# Esperado: 403.
+POST {{baseUrl}}/cautelas
+Authorization: Bearer {{portariaToken}}
+Content-Type: {{json}}
+
+{
+  "setorId": "{{setorId}}",
+  "proprietarioNome": "Visitante Sem Validade",
+  "empresa": "Empresa Validacao",
+  "documentoProprietario": "10020030040",
+  "proprietarioEmail": "sem.validade@teste.com",
+  "itens": [
+    {
+      "descricao": "Notebook sem validade",
+      "quantidade": 1
+    }
+  ]
+}
+
+###
+# 41) Criar cautela sem campos legados retornoItem/validade
+# Esperado: 201.
+POST {{baseUrl}}/cautelas
+Authorization: Bearer {{solicitanteToken}}
+Content-Type: {{json}}
+
+{
+  "setorId": "{{setorId}}",
+  "proprietarioNome": "Visitante Validade Indevida",
+  "empresa": "Empresa Validacao",
+  "documentoProprietario": "10020030041",
+  "proprietarioEmail": "validade.indevida@teste.com",
+  "itens": [
+    {
+      "descricao": "Item sem retorno",
+      "quantidade": 1
+    }
+  ]
+}
+
+###
+# 42) Validacao: criar cautela sem itens
+# Esperado: 400.
+POST {{baseUrl}}/cautelas
+Authorization: Bearer {{solicitanteToken}}
+Content-Type: {{json}}
+
+{
+  "setorId": "{{setorId}}",
+  "proprietarioNome": "Visitante Sem Itens",
+  "empresa": "Empresa Validacao",
+  "documentoProprietario": "10020030042",
+  "proprietarioEmail": "sem.itens@teste.com",
+  "itens": []
+}
+
+###
+# 43) Validacao: criar cautela com item sem descricao/nomeItem
+# Esperado: 400.
+POST {{baseUrl}}/cautelas
+Authorization: Bearer {{solicitanteToken}}
+Content-Type: {{json}}
+
+{
+  "setorId": "{{setorId}}",
+  "proprietarioNome": "Visitante Item Invalido",
+  "empresa": "Empresa Validacao",
+  "documentoProprietario": "10020030043",
+  "proprietarioEmail": "item.invalido@teste.com",
+  "itens": [
+    {
+      "quantidade": 1
+    }
+  ]
+}
+
+###
+# 44) Validacao: criar cautela com quantidade zero
+# Esperado: 400.
+POST {{baseUrl}}/cautelas
+Authorization: Bearer {{solicitanteToken}}
+Content-Type: {{json}}
+
+{
+  "setorId": "{{setorId}}",
+  "proprietarioNome": "Visitante Quantidade Zero",
+  "empresa": "Empresa Validacao",
+  "documentoProprietario": "10020030044",
+  "proprietarioEmail": "quantidade.zero@teste.com",
+  "itens": [
+    {
+      "descricao": "Item com quantidade zero",
+      "quantidade": 0
+    }
+  ]
+}
+
+###
+# 45) Validacao: criar cautela com setor inexistente
+# Esperado: 400.
+POST {{baseUrl}}/cautelas
+Authorization: Bearer {{solicitanteToken}}
+Content-Type: {{json}}
+
+{
+  "setorId": "00000000-0000-0000-0000-000000000000",
+  "proprietarioNome": "Visitante Setor Inexistente",
+  "empresa": "Empresa Validacao",
+  "documentoProprietario": "10020030045",
+  "proprietarioEmail": "setor.inexistente@teste.com",
+  "itens": [
+    {
+      "descricao": "Item teste",
+      "quantidade": 1
+    }
+  ]
+}
+
+###
+# 46) Validacao: criar cautela com setor inativo
+# Primeiro inative um setor no bloco 78 e use o ID em @setorInativoId.
+# Esperado: 400.
+POST {{baseUrl}}/cautelas
+Authorization: Bearer {{solicitanteToken}}
+Content-Type: {{json}}
+
+{
+  "setorId": "{{setorInativoId}}",
+  "proprietarioNome": "Visitante Setor Inativo",
+  "empresa": "Empresa Validacao",
+  "documentoProprietario": "10020030046",
+  "proprietarioEmail": "setor.inativo@teste.com",
+  "itens": [
+    {
+      "descricao": "Item teste",
+      "quantidade": 1
+    }
+  ]
+}
+
+###
+# 47) Negativo aprovacao: portaria tentando aprovar
+# Esperado: 403.
+PATCH {{baseUrl}}/cautelas/{{cautelaEmAnaliseId}}/aprovar
+Authorization: Bearer {{portariaToken}}
+
+###
+# 48) Negativo aprovacao: aprovar cautela ja aprovada
+# Esperado: 409.
+PATCH {{baseUrl}}/cautelas/{{cautelaAprovadaId}}/aprovar
+Authorization: Bearer {{gestorToken}}
+
+###
+# 49) Negativo rejeicao: portaria tentando reprovar
+# Esperado: 403.
+PATCH {{baseUrl}}/cautelas/{{cautelaEmAnaliseId}}/reprovar
+Authorization: Bearer {{portariaToken}}
+Content-Type: {{json}}
+
+{
+  "justificativa": "Tentativa por perfil indevido."
+}
+
+###
+# 50) Negativo rejeicao: reprovar sem justificativa
+# Esperado: 400.
+PATCH {{baseUrl}}/cautelas/{{cautelaEmAnaliseId}}/reprovar
+Authorization: Bearer {{gestorToken}}
+Content-Type: {{json}}
+
+{
+  "justificativa": ""
+}
+
+###
+# 51) Negativo rejeicao: reprovar cautela ja aprovada
+# Esperado: 409.
+PATCH {{baseUrl}}/cautelas/{{cautelaAprovadaId}}/reprovar
+Authorization: Bearer {{gestorToken}}
+Content-Type: {{json}}
+
+{
+  "justificativa": "Tentativa de reprovar cautela ja aprovada."
+}
+
+###
+# 52) Negativo saida: autorizar saida duas vezes
+# Rode uma vez depois que @cautelaSaidaAutorizadaId ja tiver saida autorizada.
+# Esperado: 409.
+PATCH {{baseUrl}}/cautelas/{{cautelaSaidaAutorizadaId}}/autorizar-saida
+Authorization: Bearer {{gestorToken}}
+
+###
+# 53) Negativo saida: permitir saida de cautela em analise
+# Esperado: 409.
+PATCH {{baseUrl}}/cautelas/{{cautelaEmAnaliseId}}/permitir-saida
+Authorization: Bearer {{portariaToken}}
+
+###
+# 54) Negativo saida: permitir saida de cautela reprovada
+# Esperado: 409.
+PATCH {{baseUrl}}/cautelas/{{cautelaReprovadaId}}/permitir-saida
+Authorization: Bearer {{portariaToken}}
+
+###
+# 55) Permissao: requisicao sem token
+# Esperado: 401.
+GET {{baseUrl}}/cautelas
+
+###
+# 56) Permissao: token invalido
+# Esperado: 401.
+GET {{baseUrl}}/cautelas
+Authorization: Bearer token.invalido
+
+###
+# 57) Permissao: gestor acessando cautela de outro gestor
+# Esperado: 403.
+GET {{baseUrl}}/cautelas/{{cautelaDeOutroGestorId}}
+Authorization: Bearer {{gestorToken}}
+
+###
+# 58) Permissao: portaria acessando cautela criada por outra portaria
+# Esperado: 403, se a regra de acesso por solicitadoPorId continuar ativa.
+GET {{baseUrl}}/cautelas/{{cautelaDeOutraPortariaId}}
+Authorization: Bearer {{portariaToken}}
+
+###
+# 59) Filtro: cautelas respondidas
+GET {{baseUrl}}/cautelas?respondidas=true
+Authorization: Bearer {{gestorToken}}
+
+###
+# 60) Filtro: status APROVADA
+GET {{baseUrl}}/cautelas?status=APROVADA
+Authorization: Bearer {{gestorToken}}
+
+###
+# 61) Filtro: status EM_ANALISE
+GET {{baseUrl}}/cautelas?status=EM_ANALISE
+Authorization: Bearer {{gestorToken}}
+
+###
+# 62) Filtro: status REPROVADA
+GET {{baseUrl}}/cautelas?status=REPROVADA
+Authorization: Bearer {{gestorToken}}
+
+###
+# 63) Filtro combinado: search + status
+GET {{baseUrl}}/cautelas?search=Lucas&status=APROVADA
+Authorization: Bearer {{portariaToken}}
+
+###
+# 64) Busca sem resultado
+# Esperado: 200 com lista vazia.
+GET {{baseUrl}}/cautelas?search=NAO_DEVE_EXISTIR_123456
+Authorization: Bearer {{portariaToken}}
+
+###
+# 65) Auth: login com senha errada
+# Esperado: 401.
+POST {{baseUrl}}/auth/login
+Content-Type: {{json}}
+
+{
+  "email": "gestor@cautela.local",
+  "senha": "senha-errada"
+}
+
+###
+# 66) Auth: refresh token invalido
+# Esperado: 401.
+POST {{baseUrl}}/auth/refresh
+Content-Type: {{json}}
+
+{
+  "refreshToken": "refresh.invalido"
+}
+
+###
+# 67) Auth: logout sem token
+# Esperado: 401.
+POST {{baseUrl}}/auth/logout
+Content-Type: {{json}}
+
+{}
+
+###
+# 68) Users: dados do usuario autenticado
+GET {{baseUrl}}/users/me
+Authorization: Bearer {{gestorToken}}
+
+###
+# 69) Users: listar por papel GESTOR
+GET {{baseUrl}}/users?papel=GESTOR
+Authorization: Bearer {{adminToken}}
+
+###
+# 70) Users: listar ativos
+GET {{baseUrl}}/users?ativo=true
+Authorization: Bearer {{adminToken}}
+
+###
+# 71) Users: buscar usuario por ID
+GET {{baseUrl}}/users/{{usuarioParaAtualizarId}}
+Authorization: Bearer {{adminToken}}
+
+###
+# 72) Users: atualizar usuario
+PATCH {{baseUrl}}/users/{{usuarioParaAtualizarId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: {{json}}
+
+{
+  "nome": "Usuario Atualizado",
+  "ativo": true
+}
+
+###
+# 73) Users: inativar usuario
+DELETE {{baseUrl}}/users/{{usuarioParaInativarId}}
+Authorization: Bearer {{adminToken}}
+
+###
+# 74) Users negativo: portaria tentando listar usuarios
+# Esperado: 403.
+GET {{baseUrl}}/users
+Authorization: Bearer {{portariaToken}}
+
+###
+# 75) Sectors: listar setores ativos
+GET {{baseUrl}}/sectors?ativo=true
+Authorization: Bearer {{adminToken}}
+
+###
+# 76) Sectors: buscar setor por ID
+GET {{baseUrl}}/sectors/{{setorParaAtualizarId}}
+Authorization: Bearer {{adminToken}}
+
+###
+# 77) Sectors: atualizar setor
+PATCH {{baseUrl}}/sectors/{{setorParaAtualizarId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: {{json}}
+
+{
+  "nome": "Tecnologia Atualizada",
+  "ativo": true
+}
+
+###
+# 78) Sectors: inativar setor
+# Depois copie este ID para @setorInativoId para testar o bloco 46.
+DELETE {{baseUrl}}/sectors/{{setorParaInativarId}}
+Authorization: Bearer {{adminToken}}
+
+###
+# 79) Sectors negativo: portaria tentando criar setor
+# Esperado: 403.
+POST {{baseUrl}}/sectors
+Authorization: Bearer {{portariaToken}}
+Content-Type: {{json}}
+
+{
+  "numeroSetor": 999,
+  "nome": "Setor Indevido",
+  "gestorId": "{{gestorId}}"
+}
+
+###
+# 80) Sectors negativo: criar setor com gestor inexistente
+# Esperado: 400.
+POST {{baseUrl}}/sectors
+Authorization: Bearer {{adminToken}}
+Content-Type: {{json}}
+
+{
+  "numeroSetor": 998,
+  "nome": "Setor Gestor Inexistente",
+  "gestorId": "00000000-0000-0000-0000-000000000000"
+}
+
+###
+# 81) Sectors negativo: criar setor com numero repetido
+# Esperado: 409, se numeroSetor 101 ja existir.
+POST {{baseUrl}}/sectors
+Authorization: Bearer {{adminToken}}
+Content-Type: {{json}}
+
+{
+  "numeroSetor": 101,
+  "nome": "Setor Numero Repetido",
+  "gestorId": "{{gestorId}}"
+}
+
+###
+# 82) Users negativo: criar usuario com email repetido
+# Esperado: 409.
+POST {{baseUrl}}/users
+Authorization: Bearer {{adminToken}}
+Content-Type: {{json}}
+
+{
+  "nome": "Gestor Repetido",
+  "email": "gestor@cautela.local",
+  "senha": "123456",
+  "papel": "GESTOR"
+}
+
+###
+# 83) Users negativo: criar usuario com papel invalido
+# Esperado: 400.
+POST {{baseUrl}}/users
+Authorization: Bearer {{adminToken}}
+Content-Type: {{json}}
+
+{
+  "nome": "Usuario Papel Invalido",
+  "email": "papel.invalido@cautela.local",
+  "senha": "123456",
+  "papel": "INVALIDO"
+}

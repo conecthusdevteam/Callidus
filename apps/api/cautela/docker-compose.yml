@@ -1,11 +1,17 @@
 services:
   api:
-    build: .
-    container_name: cautela-api
+    build:
+      context: .
+      args:
+        PORT: ${PORT}
+    container_name: ${NODE_ENV}-cautela-api
     env_file:
       - .env
     ports:
       - '${PORT:-3000}:3000'
+    environment:
+      - PORT=3000
+      - CLIENT_PORT=${CLIENT_PORT}
     volumes:
       - .:/app
       - /app/node_modules
@@ -15,7 +21,7 @@ services:
 
   seed:
     build: .
-    container_name: cautela-seed
+    container_name: ${NODE_ENV}-cautela-seed
     env_file:
       - .env
     profiles:
@@ -29,7 +35,7 @@ services:
 
   migrate:
     build: .
-    container_name: cautela-migrate
+    container_name: ${NODE_ENV}-cautela-migrate
     env_file:
       - .env
     profiles:
@@ -43,12 +49,12 @@ services:
 
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: cautela-sqlserver
+    container_name: ${NODE_ENV}-cautela-sqlserver
     ports:
-      - '1433:1433'
+      - '${DB_HOST_PORT}:1433'
     environment:
       ACCEPT_EULA: 'Y'
-      SA_PASSWORD: 'G@leotti28'
+      SA_PASSWORD: 'SecurePassword123!'
       MSSQL_PID: 'Developer'
     volumes:
       - sqlserver_data:/var/opt/mssql

@@ -1,17 +1,115 @@
-import { useCallback, useEffect, useState } from "react";
-import StatusBadge from "../components/StatusBadge";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Cautela, StatusCautela } from "../data/cautelaTypes";
 import { useAuth } from "../context/AuthContext";
-import { createCautela, getCautelas } from "../lib/api";
+import { createCautela, getCautelas, markCautelaAsRead } from "../lib/api";
 import FormularioCautela, {
   type FieldErrors,
 } from "../components/FormularioCautela";
+import { useLocation } from "react-router-dom";
+import { AvatarStatus } from "../components/AvatarStatus";
+import { BadgeStatus } from "../components/BadgeStatus";
+import { BannerStatus, JustificativaBox } from "../components/BannerStatus";
+import {
+  TabelaCautelados,
+  ListaCautelados,
+} from "../components/TabelaCautelados";
+import { matchesSearch, validarDocumento } from "../lib/cautelaUtils";
 
-function LineSeparator() {
-  return <div className="w-full h-px bg-[#404040]" />;
+const STATUS_RECEBIDOS: StatusCautela[] = [
+  "Aprovado",
+  "Reprovado",
+  "Saída Autorizada",
+  "Encerrada",
+];
+
+type Tab = "enviados" | "recebidos";
+type MobileView = "lista" | "detalhe";
+
+// ─── Card de cautela ──────────────────────────────────────────────────────────
+
+function CardCautelaPortaria({
+  cautela,
+  isNaoLida,
+  onClick,
+}: {
+  cautela: Cautela;
+  isNaoLida: boolean;
+  onClick: () => void;
+}) {
+  const status = cautela.status as StatusCautela;
+  const borderClass = isNaoLida
+    ? "border-2 border-amber-400 bg-[#FFFBEB]"
+    : status === "Saída Autorizada"
+      ? "border border-amber-300 bg-amber-50"
+      : "border border-[#D1D5DB] bg-white";
+
+  return (
+    <div
+      onClick={onClick}
+      className={`rounded-lg p-5 cursor-pointer transition-all hover:shadow-md mb-3 ${borderClass}`}
+    >
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <AvatarStatus status={status} />
+
+          <div>
+            <p className="text-[18px] font-bold leading-tight text-[#404040]">
+              {cautela.visitante || "Nome do proprietário"}
+            </p>
+
+            <p className="text-[15px] text-[#404040] mt-1">
+              Data: {cautela.data || "00/00/0000"}
+            </p>
+
+            <p className="text-[15px] text-[#404040] mt-0.5">
+              Ciente:{" "}
+              <span className="font-bold">
+                {(cautela.gestor || "").toUpperCase()}
+              </span>
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-1">
+          <BadgeStatus status={status} />
+
+          {isNaoLida && (
+            <span className="inline-flex items-center rounded-lg px-2 py-0.5 text-[12px] font-semibold bg-[#FCE96A] text-black mt-0.5">
+              Nova
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="border-t border-black my-3" />
+
+      <div className="flex justify-between items-end gap-4">
+        <div className="flex-1">
+          <p className="text-[14px] font-medium text-[#404040] mb-1">
+            Cautelados:
+          </p>
+
+          <ListaCautelados equipamentos={cautela.equipamentos ?? []} max={3} />
+        </div>
+
+        <div className="flex-shrink-0">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onClick();
+            }}
+            className="text-[13px] px-4 py-2 bg-gray-100 rounded-lg text-[#171717] font-medium hover:underline"
+          >
+            Ver detalhes
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-// ── Painel de detalhes da cautela (portaria) ──
+// ─── Painel de detalhes ───────────────────────────────────────────────────────
+
 function DetalhesCautelaPortaria({
   cautela,
   onFechar,
@@ -19,49 +117,154 @@ function DetalhesCautelaPortaria({
   cautela: Cautela;
   onFechar: () => void;
 }) {
-  return (
-    <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto p-6">
-        {/* Status no topo */}
-        <div className="mb-4">
-          <span
-            className={`inline-flex items-center justify-center w-full h-[36px] rounded-lg px-2 py-1 text-[14px] font-medium ${
-              cautela.status === "Aprovado"
-                ? "bg-[#BCF0DA] text-[#171717] border border-[#31C48D]"
-                : cautela.status === "Reprovado"
-                  ? "bg-[#FBD5D5] text-[#171717] border border-[#F05252]"
-                  : "bg-amber-50 text-[#171717] border border-amber-200"
-            }`}
-          >
-            {cautela.status}
-          </span>
-        </div>
+  const tipoPermissaoLabel =
+    cautela.tipoPermissao === "LIVRE_TRANSITO"
+      ? "Livre trânsito"
+      : "Entrada única";
+  const permissaoEditadaLabel =
+    cautela.tipoPermissao === "LIVRE_TRANSITO"
+      ? "LIVRE TRÂNSITO"
+      : "ENTRADA ÚNICA";
+  const statusFinalizadoLabel =
+    cautela.status === "Reprovado" ? "Reprovado" : "Aprovado";
+  const statusFinalizadoEm =
+    cautela.status === "Reprovado" ? cautela.reprovadoEm : cautela.aprovadoEm;
+  const progresso = [
+    {
+      label: "Pedido realizado",
+      data: cautela.data?.split(", ")[1],
+      complete: true,
+    },
+    {
+      label:
+        cautela.status === "Reprovado"
+          ? "Cautela reprovada"
+          : "Cautela aprovada",
+      data:
+        cautela.status === "Reprovado"
+          ? cautela.reprovadoEm
+          : cautela.aprovadoEm,
+      complete:
+        cautela.status !== "Em análise" || cautela.etapaFluxo !== "SOLICITADA",
+    },
+    {
+      label:
+        cautela.status === "Encerrada"
+          ? "Saída autorizada"
+          : "Validação da portaria",
+      data: cautela.entradaValidadaEm,
+      complete:
+        cautela.status === "Aprovado" ||
+        cautela.status === "Saída Autorizada" ||
+        cautela.status === "Encerrada",
+    },
+  ];
 
-        {/* Justificativa — só quando reprovado */}
+  return (
+    <div className="relative flex flex-col h-full">
+      <button
+        onClick={onFechar}
+        className="absolute right-3 top-3 z-10 text-black hover:text-gray-500"
+        aria-label="Fechar detalhes"
+      >
+        <svg
+          className="h-4 w-4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M6 18L18 6M6 6l12 12"
+          />
+        </svg>
+      </button>
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className="mb-4">
+          <BannerStatus cautela={cautela} />
+        </div>
         {cautela.status === "Reprovado" && cautela.motivoNegativa && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-sm font-semibold text-red-700 mb-1">
-              Justificativa:
-            </p>
-            <p className="text-sm text-red-700">{cautela.motivoNegativa}</p>
+          <div className="mb-4">
+            <JustificativaBox motivo={cautela.motivoNegativa} />
           </div>
         )}
-
+        {cautela.tipoPermissaoAlteradoEm && (
+          <div className="mb-4 text-center text-[13px] text-[#6B7280]">
+            <p className="font-semibold text-[#404040]">{tipoPermissaoLabel}</p>
+            <p className="mt-1">
+              Acesso da cautela editado para{" "}
+              <span className="font-bold">{permissaoEditadaLabel}</span> em{" "}
+              {cautela.tipoPermissaoAlteradoEm}
+            </p>
+          </div>
+        )}
+        <div className="float-right ml-5 mb-5 w-[160px]">
+          <p className="mb-4 text-[12px] font-bold text-[#404040]">
+            Acompanhe seu pedido de cautela
+          </p>
+          <div>
+            {progresso.map((item, index) => (
+              <div
+                key={item.label}
+                className="grid grid-cols-[1fr_18px_auto] gap-2"
+              >
+                <p
+                  className={`text-[11px] leading-tight ${
+                    item.complete ? "text-black" : "text-[#BDBDBD]"
+                  }`}
+                >
+                  {item.label}
+                </p>
+                <div className="flex flex-col items-center">
+                  <span
+                    className={`h-4 w-4 rounded-full ${
+                      item.complete ? "bg-[#3BB14A]" : "bg-[#BDBDBD]"
+                    }`}
+                  />
+                  {index < progresso.length - 1 && (
+                    <span
+                      className={`h-20 w-0.5 ${
+                        progresso[index + 1].complete
+                          ? "bg-[#3BB14A]"
+                          : "bg-[#BDBDBD]"
+                      }`}
+                    />
+                  )}
+                </div>
+                <p className="text-[12px] text-[#404040]">
+                  {item.data?.split(", ")[1] ?? item.data ?? ""}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
         <div className="mb-3">
           <p className="text-sm font-bold text-black">Id da cautela</p>
           <p className="text-sm text-gray-700 break-all">{cautela.id}</p>
         </div>
         <div className="mb-3">
-          <p className="text-sm font-bold text-black">Setor:</p>
-          <p className="text-sm text-gray-700">{cautela.empresa || "-"}</p>
+          <p className="text-sm font-bold text-black">Setor</p>
+          <p className="text-sm text-gray-700">{cautela.setorId || "-"}</p>
         </div>
         <div className="mb-3">
-          <p className="text-sm font-bold text-black">Data</p>
+          <p className="text-sm font-bold text-black">
+            Data e hora da solicitação
+          </p>
           <p className="text-sm text-gray-700">{cautela.data || "-"}</p>
         </div>
         <div className="mb-3">
           <p className="text-sm font-bold text-black">Proprietário</p>
           <p className="text-sm text-gray-700">{cautela.visitante || "-"}</p>
+        </div>
+        <div className="mb-3">
+          <p className="text-sm font-bold text-black">Documento</p>
+          <p className="text-sm text-gray-700">{cautela.documento || "-"}</p>
+        </div>
+        <div className="mb-3">
+          <p className="text-sm font-bold text-black">Empresa</p>
+          <p className="text-sm text-gray-700">{cautela.empresa || "-"}</p>
         </div>
         {cautela.proprietarioEmail && (
           <div className="mb-3">
@@ -71,129 +274,156 @@ function DetalhesCautelaPortaria({
             <p className="text-sm text-gray-700">{cautela.proprietarioEmail}</p>
           </div>
         )}
+        {cautela.gestor && (
+          <div className="mb-3">
+            <p className="text-sm font-bold text-black">
+              {statusFinalizadoLabel} por:
+            </p>
+            <p className="text-sm text-gray-700">{cautela.gestor}</p>
+          </div>
+        )}
         {cautela.validade && (
           <div className="mb-3">
             <p className="text-sm font-bold text-black">Válido até:</p>
             <p className="text-sm text-gray-700">{cautela.validade}</p>
           </div>
         )}
-
-        {/* Equipamentos */}
-        {cautela.equipamentos?.length > 0 && (
+        {statusFinalizadoEm && (
           <div className="mb-3">
-            <p className="text-sm font-bold text-black mb-2">Cautelados:</p>
-            <table className="w-full overflow-hidden rounded-lg">
-              <thead>
-                <tr style={{ backgroundColor: "#0E9F6E" }}>
-                  <th className="px-4 py-2 text-left text-white text-sm font-bold">
-                    Descrição
-                  </th>
-                  <th className="px-4 py-2 text-center text-white text-sm font-bold">
-                    Quantidade
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {cautela.equipamentos.map((eq, i) => (
-                  <tr
-                    key={i}
-                    className="border-b border-gray-100 even:bg-[#F4F4F4]"
-                  >
-                    <td className="px-4 py-2 text-sm text-[#0A0A0A]">
-                      {eq.descricao}
-                    </td>
-                    <td className="px-4 py-2 text-center text-sm text-[#0A0A0A]">
-                      {eq.quantidade ?? "-"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <p className="text-sm font-bold text-black">
+              {statusFinalizadoLabel} em:
+            </p>
+            <p className="text-sm text-gray-700">{statusFinalizadoEm}</p>
           </div>
         )}
-      </div>
-
-      {/* Botão fechar */}
-      <div className="px-6 pb-6 pt-2">
-        <button
-          onClick={onFechar}
-          className="w-full py-2.5 rounded-lg bg-[#2B8E37] text-white text-sm font-semibold hover:bg-[#22592A] transition-colors"
-        >
-          Fechar detalhes
-        </button>
+        {cautela.status === "Encerrada" && cautela.encerradaEm && (
+          <div className="mb-3">
+            <p className="text-sm font-bold text-black">
+              Data e hora de saída:
+            </p>
+            <p className="text-sm text-gray-700">{cautela.encerradaEm}</p>
+          </div>
+        )}
+        <div className="mb-3">
+          <p className="text-sm font-bold text-black mb-2">Cautelados:</p>
+          <TabelaCautelados equipamentos={cautela.equipamentos ?? []} />
+        </div>
       </div>
     </div>
   );
 }
 
-type Tab = "enviados" | "recebidos";
+// ─── Modal wrapper ────────────────────────────────────────────────────────────
+
+function ModalOverlay({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      className="fixed inset-0 md:left-[70px] flex items-center justify-center bg-black/20 backdrop-blur-sm z-30"
+      style={{ top: "60px" }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function ContadorNaoLidas({
+  total,
+  mostrarBolinha,
+}: {
+  total: number;
+  mostrarBolinha: boolean;
+}) {
+  if (total === 0) return null;
+  return (
+    <div className="relative flex-shrink-0">
+      <div
+        className="min-w-[28px] h-[28px] px-1.5 rounded-full flex items-center justify-center text-white text-[13px] font-bold leading-none"
+        style={{ backgroundColor: "#0E9F6E" }}
+      >
+        {total > 9 ? "9+" : total}
+      </div>
+      {mostrarBolinha && (
+        <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-red-500 border-2 border-white" />
+      )}
+    </div>
+  );
+}
+
+// ─── Home ─────────────────────────────────────────────────────────────────────
 
 export default function Home() {
   const { user } = useAuth();
-  const canCreateCautela =
-    user?.papel === "ADMIN" || user?.papel === "PORTARIA";
+  const location = useLocation();
+  const canCreateCautela = user?.papel === "SOLICITANTE";
 
-  const [activeTab, setActiveTab] = useState<Tab>("enviados");
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    const state = location.state as { cautelaSelecionada?: Cautela } | null;
+    return state?.cautelaSelecionada ? "recebidos" : "enviados";
+  });
+
   const [cautelaSelecionada, setCautelaSelecionada] = useState<Cautela | null>(
-    null,
+    () => {
+      const state = location.state as { cautelaSelecionada?: Cautela } | null;
+      if (state?.cautelaSelecionada) {
+        window.history.replaceState({}, "");
+        return state.cautelaSelecionada;
+      }
+      return null;
+    },
   );
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [cautelas, setCautelas] = useState<Cautela[]>([]);
+  const [loadingCautelas, setLoadingCautelas] = useState(true);
+  const [listError, setListError] = useState("");
+  const cautelaSelecionadaRef = useRef<Cautela | null>(null);
+
+  // Formulário
+  const [documento, setDocumento] = useState("");
+  const [empresa, setEmpresa] = useState("");
   const [descricao, setDescricao] = useState("");
   const [quantidade, setQuantidade] = useState<string>("");
   const [items, setItems] = useState<
     { descricao: string; quantidade: number }[]
   >([]);
-  const [retornado, setRetornado] = useState<null | boolean>(null);
-  const [dataInicio] = useState<string>(new Date().toISOString().split("T")[0]);
-  const [dataFim, setDataFim] = useState<string>("");
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [setorId, setSetorId] = useState<string>("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const [cautelas, setCautelas] = useState<Cautela[]>([]);
-  const [loadingCautelas, setLoadingCautelas] = useState(true);
-  const [listError, setListError] = useState("");
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Modais
   const [showModal, setShowModal] = useState(false);
   const [itemParaExcluir, setItemParaExcluir] = useState<number | null>(null);
   const [showItemDeletedModal, setShowItemDeletedModal] = useState(false);
-  const [recemRespondidos, setRecemRespondidos] = useState<Set<string>>(
-    new Set(),
-  );
+  const [mobileView, setMobileView] = useState<MobileView>("lista");
+  const cautelasRef = useRef<Cautela[]>([]);
+  const painelDetalhesRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    cautelasRef.current = cautelas;
+  }, [cautelas]);
+  useEffect(() => {
+    cautelaSelecionadaRef.current = cautelaSelecionada;
+  }, [cautelaSelecionada]);
 
   const carregarCautelas = useCallback(async () => {
-    setLoadingCautelas(true);
-    setListError("");
     try {
       const data = await getCautelas();
-      setCautelas((prev) => {
-        const respondidas = data.filter((nova) => {
-          const antiga = prev.find((c) => c.id === nova.id);
-          return (
-            antiga?.status === "Em análise" &&
-            (nova.status === "Aprovado" || nova.status === "Reprovado")
-          );
-        });
-        if (respondidas.length > 0) {
-          const ids = new Set(respondidas.map((c) => c.id));
-          setRecemRespondidos((prev) => new Set([...prev, ...ids]));
-          setTimeout(() => {
-            setRecemRespondidos((prev) => {
-              const novo = new Set(prev);
-              ids.forEach((id) => novo.delete(id));
-              return novo;
-            });
-          }, 3000);
-        }
-        return data;
-      });
+      setCautelas(data);
+
+      const sel = cautelaSelecionadaRef.current;
+      if (sel) {
+        const atualizada = data.find((c) => c.id === sel.id);
+        if (atualizada) setCautelaSelecionada(atualizada);
+      }
     } catch (error) {
-      console.error("Erro ao carregar cautelas.", error);
       setCautelas([]);
       setListError(
         error instanceof Error
           ? error.message
-          : "Nao foi possivel carregar as cautelas.",
+          : "Não foi possível carregar as cautelas.",
       );
     } finally {
       setLoadingCautelas(false);
@@ -201,84 +431,82 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void carregarCautelas();
-    const interval = setInterval(() => {
-      void carregarCautelas();
-    }, 20000);
+    const interval = setInterval(() => void carregarCautelas(), 5000);
     return () => clearInterval(interval);
   }, [carregarCautelas]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const newErrors: FieldErrors = {};
-    setSubmitError("");
-
-    if (!setorId) newErrors.setor = "Selecione um setor.";
-    if (!nome.trim()) newErrors.nome = "O campo Proprietário é obrigatório.";
-
-    const emailRegex = /^[A-Za-z0-9._%+-]+@(callidus|conecthus)\.org\.br$/i;
-    if (!emailRegex.test(email))
-      newErrors.email =
-        "Use apenas e-mail institucional (@callidus.org.br ou @conecthus.org.br).";
-
-    if (items.length === 0)
-      newErrors.items = "Adicione pelo menos um item antes de enviar.";
-    if (retornado === null)
-      newErrors.retornado = "Selecione se o item será retornado.";
-    if (retornado === true && !dataFim) {
-      newErrors.dataFim = "Informe a data de retorno.";
-    } else if (retornado === true && dataFim.length < 10) {
-      newErrors.dataFim = "Data inválida. Use o formato DD/MM/AAAA.";
-    }
-
-    const dataFimISO = dataFim
-      ? dataFim.split("/").reverse().join("-")
-      : undefined;
-
-    setFieldErrors(newErrors);
-
-    if (Object.keys(newErrors).length === 0) {
-      setSubmitError("");
-      setSubmitting(true);
-      try {
-        const created = await createCautela({
-          itens: items.map((item) => ({
-            nomeItem: item.descricao,
-            quantidade: item.quantidade,
-          })),
-          proprietarioEmail: email,
-          proprietarioNome: nome,
-          retornoItem: retornado === true,
-          setorId,
-          validade: retornado ? dataFimISO : undefined,
+  useEffect(() => {
+    function onSelecionar(e: Event) {
+      const cautela = (e as CustomEvent<{ cautela: Cautela }>).detail.cautela;
+      setCautelaSelecionada(cautela);
+      setActiveTab("recebidos");
+      void markCautelaAsRead(cautela.id)
+        .then((atualizada) => {
+          setCautelas((prev) =>
+            prev.map((c) => (c.id === atualizada.id ? atualizada : c)),
+          );
+        })
+        .catch((error) => {
+          console.error("Erro ao marcar cautela como lida.", error);
         });
-        setCautelas((prev) => [created, ...prev]);
-      } catch (error) {
-        console.error("Erro ao criar cautela.", error);
-        setSubmitError(
-          error instanceof Error
-            ? error.message
-            : "Nao foi possivel enviar a cautela.",
-        );
-        setSubmitting(false);
-        return;
-      }
-      setShowModal(true);
-      setTimeout(() => setShowModal(false), 3000);
-      handleCancel();
-      setSubmitting(false);
     }
-  };
+    window.addEventListener("cautela-selecionar", onSelecionar);
+    return () => window.removeEventListener("cautela-selecionar", onSelecionar);
+  }, []);
+
+  useEffect(() => {
+    function onSearch(e: Event) {
+      const term = (e as CustomEvent<{ term: string }>).detail.term;
+      setSearchTerm(term);
+      if (term.trim()) setActiveTab("recebidos");
+    }
+    window.addEventListener("cautela-search", onSearch);
+    return () => window.removeEventListener("cautela-search", onSearch);
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        cautelaSelecionada &&
+        painelDetalhesRef.current &&
+        !painelDetalhesRef.current.contains(event.target as Node)
+      ) {
+        setCautelaSelecionada(null);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [cautelaSelecionada]);
+
+  function marcarComoLida(cautela: Cautela) {
+    setCautelaSelecionada((prev) => (prev?.id === cautela.id ? null : cautela));
+    void markCautelaAsRead(cautela.id)
+      .then((atualizada) => {
+        setCautelas((prev) =>
+          prev.map((c) => (c.id === atualizada.id ? atualizada : c)),
+        );
+      })
+      .catch((error) => {
+        console.error("Erro ao marcar cautela como lida.", error);
+      });
+    setMobileView("detalhe");
+  }
 
   function handleCancel() {
     setSetorId("");
     setNome("");
     setEmail("");
+    setDocumento("");
+    setEmpresa("");
     setDescricao("");
     setQuantidade("");
     setItems([]);
-    setRetornado(null);
-    setDataFim("");
     setFieldErrors({});
     setSubmitError("");
   }
@@ -291,15 +519,73 @@ export default function Home() {
     setTimeout(() => setShowItemDeletedModal(false), 3000);
   }
 
-  const cautelasFiltradas = cautelas.filter((c) => {
-    if (activeTab === "enviados")
-      return c.status === "Em análise" || recemRespondidos.has(c.id);
-    return (
-      (c.status === "Aprovado" || c.status === "Reprovado") &&
-      !recemRespondidos.has(c.id)
-    );
-  });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const newErrors: FieldErrors = {};
+    setSubmitError("");
+    if (!setorId) newErrors.setor = "Selecione um setor.";
+    if (!nome.trim()) {
+      newErrors.nome = "O campo Proprietário é obrigatório.";
+    } else if (nome.trim().length < 3) {
+      newErrors.nome = "O nome deve ter no mínimo 3 caracteres.";
+    }
+    if (!documento.trim())
+      newErrors.documento = "O campo Documento é obrigatório.";
+    if (!empresa.trim()) newErrors.empresa = "O campo Empresa é obrigatório.";
+    const emailRegex = /^[A-Za-z0-9._%+-]+@(callidus|conecthus)\.org\.br$/i;
+    if (!emailRegex.test(email))
+      newErrors.email = "Use apenas e-mail institucional.";
+    if (!validarDocumento(documento))
+      newErrors.documento = "Informe um CPF ou identidade válida";
+    if (items.length === 0) {
+      newErrors.items = "Adicione ao menos um item à lista.";
+    }
+    setFieldErrors(newErrors);
+    if (Object.keys(newErrors).length === 0) {
+      setSubmitting(true);
+      try {
+        await createCautela({
+          itens: items.map((i) => ({
+            nomeItem: i.descricao,
+            quantidade: i.quantidade,
+          })),
+          proprietarioEmail: email,
+          proprietarioNome: nome,
+          documentoProprietario: documento,
+          empresa,
+          setorId,
+        });
+        await carregarCautelas();
+        setShowModal(true);
+        setTimeout(() => setShowModal(false), 3000);
+        handleCancel();
+      } catch (error) {
+        setSubmitError(
+          error instanceof Error ? error.message : "Não foi possível enviar.",
+        );
+      } finally {
+        setSubmitting(false);
+      }
+    }
+  };
 
+  // ── Filtros ──
+  const cautelasPorAba = cautelas.filter((c) =>
+    activeTab === "enviados"
+      ? c.status === "Em análise"
+      : STATUS_RECEBIDOS.includes(c.status as StatusCautela),
+  );
+  const pool = searchTerm.trim() ? cautelas : cautelasPorAba;
+  const cautelasFiltradas = pool.filter((c) => matchesSearch(c, searchTerm));
+
+  const totalNaoLidas = cautelas.filter(
+    (c) =>
+      STATUS_RECEBIDOS.includes(c.status as StatusCautela) &&
+      c.badgeSolicitante,
+  ).length;
+  const mostrarBolinha = totalNaoLidas > 0;
+
+  // ── Props formulário ──
   const formularioProps = {
     canCreateCautela,
     setorId,
@@ -308,18 +594,18 @@ export default function Home() {
     setNome,
     email,
     setEmail,
+    documento,
+    setDocumento,
+    empresa,
+    setEmpresa,
     descricao,
     setDescricao,
     quantidade,
     setQuantidade,
     items,
     setItems,
-    retornado,
-    setRetornado,
-    dataInicio,
-    dataFim,
-    setDataFim,
     fieldErrors,
+    setFieldErrors,
     submitError,
     submitting,
     handleSubmit,
@@ -327,132 +613,131 @@ export default function Home() {
     onCancel: handleCancel,
   };
 
-  // Itens da lista — clicáveis quando na aba recebidos
-  const listaLeft = (
-    <>
-      {loadingCautelas && (
-        <div className="px-3 py-4 text-sm text-[#404040] bg-white">
-          Carregando cautelas...
-        </div>
+  // ── Sub-elementos ──
+  const listaCards = (
+    <div className="py-2 px-3">
+      {loadingCautelas && cautelas.length === 0 && (
+        <p className="text-[13px] text-[#6B7280] text-center mt-6 py-4">
+          Carregando...
+        </p>
       )}
       {listError && (
-        <div className="px-3 py-4 text-sm text-red-600 bg-white">
-          {listError}
-        </div>
+        <p className="text-[13px] text-red-500 text-center mt-6">{listError}</p>
       )}
       {!loadingCautelas && !listError && cautelasFiltradas.length === 0 && (
-        <div className="px-3 py-4 text-sm text-[#404040] bg-white">
-          Nenhuma cautela encontrada.
-        </div>
+        <p className="text-[13px] text-[#6B7280] text-center mt-6 py-4">
+          {searchTerm
+            ? `Nenhum resultado para "${searchTerm}".`
+            : "Nenhuma cautela encontrada."}
+        </p>
       )}
-      {cautelasFiltradas.map((cautela, index) => {
-        const isAberto = cautelaSelecionada?.id === cautela.id;
-        const clicavel = activeTab === "recebidos";
+      {cautelasFiltradas.map((cautela) => (
+        <CardCautelaPortaria
+          key={cautela.id}
+          cautela={cautela}
+          isNaoLida={
+            STATUS_RECEBIDOS.includes(cautela.status as StatusCautela) &&
+            Boolean(cautela.badgeSolicitante)
+          }
+          onClick={() => marcarComoLida(cautela)}
+        />
+      ))}
+    </div>
+  );
 
-        return (
-          <div key={cautela.id}>
-            {/* Linha do item */}
-            <div
-              className={`px-3 py-3 transition-colors bg-white ${
-                clicavel ? "cursor-pointer hover:bg-gray-200" : ""
-              } ${isAberto ? "bg-[#C4EEC9]" : ""}`}
-              onClick={() => {
-                if (!clicavel) return;
-                setCautelaSelecionada((prev) =>
-                  prev?.id === cautela.id ? null : cautela,
-                );
-              }}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1 gap-2">
-                    <span className="text-[14px] text-[#404040] break-all flex-1">
-                      Id Cautela:{" "}
-                      <span className="font-bold">{cautela.id}</span>
-                    </span>
-                    <span className="text-[14px] text-[#404040] whitespace-nowrap">
-                      Data: {cautela.data || "-"}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[14px] text-[#404040] truncate flex-1">
-                      Ciente:{" "}
-                      <span className="font-bold">
-                        {(cautela.gestor || "-").toUpperCase()}
-                      </span>
-                    </span>
-                    <div className="flex-shrink-0">
-                      <StatusBadge status={cautela.status as StatusCautela} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            {index < cautelasFiltradas.length - 1 && <LineSeparator />}
-          </div>
-        );
-      })}
-    </>
+  const painelDetalhes = cautelaSelecionada ? (
+    <div
+      ref={painelDetalhesRef}
+      className="fixed top-22 left-[630px] w-[380px] bg-white border border-gray-200 rounded-xl shadow-2xl z-10 max-h-[90%] overflow-y-auto"
+    >
+      <DetalhesCautelaPortaria
+        cautela={cautelaSelecionada}
+        onFechar={() => setCautelaSelecionada(null)}
+      />
+    </div>
+  ) : null;
+
+  const abaRecebidos = (isMobile = false) => (
+    <button
+      onClick={() => {
+        setActiveTab("recebidos");
+        setCautelaSelecionada(null);
+        setSearchTerm("");
+      }}
+      className={`${isMobile ? "w-full h-[56px] text-[16px]" : "w-full h-[68px] text-[18px]"} font-normal rounded-t${isMobile ? "-lg" : "-xl"} transition-all relative ${activeTab === "recebidos" ? "bg-[#22592A] text-white" : "bg-[#C4EEC9] text-[#2B8E37]"}`}
+    >
+      <div
+        className="w-full h-full flex items-center justify-center gap-2"
+        style={{ paddingLeft: "50%" }}
+      >
+        <span>Respondido</span>
+        <ContadorNaoLidas
+          total={totalNaoLidas}
+          mostrarBolinha={mostrarBolinha}
+        />
+      </div>
+    </button>
+  );
+
+  const abaEnviados = (isMobile = false) => (
+    <button
+      onClick={() => {
+        setActiveTab("enviados");
+        setCautelaSelecionada(null);
+        setSearchTerm("");
+      }}
+      className={`absolute top-0 left-0 w-[50%] ${isMobile ? "h-[56px] text-[16px]" : "h-[68px] text-[18px]"} font-bold rounded-tl${isMobile ? "-lg" : "-xl"} transition-all ${activeTab === "enviados" ? "bg-[#22592A] text-white" : "bg-[#C4EEC9] text-[#22592A]"}`}
+    >
+      Solicitadas
+    </button>
+  );
+
+  const formularioSection = (
+    <div className="w-full max-w-[800px] mx-auto">
+      <div className="text-center mb-4 md:mb-6">
+        <h1 className="text-xl font-bold text-black md:text-[28px] md:leading-snug">
+          Cautela para equipamentos externos
+        </h1>
+        <p className="text-xs text-black mt-1 md:text-sm md:mt-2">
+          Esta cautela funciona para qualquer tipo de equipamento
+          eletroeletrônico que venha de terceiros.
+        </p>
+        <h3 className="hidden md:block text-[18px] font-semibold text-black mt-1">
+          Notebooks, Mouses, Teclados, Etc...
+        </h3>
+      </div>
+      <div className="bg-[#F2FBF3] rounded-sm shadow-sm border border-[#22592A] p-4 md:p-8">
+        <FormularioCautela
+          {...formularioProps}
+          fieldErrors={fieldErrors}
+          setFieldErrors={setFieldErrors}
+          validarDocumento={validarDocumento}
+        />
+      </div>
+    </div>
   );
 
   return (
-    <div className="min-h-screen pt-[60px] pl-0 md:pl-[70px] bg-[#F5F7F6] relative overflow-x-hidden">
+    <div className="min-h-screen md:h-screen pt-[60px] pl-0 md:pl-[70px] bg-[#F5F7F6] relative overflow-x-hidden md:overflow-hidden">
       {/* ══ DESKTOP ══ */}
-      <div className="hidden md:flex h-[calc(100vh-60px)] overflow-hidden">
-        {/* Painel esquerdo */}
-        <div className="w-[560px] flex-shrink-0 px-8 pt-10 pb-0">
+      <div className="hidden md:flex h-[calc(100vh-60px)]">
+        <div className="w-[560px] flex-shrink-0 px-8 pt-8 pb-4 flex flex-col h-full">
           <div
-            className="bg-gray-300 rounded-xl border border-gray-200 flex flex-col overflow-hidden h-full"
+            className="flex flex-col h-full bg-white rounded-xl border border-[#E5E7EB] overflow-hidden"
             style={{ boxShadow: "4px 0 8px rgba(0,0,0,0.25)" }}
           >
             <div className="relative flex-shrink-0">
-              <button
-                onClick={() => {
-                  setActiveTab("recebidos");
-                  setCautelaSelecionada(null);
-                }}
-                className={`w-full h-[68px] text-[18px] font-normal leading-[100%] rounded-t-[5px] transition-all ${
-                  activeTab === "recebidos"
-                    ? "bg-[#22592A] text-white"
-                    : "bg-[#C4EEC9] text-[#2B8E37]"
-                }`}
-                style={{ paddingLeft: "55%" }}
-              >
-                Recebidos
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTab("enviados");
-                  setCautelaSelecionada(null);
-                }}
-                className={`absolute top-0 left-0 w-[50%] h-[68px] text-[18px] font-bold leading-[100%] rounded-t-[5px] transition-all ${
-                  activeTab === "enviados"
-                    ? "bg-[#22592A] text-white"
-                    : "bg-[#C4EEC9] text-[#22592A]"
-                }`}
-              >
-                Enviados
-              </button>
+              {abaRecebidos()}
+              {abaEnviados()}
             </div>
-            <div className="flex-1 overflow-y-auto pb-2 bg-[#E5E7EB]">
-              {listaLeft}
+            <div className="flex-1 overflow-y-auto bg-[#E5E7EB]">
+              {listaCards}
             </div>
           </div>
         </div>
-
-        {/* Painel direito */}
         <div className="flex-1 overflow-y-auto flex flex-col items-center py-8 px-6 relative">
-          {/* Card flutuante — próximo à lista, alinhado à esquerda */}
-          {activeTab === "recebidos" && cautelaSelecionada && (
-            <div className="absolute top-4 left-0 w-[360px] bg-white border border-gray-200 rounded-xl shadow-2xl z-10 max-h-[90%] overflow-y-auto">
-              <DetalhesCautelaPortaria
-                cautela={cautelaSelecionada}
-                onFechar={() => setCautelaSelecionada(null)}
-              />
-            </div>
-          )}
-
-          <div className="w-full max-w-[580px] text-center mb-6 mt-6">
+          {painelDetalhes}
+          <div className="w-full max-w-[580px] text-center mb-6">
             <h1 className="text-[28px] font-bold text-black leading-snug">
               Cautela para equipamentos externos
             </h1>
@@ -466,97 +751,78 @@ export default function Home() {
             </h3>
           </div>
           <div className="w-full max-w-[650px] bg-[#F2FBF3] rounded-sm shadow-sm border border-[#22592A] p-8">
-            <FormularioCautela {...formularioProps} />
+            <FormularioCautela
+              {...formularioProps}
+              fieldErrors={fieldErrors}
+              setFieldErrors={setFieldErrors}
+              validarDocumento={validarDocumento}
+            />
           </div>
         </div>
       </div>
 
       {/* ══ MOBILE ══ */}
-      <div className="md:hidden flex flex-col pb-8">
-        {/* Abas mobile */}
-        <div className="relative mx-4 mt-4">
-          <button
-            onClick={() => {
-              setActiveTab("recebidos");
-              setCautelaSelecionada(null);
-            }}
-            className={`w-full h-[56px] text-[16px] font-normal leading-[100%] rounded-t-[5px] transition-all ${
-              activeTab === "recebidos"
-                ? "bg-[#22592A] text-white"
-                : "bg-[#C4EEC9] text-[#2B8E37]"
-            }`}
-            style={{ paddingLeft: "50%" }}
-          >
-            Recebidos
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab("enviados");
-              setCautelaSelecionada(null);
-            }}
-            className={`absolute top-0 left-0 w-1/2 h-[56px] text-[16px] font-bold leading-[100%] rounded-t-[5px] transition-all ${
-              activeTab === "enviados"
-                ? "bg-[#22592A] text-white"
-                : "bg-[#C4EEC9] text-[#22592A]"
-            }`}
-          >
-            Enviados
-          </button>
-        </div>
+      <div className="md:hidden flex flex-col h-[calc(100vh-60px)] pt-[40px] overflow-hidden">
+        {mobileView === "lista" && (
+          <>
+            <div className="relative mx-3 mt-2 flex-shrink-0">
+              {abaRecebidos(true)}
+              {abaEnviados(true)}
+            </div>
+            <div
+              className="mx-3 bg-[#E5E7EB] rounded-t-[5px] border border-[#E5E7EB] flex-shrink-0"
+              style={{ maxHeight: "35vh" }}
+            >
+              <div className="overflow-y-auto h-full">{listaCards}</div>
+            </div>
+            <div className="flex-1 overflow-y-auto px-3 pb-4 pt-2">
+              {formularioSection}
+            </div>
+          </>
+        )}
 
-        {/* Lista mobile */}
-        <div
-          className="mx-4 bg-[#E5E7EB] rounded-b-xl border border-gray-200 mb-6 max-h-64 overflow-y-auto"
-          style={{ boxShadow: "0 4px 8px rgba(0,0,0,0.15)" }}
-        >
-          {listaLeft}
-        </div>
-
-        {/* Detalhes mobile — quando recebidos e selecionada */}
-        {activeTab === "recebidos" && cautelaSelecionada ? (
-          <div className="px-4 w-full">
-            <div className="bg-white border border-gray-300 rounded-lg">
-              <DetalhesCautelaPortaria
-                cautela={cautelaSelecionada}
-                onFechar={() => setCautelaSelecionada(null)}
-              />
+        {mobileView === "detalhe" && cautelaSelecionada && (
+          <div className="flex flex-col flex-1 overflow-hidden">
+            <div className="relative flex items-center justify-center px-4 py-3 mt-2 flex-shrink-0">
+              <button
+                onClick={() => {
+                  setMobileView("lista");
+                  setCautelaSelecionada(null);
+                }}
+                className="absolute left-4 text-gray-600"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M19 12H5M5 12L12 19M5 12L12 5"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+              <span className="font-bold text-[20px] text-center">
+                Visualização de Cautela
+              </span>
             </div>
-          </div>
-        ) : activeTab === "enviados" ? (
-          /* Formulário mobile — só na aba enviados */
-          <div className="px-4 w-full">
-            <div className="text-center mb-4">
-              <h1 className="text-xl font-bold text-black">
-                Cautela para equipamentos externos
-              </h1>
-              <p className="text-xs text-black mt-1">
-                Esta cautela funciona para qualquer tipo de equipamento
-                eletroeletrônico que venha de terceiros.
-              </p>
-              <h3 className="text-sm font-semibold text-black mt-1">
-                Notebooks, Mouses, Teclados, Etc...
-              </h3>
+            <div className="flex-1 overflow-y-auto px-4 py-2">
+              <div className="bg-white rounded-sm border border-black p-6">
+                <DetalhesCautelaPortaria
+                  cautela={cautelaSelecionada}
+                  onFechar={() => {
+                    setMobileView("lista");
+                    setCautelaSelecionada(null);
+                  }}
+                />
+              </div>
             </div>
-            <div className="bg-[#F2FBF3] rounded-sm shadow-sm border border-[#22592A] p-4 w-full">
-              <FormularioCautela {...formularioProps} />
-            </div>
-          </div>
-        ) : (
-          /* Aba recebidos sem seleção */
-          <div className="px-4 w-full text-center">
-            <p className="text-sm text-gray-500 mt-4">
-              Selecione uma cautela para ver os detalhes.
-            </p>
           </div>
         )}
       </div>
 
       {/* ══ MODAIS ══ */}
       {showModal && (
-        <div
-          className="fixed inset-0 md:left-[70px] flex items-center justify-center bg-black/20 backdrop-blur-sm z-30"
-          style={{ top: "60px" }}
-        >
+        <ModalOverlay>
           <div className="bg-white rounded-2xl shadow-xl px-12 py-10 flex flex-col items-center gap-4 min-w-[320px]">
             <div
               className="w-20 h-20 rounded-3xl flex items-center justify-center"
@@ -582,14 +848,11 @@ export default function Home() {
               Sua solicitação foi enviada ao gestor
             </p>
           </div>
-        </div>
+        </ModalOverlay>
       )}
 
       {itemParaExcluir !== null && (
-        <div
-          className="fixed inset-0 md:left-[70px] flex items-center justify-center bg-black/20 backdrop-blur-sm z-30"
-          style={{ top: "60px" }}
-        >
+        <ModalOverlay>
           <div className="bg-white rounded-2xl shadow-xl px-14 py-10 flex flex-col items-center gap-4 min-w-[320px]">
             <div
               className="w-14 h-14 rounded-2xl flex items-center justify-center"
@@ -601,29 +864,11 @@ export default function Home() {
                 fill="none"
               >
                 <path
-                  d="M3 6h18"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M9 6V4h6v2"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"
+                  d="M3 6h18M9 6V4h6v2M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6M10 11v6M14 11v6"
                   stroke="currentColor"
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                />
-                <path
-                  d="M10 11v6M14 11v6"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
                 />
               </svg>
             </div>
@@ -650,14 +895,11 @@ export default function Home() {
               </button>
             </div>
           </div>
-        </div>
+        </ModalOverlay>
       )}
 
       {showItemDeletedModal && (
-        <div
-          className="fixed inset-0 md:left-[70px] flex items-center justify-center bg-black/20 backdrop-blur-sm z-30"
-          style={{ top: "60px" }}
-        >
+        <ModalOverlay>
           <div className="bg-white rounded-2xl shadow-xl px-12 py-10 flex flex-col items-center gap-4 min-w-[320px]">
             <div
               className="w-16 h-16 rounded-2xl flex items-center justify-center"
@@ -683,7 +925,7 @@ export default function Home() {
               O item foi EXCLUÍDO com sucesso.
             </p>
           </div>
-        </div>
+        </ModalOverlay>
       )}
     </div>
   );

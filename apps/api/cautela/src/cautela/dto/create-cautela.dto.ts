@@ -2,11 +2,10 @@ import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsArray,
-  IsBoolean,
-  IsDateString,
   IsEmail,
   IsInt,
   IsNotEmpty,
+  IsOptional,
   IsString,
   IsUUID,
   Min,
@@ -15,9 +14,15 @@ import {
 } from 'class-validator';
 
 export class CreateCautelaItemDto {
+  @ValidateIf((dto: CreateCautelaItemDto) => !dto.nomeItem)
   @IsString()
   @IsNotEmpty()
-  nomeItem: string;
+  descricao?: string;
+
+  @ValidateIf((dto: CreateCautelaItemDto) => !dto.descricao)
+  @IsString()
+  @IsNotEmpty()
+  nomeItem?: string;
 
   @Type(() => Number)
   @IsInt()
@@ -36,12 +41,15 @@ export class CreateCautelaDto {
   @IsEmail()
   proprietarioEmail: string;
 
-  @IsBoolean()
-  retornoItem: boolean;
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  empresa?: string;
 
-  @ValidateIf((dto: CreateCautelaDto) => dto.retornoItem)
-  @IsDateString()
-  validade?: string;
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  documentoProprietario?: string;
 
   @IsArray()
   @ArrayMinSize(1)

@@ -5,6 +5,8 @@ import { AppModule } from '../app.module';
 import { CautelaEvent } from '../cautela/entities/cautela-event.entity';
 import { CautelaItem } from '../cautela/entities/cautela-item.entity';
 import { Cautela } from '../cautela/entities/cautela.entity';
+import { CautelaFlowStep } from '../common/enums/cautela-flow-step.enum';
+import { CautelaPermissionType } from '../common/enums/cautela-permission-type.enum';
 import { CautelaStatus } from '../common/enums/cautela-status.enum';
 import { CautelaType } from '../common/enums/cautela-type.enum';
 import { UserRole } from '../common/enums/user-role.enum';
@@ -49,6 +51,11 @@ const seedUsers = [
     email: 'portaria@cautela.local',
     nome: 'Portaria Teste',
     papel: UserRole.PORTARIA,
+  },
+  {
+    email: 'solicitante@cautela.local',
+    nome: 'Solicitante Teste',
+    papel: UserRole.SOLICITANTE,
   },
 ];
 
@@ -113,6 +120,7 @@ async function bootstrap() {
     const gestorTi = usersByEmail.get('gestor.ti@callidus.local')!;
     const gestorTeste = usersByEmail.get('gestor@cautela.local')!;
     const portariaTeste = usersByEmail.get('portaria@cautela.local')!;
+    const solicitanteTeste = usersByEmail.get('solicitante@cautela.local')!;
     const seedSectors = [
       {
         ativo: true,
@@ -181,16 +189,31 @@ async function bootstrap() {
 
     if (existingSeedCautela) {
       existingSeedCautela.gestorId = gestorTeste.id;
-      existingSeedCautela.solicitadoPorId = portariaTeste.id;
+      existingSeedCautela.solicitadoPorId = solicitanteTeste.id;
       existingSeedCautela.setorId = almoxarifado.id;
       existingSeedCautela.proprietarioNome = 'Visitante Almoxarifado';
       existingSeedCautela.proprietarioEmail = seedCautelaOwnerEmail;
-      existingSeedCautela.retornoItem = true;
-      existingSeedCautela.validade = new Date('2026-03-15T18:00:00');
+      existingSeedCautela.empresa = 'Fornecedor Seed';
+      existingSeedCautela.documentoProprietario = '12345678900';
       existingSeedCautela.status = CautelaStatus.EM_ANALISE;
+      existingSeedCautela.etapaFluxo = CautelaFlowStep.SOLICITADA;
       existingSeedCautela.tipo = CautelaType.EQUIPAMENTO;
+      existingSeedCautela.tipoPermissao = CautelaPermissionType.ENTRADA_UNICA;
       existingSeedCautela.justificativaRejeicao = null;
+      existingSeedCautela.aprovadoEm = null;
+      existingSeedCautela.entradaValidadaEm = null;
+      existingSeedCautela.entradaValidadaPorId = null;
+      existingSeedCautela.rejeitadoEm = null;
       existingSeedCautela.respondidoEm = null;
+      existingSeedCautela.saidaAutorizadaEm = null;
+      existingSeedCautela.saidaAutorizadaPorId = null;
+      existingSeedCautela.encerradoEm = null;
+      existingSeedCautela.encerradoPorId = null;
+      existingSeedCautela.tipoPermissaoAlteradoEm = null;
+      existingSeedCautela.tipoPermissaoAlteradoPorId = null;
+      existingSeedCautela.visualizadoGestorEm = null;
+      existingSeedCautela.visualizadoPortariaEm = null;
+      existingSeedCautela.visualizadoSolicitanteEm = seedCautelaDate;
       existingSeedCautela.criadoEm = seedCautelaDate;
       existingSeedCautela.atualizadoEm = seedCautelaDate;
 
@@ -205,12 +228,17 @@ async function bootstrap() {
             eventsRepository.create({
               acao: CautelaStatus.EM_ANALISE,
               descricao:
-                'Cautela criada pelo seed e encaminhada para analise do gestor do almoxarifado.',
-              feitoPorId: portariaTeste.id,
+                'Cautela solicitada pelo seed e encaminhada para analise do gestor do almoxarifado.',
+              feitoPorId: solicitanteTeste.id,
               timestamp: seedCautelaDate,
             }),
           ],
           gestorId: gestorTeste.id,
+          aprovadoEm: null,
+          documentoProprietario: '12345678900',
+          empresa: 'Fornecedor Seed',
+          encerradoEm: null,
+          encerradoPorId: null,
           itens: [
             itemsRepository.create({
               criadoEm: seedCautelaDate,
@@ -222,15 +250,270 @@ async function bootstrap() {
           justificativaRejeicao: null,
           proprietarioEmail: seedCautelaOwnerEmail,
           proprietarioNome: 'Visitante Almoxarifado',
+          rejeitadoEm: null,
           respondidoEm: null,
-          retornoItem: true,
+          saidaAutorizadaEm: null,
+          saidaAutorizadaPorId: null,
           setorId: almoxarifado.id,
-          solicitadoPorId: portariaTeste.id,
+          solicitadoPorId: solicitanteTeste.id,
           status: CautelaStatus.EM_ANALISE,
+          etapaFluxo: CautelaFlowStep.SOLICITADA,
           tipo: CautelaType.EQUIPAMENTO,
-          validade: new Date('2026-03-15T18:00:00'),
+          tipoPermissao: CautelaPermissionType.ENTRADA_UNICA,
+          visualizadoSolicitanteEm: seedCautelaDate,
         }),
       );
+      cautelasCriadas += 1;
+    }
+
+    const seedFlowCautelas = [
+      {
+        atualizadoEm: new Date('2026-03-02T09:15:00'),
+        criadoEm: new Date('2026-03-02T09:00:00'),
+        email: 'aprovada.seed@cautela.local',
+        empresa: 'Manutencao Externa Ltda',
+        eventos: [
+          {
+            acao: CautelaStatus.EM_ANALISE,
+            descricao: 'Cautela seed criada para validacao de fluxo aprovado.',
+            feitoPorId: solicitanteTeste.id,
+            timestamp: new Date('2026-03-02T09:00:00'),
+          },
+          {
+            acao: CautelaFlowStep.APROVADA_PELO_GESTOR,
+            descricao: 'Cautela seed aprovada pelo gestor.',
+            feitoPorId: gestorTeste.id,
+            timestamp: new Date('2026-03-02T09:15:00'),
+          },
+          {
+            acao: CautelaFlowStep.VALIDADA_PELA_PORTARIA,
+            descricao: 'Entrada seed validada pela portaria.',
+            feitoPorId: portariaTeste.id,
+            timestamp: new Date('2026-03-02T09:25:00'),
+          },
+        ],
+        item: 'Furadeira industrial',
+        nome: 'Visitante Aprovado',
+        status: CautelaStatus.APROVADA,
+        aprovadoEm: new Date('2026-03-02T09:15:00'),
+        entradaValidadaEm: new Date('2026-03-02T09:25:00'),
+        etapaFluxo: CautelaFlowStep.VALIDADA_PELA_PORTARIA,
+        tipoPermissao: CautelaPermissionType.ENTRADA_UNICA,
+        saidaAutorizadaEm: null,
+        encerradoEm: null,
+      },
+      {
+        atualizadoEm: new Date('2026-03-03T10:30:00'),
+        criadoEm: new Date('2026-03-03T10:00:00'),
+        email: 'saida.autorizada.seed@cautela.local',
+        empresa: 'Calibracao Norte',
+        eventos: [
+          {
+            acao: CautelaStatus.EM_ANALISE,
+            descricao:
+              'Cautela seed criada para validacao de saida autorizada.',
+            feitoPorId: solicitanteTeste.id,
+            timestamp: new Date('2026-03-03T10:00:00'),
+          },
+          {
+            acao: CautelaFlowStep.APROVADA_PELO_GESTOR,
+            descricao: 'Cautela seed aprovada pelo gestor.',
+            feitoPorId: gestorTeste.id,
+            timestamp: new Date('2026-03-03T10:10:00'),
+          },
+          {
+            acao: CautelaFlowStep.VALIDADA_PELA_PORTARIA,
+            descricao: 'Entrada seed validada pela portaria.',
+            feitoPorId: portariaTeste.id,
+            timestamp: new Date('2026-03-03T10:20:00'),
+          },
+          {
+            acao: 'SAIDA_AUTORIZADA',
+            descricao: 'Saida seed autorizada pelo gestor.',
+            feitoPorId: gestorTeste.id,
+            timestamp: new Date('2026-03-03T10:30:00'),
+          },
+        ],
+        item: 'Notebook de diagnostico',
+        nome: 'Visitante Saida Autorizada',
+        status: CautelaStatus.APROVADA,
+        aprovadoEm: new Date('2026-03-03T10:10:00'),
+        entradaValidadaEm: new Date('2026-03-03T10:20:00'),
+        etapaFluxo: CautelaFlowStep.SAIDA_AUTORIZADA_PELO_GESTOR,
+        tipoPermissao: CautelaPermissionType.ENTRADA_UNICA,
+        saidaAutorizadaEm: new Date('2026-03-03T10:30:00'),
+        encerradoEm: null,
+      },
+      {
+        atualizadoEm: new Date('2026-03-04T16:00:00'),
+        criadoEm: new Date('2026-03-04T13:00:00'),
+        email: 'encerrada.seed@cautela.local',
+        empresa: 'Inspecao Tecnica SA',
+        eventos: [
+          {
+            acao: CautelaStatus.EM_ANALISE,
+            descricao: 'Cautela seed criada para validacao de encerramento.',
+            feitoPorId: solicitanteTeste.id,
+            timestamp: new Date('2026-03-04T13:00:00'),
+          },
+          {
+            acao: CautelaFlowStep.APROVADA_PELO_GESTOR,
+            descricao: 'Cautela seed aprovada pelo gestor.',
+            feitoPorId: gestorTeste.id,
+            timestamp: new Date('2026-03-04T13:20:00'),
+          },
+          {
+            acao: CautelaFlowStep.VALIDADA_PELA_PORTARIA,
+            descricao: 'Entrada seed validada pela portaria.',
+            feitoPorId: portariaTeste.id,
+            timestamp: new Date('2026-03-04T13:30:00'),
+          },
+          {
+            acao: 'SAIDA_AUTORIZADA',
+            descricao: 'Saida seed autorizada pelo gestor.',
+            feitoPorId: gestorTeste.id,
+            timestamp: new Date('2026-03-04T15:45:00'),
+          },
+          {
+            acao: CautelaStatus.ENCERRADA,
+            descricao: 'Cautela seed encerrada pela portaria.',
+            feitoPorId: portariaTeste.id,
+            timestamp: new Date('2026-03-04T16:00:00'),
+          },
+        ],
+        item: 'Camera termografica',
+        nome: 'Visitante Encerrado',
+        status: CautelaStatus.ENCERRADA,
+        aprovadoEm: new Date('2026-03-04T13:20:00'),
+        entradaValidadaEm: new Date('2026-03-04T13:30:00'),
+        etapaFluxo: CautelaFlowStep.ENCERRADA_PELA_PORTARIA,
+        tipoPermissao: CautelaPermissionType.ENTRADA_UNICA,
+        saidaAutorizadaEm: new Date('2026-03-04T15:45:00'),
+        encerradoEm: new Date('2026-03-04T16:00:00'),
+      },
+      {
+        atualizadoEm: new Date('2026-02-06T11:00:00'),
+        criadoEm: new Date('2026-02-06T08:00:00'),
+        email: 'encerrada.30dias.seed@cautela.local',
+        empresa: 'Arquivo Historico Ltda',
+        eventos: [
+          {
+            acao: CautelaStatus.EM_ANALISE,
+            descricao: 'Cautela seed historica criada para validacao de busca.',
+            feitoPorId: solicitanteTeste.id,
+            timestamp: new Date('2026-02-06T08:00:00'),
+          },
+          {
+            acao: CautelaFlowStep.APROVADA_PELO_GESTOR,
+            descricao: 'Cautela seed historica aprovada pelo gestor.',
+            feitoPorId: gestorTeste.id,
+            timestamp: new Date('2026-02-06T08:30:00'),
+          },
+          {
+            acao: CautelaFlowStep.VALIDADA_PELA_PORTARIA,
+            descricao: 'Entrada seed historica validada pela portaria.',
+            feitoPorId: portariaTeste.id,
+            timestamp: new Date('2026-02-06T08:40:00'),
+          },
+          {
+            acao: 'SAIDA_AUTORIZADA',
+            descricao: 'Saida seed historica autorizada pelo gestor.',
+            feitoPorId: gestorTeste.id,
+            timestamp: new Date('2026-02-06T10:45:00'),
+          },
+          {
+            acao: CautelaStatus.ENCERRADA,
+            descricao: 'Cautela seed historica encerrada pela portaria.',
+            feitoPorId: portariaTeste.id,
+            timestamp: new Date('2026-02-06T11:00:00'),
+          },
+        ],
+        item: 'Scanner patrimonial',
+        nome: 'Visitante Encerrado Historico',
+        status: CautelaStatus.ENCERRADA,
+        aprovadoEm: new Date('2026-02-06T08:30:00'),
+        entradaValidadaEm: new Date('2026-02-06T08:40:00'),
+        etapaFluxo: CautelaFlowStep.ENCERRADA_PELA_PORTARIA,
+        tipoPermissao: CautelaPermissionType.ENTRADA_UNICA,
+        saidaAutorizadaEm: new Date('2026-02-06T10:45:00'),
+        encerradoEm: new Date('2026-02-06T11:00:00'),
+      },
+    ];
+
+    for (const seedData of seedFlowCautelas) {
+      const existingCautela = await cautelasRepository.findOne({
+        where: {
+          proprietarioEmail: seedData.email,
+          setorId: almoxarifado.id,
+        },
+      });
+
+      const cautelaData = {
+        aprovadoEm: seedData.aprovadoEm,
+        atualizadoEm: seedData.atualizadoEm,
+        criadoEm: seedData.criadoEm,
+        documentoProprietario: '98765432100',
+        empresa: seedData.empresa,
+        encerradoEm: seedData.encerradoEm,
+        encerradoPorId: seedData.encerradoEm ? portariaTeste.id : null,
+        gestorId: gestorTeste.id,
+        entradaValidadaEm: seedData.entradaValidadaEm,
+        entradaValidadaPorId: seedData.entradaValidadaEm
+          ? portariaTeste.id
+          : null,
+        etapaFluxo: seedData.etapaFluxo,
+        justificativaRejeicao: null,
+        proprietarioEmail: seedData.email,
+        proprietarioNome: seedData.nome,
+        rejeitadoEm: null,
+        respondidoEm: seedData.aprovadoEm,
+        saidaAutorizadaEm: seedData.saidaAutorizadaEm,
+        saidaAutorizadaPorId: seedData.saidaAutorizadaEm
+          ? gestorTeste.id
+          : null,
+        setorId: almoxarifado.id,
+        solicitadoPorId: solicitanteTeste.id,
+        status: seedData.status,
+        tipo: CautelaType.EQUIPAMENTO,
+        tipoPermissao: seedData.tipoPermissao,
+        visualizadoGestorEm: seedData.aprovadoEm,
+        visualizadoPortariaEm: seedData.entradaValidadaEm,
+        visualizadoSolicitanteEm: null,
+      };
+
+      if (existingCautela) {
+        await cautelasRepository.save({
+          ...existingCautela,
+          ...cautelaData,
+        });
+        cautelasAtualizadas += 1;
+        continue;
+      }
+
+      const savedCautela = await cautelasRepository.save(
+        cautelasRepository.create({
+          ...cautelaData,
+          itens: [
+            itemsRepository.create({
+              atualizadoEm: seedData.criadoEm,
+              criadoEm: seedData.criadoEm,
+              nomeItem: seedData.item,
+              quantidade: 1,
+            }),
+          ],
+        }),
+      );
+
+      await eventsRepository.save(
+        seedData.eventos.map((event) => ({
+          acao: event.acao,
+          cautelaId: savedCautela.id,
+          descricao: event.descricao,
+          feitoPorId: event.feitoPorId,
+          timestamp: event.timestamp,
+        })),
+      );
+
       cautelasCriadas += 1;
     }
 

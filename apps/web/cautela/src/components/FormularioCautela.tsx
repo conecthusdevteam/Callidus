@@ -1,12 +1,14 @@
-import CampoSetor from "../pages/CampoSetor";
+import CampoSetor from "./CampoSetor";
 
 export interface FieldErrors {
   setor?: string;
   nome?: string;
   email?: string;
+  documento?: string;
+  empresa?: string;
+  descricao?: string;
+  quantidade?: string;
   items?: string;
-  retornado?: string;
-  dataFim?: string;
 }
 
 function IconTrash() {
@@ -48,12 +50,17 @@ function IconTrash() {
 
 interface FormularioCautelaProps {
   canCreateCautela: boolean;
+  validarDocumento: (documento: string) => boolean;
   setorId: string;
   setSetorId: (v: string) => void;
   nome: string;
   setNome: (v: string) => void;
   email: string;
   setEmail: (v: string) => void;
+  documento: string;
+  setDocumento: (v: string) => void;
+  empresa: string;
+  setEmpresa: (v: string) => void;
   descricao: string;
   setDescricao: (v: string) => void;
   quantidade: string;
@@ -62,12 +69,8 @@ interface FormularioCautelaProps {
   setItems: React.Dispatch<
     React.SetStateAction<{ descricao: string; quantidade: number }[]>
   >;
-  retornado: boolean | null;
-  setRetornado: (v: boolean | null) => void;
-  dataInicio: string;
-  dataFim: string;
-  setDataFim: (v: string) => void;
   fieldErrors: FieldErrors;
+  setFieldErrors: React.Dispatch<React.SetStateAction<FieldErrors>>;
   submitError: string;
   submitting: boolean;
   handleSubmit: (e: React.FormEvent) => Promise<void>;
@@ -77,30 +80,67 @@ interface FormularioCautelaProps {
 
 export default function FormularioCautela({
   canCreateCautela,
+  validarDocumento,
   setorId,
   setSetorId,
   nome,
   setNome,
   email,
   setEmail,
+  documento,
+  setDocumento,
+  empresa,
+  setEmpresa,
   descricao,
   setDescricao,
   quantidade,
   setQuantidade,
   items,
   setItems,
-  retornado,
-  setRetornado,
-  dataInicio,
-  dataFim,
-  setDataFim,
   fieldErrors,
+  setFieldErrors,
   submitError,
   submitting,
   handleSubmit,
   setItemParaExcluir,
   onCancel,
 }: FormularioCautelaProps) {
+  const dominiosPermitidos = ["@callidus.org.br", "@conecthus.org.br"];
+  const dominioAtual =
+    dominiosPermitidos.find((dominio) => email.endsWith(dominio)) ??
+    "@callidus.org.br";
+  const emailLocal = email.endsWith(dominioAtual)
+    ? email.slice(0, -dominioAtual.length)
+    : (email.split("@")[0] ?? "");
+
+  function validarEmailInstitucional(value: string) {
+    return /^[A-Za-z0-9._%+-]+@(callidus|conecthus)\.org\.br$/i.test(value);
+  }
+
+  function atualizarEmail(local: string, dominio = dominioAtual) {
+    const sanitizedLocal = local.replace(/@.*/, "");
+    const nextEmail = sanitizedLocal ? `${sanitizedLocal}${dominio}` : "";
+    setEmail(nextEmail);
+
+    if (!nextEmail.trim()) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        email: "O campo E-mail é obrigatório.",
+      }));
+    } else if (!validarEmailInstitucional(nextEmail)) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        email: "Use apenas e-mail institucional.",
+      }));
+    } else {
+      setFieldErrors((prev) => {
+        const n = { ...prev };
+        delete n.email;
+        return n;
+      });
+    }
+  }
+
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
       {!canCreateCautela && (
@@ -125,7 +165,40 @@ export default function FormularioCautela({
         <input
           type="text"
           value={nome}
-          onChange={(e) => setNome(e.target.value)}
+          onChange={(e) => {
+            const value = e.target.value;
+            setNome(value);
+            if (!value.trim()) {
+              setFieldErrors((prev) => ({
+                ...prev,
+                nome: "O campo Proprietário é obrigatório.",
+              }));
+            } else if (value.trim().length < 3) {
+              setFieldErrors((prev) => ({
+                ...prev,
+                nome: "O nome deve ter no mínimo 3 caracteres.",
+              }));
+            } else {
+              setFieldErrors((prev) => {
+                const n = { ...prev };
+                delete n.nome;
+                return n;
+              });
+            }
+          }}
+          onBlur={() => {
+            if (!nome.trim()) {
+              setFieldErrors((prev) => ({
+                ...prev,
+                nome: "O campo Proprietário é obrigatório.",
+              }));
+            } else if (nome.trim().length < 3) {
+              setFieldErrors((prev) => ({
+                ...prev,
+                nome: "O nome deve ter no mínimo 3 caracteres.",
+              }));
+            }
+          }}
           className={`mt-1 w-full border-2 bg-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-600 focus:outline-none ${
             fieldErrors.nome ? "border-red-400" : "border-[#D4D4D4]"
           }`}
@@ -136,20 +209,140 @@ export default function FormularioCautela({
         )}
       </div>
 
+      {/* Documento */}
+      <div>
+        <label className="block font-medium text-black text-sm">
+          Documento{" "}
+          <span className="font-normal text-gray-500">(Identidade ou CPF)</span>
+        </label>
+        <input
+          type="text"
+          value={documento}
+          onChange={(e) => {
+            const valor = e.target.value.replace(/\D/g, "").slice(0, 14);
+            setDocumento(valor);
+            if (!valor.trim()) {
+              setFieldErrors((prev) => ({
+                ...prev,
+                documento: "O campo Documento é obrigatório.",
+              }));
+            } else if (!validarDocumento(valor)) {
+              setFieldErrors((prev) => ({
+                ...prev,
+                documento: "Informe um CPF ou identidade válida",
+              }));
+            } else {
+              setFieldErrors((prev) => {
+                const n = { ...prev };
+                delete n.documento;
+                return n;
+              });
+            }
+          }}
+          onBlur={() => {
+            if (!documento.trim()) {
+              setFieldErrors((prev) => ({
+                ...prev,
+                documento: "O campo Documento é obrigatório.",
+              }));
+            } else if (!validarDocumento(documento)) {
+              setFieldErrors((prev) => ({
+                ...prev,
+                documento: "Informe um CPF ou identidade válida",
+              }));
+            }
+          }}
+          className={`mt-1 w-full border-2 bg-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-600 focus:outline-none ${
+            fieldErrors.documento ? "border-red-400" : "border-[#D4D4D4]"
+          }`}
+          placeholder="Adicione Identidade ou CPF"
+        />
+        {fieldErrors.documento && (
+          <p className="text-red-500 text-xs mt-1">{fieldErrors.documento}</p>
+        )}
+      </div>
+
+      {/* Empresa */}
+      <div>
+        <label className="block font-medium text-black text-sm">Empresa</label>
+        <input
+          type="text"
+          value={empresa}
+          onChange={(e) => {
+            const value = e.target.value;
+            setEmpresa(value);
+            if (!value.trim()) {
+              setFieldErrors((prev) => ({
+                ...prev,
+                empresa: "O campo Empresa é obrigatório.",
+              }));
+            } else {
+              setFieldErrors((prev) => {
+                const n = { ...prev };
+                delete n.empresa;
+                return n;
+              });
+            }
+          }}
+          onBlur={() => {
+            if (!empresa.trim()) {
+              setFieldErrors((prev) => ({
+                ...prev,
+                empresa: "O campo Empresa é obrigatório.",
+              }));
+            }
+          }}
+          className={`mt-1 w-full border-2 bg-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-600 focus:outline-none ${
+            fieldErrors.empresa ? "border-red-400" : "border-[#D4D4D4]"
+          }`}
+          placeholder="Nome da empresa"
+        />
+        {fieldErrors.empresa && (
+          <p className="text-red-500 text-xs mt-1">{fieldErrors.empresa}</p>
+        )}
+      </div>
+
       {/* E-mail */}
       <div>
         <label className="block font-medium text-black text-sm">
           E-mail do proprietário
         </label>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className={`mt-1 w-full border-2 bg-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-600 focus:outline-none ${
-            fieldErrors.email ? "border-red-400" : "border-[#D4D4D4]"
-          }`}
-          placeholder="@conecthus.org.br"
-        />
+        <div className="mt-1 flex gap-2">
+          <input
+            type="text"
+            value={emailLocal}
+            onChange={(e) => atualizarEmail(e.target.value)}
+            onBlur={() => {
+              if (!email.trim()) {
+                setFieldErrors((prev) => ({
+                  ...prev,
+                  email: "O campo E-mail é obrigatório.",
+                }));
+              } else if (!validarEmailInstitucional(email)) {
+                setFieldErrors((prev) => ({
+                  ...prev,
+                  email: "Use apenas e-mail institucional.",
+                }));
+              }
+            }}
+            className={`min-w-0 flex-1 border-2 bg-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-600 focus:outline-none ${
+              fieldErrors.email ? "border-red-400" : "border-[#D4D4D4]"
+            }`}
+            placeholder="usuario"
+          />
+          <select
+            value={dominioAtual}
+            onChange={(e) => atualizarEmail(emailLocal, e.target.value)}
+            className="w-[180px] border-2 border-[#D4D4D4] bg-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-600 focus:outline-none"
+          >
+            {dominiosPermitidos.map((dominio) => (
+              <option key={dominio} value={dominio}>
+                {dominio}
+              </option>
+            ))}
+          </select>
+        </div>
+        <input type="hidden" value={email} readOnly />
         {fieldErrors.email && (
           <p className="text-red-500 text-xs mt-1">{fieldErrors.email}</p>
         )}
@@ -159,15 +352,53 @@ export default function FormularioCautela({
       <div className="flex gap-4">
         <div className="flex-1 min-w-0">
           <label className="block font-medium text-black text-sm">
-            Descrição
+            Descrição de Material
           </label>
           <input
             type="text"
             value={descricao}
-            onChange={(e) => setDescricao(e.target.value)}
-            className="mt-1 w-full border-2 border-[#D4D4D4] bg-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-600 focus:outline-none h-[42px]"
-            placeholder="value"
+            onChange={(e) => {
+              const value = e.target.value;
+              setDescricao(value);
+              if (!value.trim()) {
+                setFieldErrors((prev) => ({
+                  ...prev,
+                  descricao: "A descrição do material é obrigatória.",
+                }));
+              } else if (value.trim().length < 3) {
+                setFieldErrors((prev) => ({
+                  ...prev,
+                  descricao: "A descrição deve ter no mínimo 3 caracteres.",
+                }));
+              } else {
+                setFieldErrors((prev) => {
+                  const n = { ...prev };
+                  delete n.descricao;
+                  return n;
+                });
+              }
+            }}
+            onBlur={() => {
+              if (!descricao.trim()) {
+                setFieldErrors((prev) => ({
+                  ...prev,
+                  descricao: "A descrição do material é obrigatória.",
+                }));
+              } else if (descricao.trim().length < 3) {
+                setFieldErrors((prev) => ({
+                  ...prev,
+                  descricao: "A descrição deve ter no mínimo 3 caracteres.",
+                }));
+              }
+            }}
+            className={`mt-1 w-full border-2 bg-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-600 focus:outline-none h-[42px] ${
+              fieldErrors.descricao ? "border-red-400" : "border-[#D4D4D4]"
+            }`}
+            placeholder="Item"
           />
+          {fieldErrors.descricao && (
+            <p className="text-red-500 text-xs mt-1">{fieldErrors.descricao}</p>
+          )}
         </div>
         <div className="w-28 flex-shrink-0">
           <label className="block font-medium text-black text-sm">
@@ -177,12 +408,32 @@ export default function FormularioCautela({
             type="text"
             inputMode="numeric"
             value={quantidade}
-            onChange={(e) =>
-              setQuantidade(e.target.value.replace(/\D/g, "").slice(0, 6))
-            }
-            className="mt-1 w-full border-2 border-[#D4D4D4] bg-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-600 focus:outline-none h-[42px]"
+            onChange={(e) => {
+              const value = e.target.value.replace(/\D/g, "").slice(0, 6);
+              setQuantidade(value);
+              if (!value || Number(value) <= 0) {
+                setFieldErrors((prev) => ({
+                  ...prev,
+                  quantidade: "A quantidade deve ser maior que 0.",
+                }));
+              } else {
+                setFieldErrors((prev) => {
+                  const n = { ...prev };
+                  delete n.quantidade;
+                  return n;
+                });
+              }
+            }}
+            className={`mt-1 w-full border-2 bg-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-600 focus:outline-none h-[42px] ${
+              fieldErrors.quantidade ? "border-red-400" : "border-[#D4D4D4]"
+            }`}
             placeholder="000"
           />
+          {fieldErrors.quantidade && (
+            <p className="text-red-500 text-xs mt-1">
+              {fieldErrors.quantidade}
+            </p>
+          )}
         </div>
       </div>
 
@@ -190,17 +441,32 @@ export default function FormularioCautela({
       <button
         type="button"
         onClick={() => {
+          const erros: FieldErrors = {};
+
           if (!descricao.trim()) {
-            alert("Descrição obrigatória");
-            return;
+            erros.descricao = "A descrição do material é obrigatória.";
+          } else if (descricao.trim().length < 3) {
+            erros.descricao = "A descrição deve ter no mínimo 3 caracteres.";
           }
+
           if (!quantidade || Number(quantidade) <= 0) {
-            alert("Quantidade deve ser maior que 0");
+            erros.quantidade = "A quantidade deve ser maior que 0.";
+          }
+
+          if (Object.keys(erros).length > 0) {
+            setFieldErrors((prev) => ({ ...prev, ...erros }));
             return;
           }
+
           setItems([...items, { descricao, quantidade: Number(quantidade) }]);
           setDescricao("");
           setQuantidade("");
+          setFieldErrors((prev) => {
+            const next = { ...prev };
+            delete next.descricao;
+            delete next.quantidade;
+            return next;
+          });
         }}
         className="flex items-center gap-2 text-sm font-medium text-[#F9F9F9] bg-[#3BB14A] px-4 py-2 rounded-lg hover:bg-[#2B8E37]"
       >
@@ -245,79 +511,6 @@ export default function FormularioCautela({
       {fieldErrors.items && (
         <p className="text-red-500 text-xs mt-1">{fieldErrors.items}</p>
       )}
-
-      {/* Retorno */}
-      <div>
-        <div className="flex flex-wrap items-center gap-4">
-          <p className="text-sm font-medium text-gray-700">
-            O item será retornado?
-          </p>
-          <label className="flex items-center gap-2 text-sm text-gray-700">
-            <input
-              type="checkbox"
-              checked={retornado === true}
-              onChange={() => setRetornado(retornado === true ? null : true)}
-              className="h-4 w-4 text-green-600"
-            />
-            Sim
-          </label>
-          <label className="flex items-center gap-2 text-sm text-gray-700">
-            <input
-              type="checkbox"
-              checked={retornado === false}
-              onChange={() => setRetornado(retornado === false ? null : false)}
-              className="h-4 w-4 text-green-600"
-            />
-            Não
-          </label>
-        </div>
-        {fieldErrors.retornado && (
-          <p className="text-red-500 text-xs mt-1">{fieldErrors.retornado}</p>
-        )}
-
-        {retornado === true && (
-          <div className="mt-4">
-            <p className="text-sm font-medium text-gray-700 mb-2">
-              Validade da Cautela
-            </p>
-            <div className="flex gap-2">
-              {/* Data início — somente leitura */}
-              <input
-                type="text"
-                value={dataInicio}
-                readOnly
-                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-100"
-              />
-              {/* Data fim — com máscara DD/MM/AAAA */}
-              <div className="flex-1">
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="DD/MM/AAAA"
-                  value={dataFim}
-                  onChange={(e) => {
-                    let v = e.target.value.replace(/\D/g, "").slice(0, 8);
-                    if (v.length >= 5)
-                      v =
-                        v.slice(0, 2) + "/" + v.slice(2, 4) + "/" + v.slice(4);
-                    else if (v.length >= 3)
-                      v = v.slice(0, 2) + "/" + v.slice(2);
-                    setDataFim(v);
-                  }}
-                  className={`w-full border bg-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-600 focus:outline-none ${
-                    fieldErrors.dataFim ? "border-red-400" : "border-gray-300"
-                  }`}
-                />
-                {fieldErrors.dataFim && (
-                  <p className="text-red-500 text-xs mt-1">
-                    {fieldErrors.dataFim}
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
 
       {submitError && (
         <p className="text-red-500 text-sm text-center">{submitError}</p>

@@ -3,16 +3,20 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { LinesModule } from './lines/lines.module';
+import { PlateWash } from './plates/entities/plate-wash.entity';
 import { Plate } from './plates/entities/plate.entity';
 import { PlatesModule } from './plates/plates.module';
+import { StencilWash } from './stencils/entities/stencil-wash.entity';
 import { Stencil } from './stencils/entities/stencil.entity';
 import { StencilsModule } from './stencils/stencils.module';
+import { WashesModule } from './washes/washes.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env'
+      envFilePath: '.env',
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
@@ -23,20 +27,22 @@ import { StencilsModule } from './stencils/stencils.module';
         username: configService.get<string>('DB_USER'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_DATABASE'),
-        entities: [Stencil, Plate],
-        synchronize: configService.get<string>('NODE_ENV') !== 'production',
-        logging: configService.get<string>('NODE_ENV') === 'development',
+        entities: [Stencil, StencilWash, Plate, PlateWash],
+        synchronize: configService.get<string>('NODE_ENV') !== 'hml',
+        logging: configService.get<string>('NODE_ENV') === 'dev',
         options: {
           encrypt: false,
           trustServerCertificate: true,
           enableArithAbort: true,
-        }
-      })
+        },
+      }),
     }),
     StencilsModule,
-    PlatesModule
+    PlatesModule,
+    LinesModule,
+    WashesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}

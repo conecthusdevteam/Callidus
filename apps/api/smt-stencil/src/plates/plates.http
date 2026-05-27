@@ -1,34 +1,171 @@
-@baseUrl=http://localhost:3001
-@plateId=paste_plate_id_here
+@baseUrl=http://localhost:5000
+@plateId=p_1oC45kmo1RnSG-E-fagHz
+@missingPlateId=plate_missing
+@uniquePlateModel=REST-PLATE-{{$timestamp}}
+@uniquePlateSerial=REST-SERIAL-{{$timestamp}}
 
-### Create plate
+### Health check
+GET {{baseUrl}}/
+
+### List plates - success
+GET {{baseUrl}}/plates
+
+### Daily wash summary - success
+GET {{baseUrl}}/washes/daily-summary
+
+### List recent plate washes - success
+GET {{baseUrl}}/plates/washes?page=1&limit=10
+
+### List today plate washes - success
+GET {{baseUrl}}/plates/washes/today?page=1&limit=10
+
+### List plates paginated - success
+GET {{baseUrl}}/plates?page=1&limit=10
+
+### List plates filtered by model - success
+GET {{baseUrl}}/plates?plate_model=PCB
+
+### List plates filtered by blank id - success
+GET {{baseUrl}}/plates?blank_id=BLANK
+
+### List plates filtered by serial - success
+GET {{baseUrl}}/plates?serial=PCB
+
+### List plates filtered by line - success
+GET {{baseUrl}}/plates?line=Linha%201
+
+### List plates filtered by multiple fields - success
+GET {{baseUrl}}/plates?plate_model=PCB&blank_id=BLANK&serial=PCB&line=Linha%201&page=1&limit=10
+
+### List plates with no results - success with empty array
+GET {{baseUrl}}/plates?line=Linha%20Inexistente
+
+### List available lines - success
+GET {{baseUrl}}/lines
+
+### Get plate by id - success
+GET {{baseUrl}}/plates/{{plateId}}
+
+### Create plate wash by plate id - success
+# Depois rode "Get plate by id" para ver historico_lavagens atualizado.
+POST {{baseUrl}}/plates/{{plateId}}/washes
+Content-Type: application/json
+
+{
+  "operator": "Maria Santos",
+  "shift": 2,
+  "phase": 1
+}
+
+### Create plate wash with custom date/time - 400 expected
+# createdAt e gerado automaticamente pelo backend para lavagens de placas.
+POST {{baseUrl}}/plates/{{plateId}}/washes
+Content-Type: application/json
+
+{
+  "operator": "Pedro Costa",
+  "shift": 3,
+  "phase": 2,
+  "createdAt": "2026-05-13T10:30:00.000Z"
+}
+
+### Create plate wash for missing plate - 404 expected
+POST {{baseUrl}}/plates/{{missingPlateId}}/washes
+Content-Type: application/json
+
+{
+  "operator": "Maria Santos",
+  "shift": 2,
+  "phase": 1
+}
+
+### Create plate wash with invalid body - 400 expected
+POST {{baseUrl}}/plates/{{plateId}}/washes
+Content-Type: application/json
+
+{
+  "operator": "Maria Santos",
+  "shift": "segundo",
+  "phase": 1,
+  "createdAt": "data-invalida"
+}
+
+### Get missing plate by id - 404 expected
+GET {{baseUrl}}/plates/{{missingPlateId}}
+
+### Create plate - success
+# @name createPlate
 POST {{baseUrl}}/plates
 Content-Type: application/json
 
 {
-    "plateModel": "Q92XMAINV30",
-    "serialNumber": "54872388",
-    "blankId": "China",
-    "shift": 1,
-    "phase": 1,
-    "totalWashes": 12,
-    "operator": "Jack Doe",
-    "lineName": "Manaus"
+  "plateModel": "{{uniquePlateModel}}",
+  "serialNumber": "{{uniquePlateSerial}}",
+  "blankId": "BLANK-REST",
+  "lineName": "Linha REST",
+  "plateManufacturerId": "MNF-REST",
+  "country": "Brasil",
+  "thickness": 0.09,
+  "addressing": "012"
 }
 
-### List plates
-GET {{baseUrl}}/plates
+### Create duplicated plate model - 409 expected
+POST {{baseUrl}}/plates
+Content-Type: application/json
 
-### Get plate
-GET {{baseUrl}}/plates/{{plateId}}
+{
+  "plateModel": "{{uniquePlateModel}}",
+  "serialNumber": "{{uniquePlateSerial}}-DUP",
+  "blankId": "BLANK-REST",
+  "lineName": "Linha REST"
+}
 
-### Update plate phase
+### Create plate with missing required fields - 400 expected
+POST {{baseUrl}}/plates
+Content-Type: application/json
+
+{
+  "plateModel": "INVALID-{{$timestamp}}"
+}
+
+### Create plate with invalid number field - 400 expected
+POST {{baseUrl}}/plates
+Content-Type: application/json
+
+{
+  "plateModel": "INVALID-THICKNESS-{{$timestamp}}",
+  "serialNumber": "SERIAL-{{$timestamp}}",
+  "blankId": "BLANK-REST",
+  "lineName": "Linha REST",
+  "thickness": "fino"
+}
+
+### Update plate line - success
 PATCH {{baseUrl}}/plates/{{plateId}}
 Content-Type: application/json
 
 {
-    "phase": 2
+  "lineName": "Linha 2"
 }
 
-### Delete plate
+### Update missing plate - 404 expected
+PATCH {{baseUrl}}/plates/{{missingPlateId}}
+Content-Type: application/json
+
+{
+  "lineName": "Linha 2"
+}
+
+### Update plate with invalid number field - 400 expected
+PATCH {{baseUrl}}/plates/{{plateId}}
+Content-Type: application/json
+
+{
+  "thickness": "fino"
+}
+
+### Delete plate - success, 204 expected
 DELETE {{baseUrl}}/plates/{{plateId}}
+
+### Delete missing plate - 404 expected
+DELETE {{baseUrl}}/plates/{{missingPlateId}}
