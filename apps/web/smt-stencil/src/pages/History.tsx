@@ -2,8 +2,6 @@ import { Header } from "@/components/dashboard/Header";
 import { Pagination } from "@/components/dashboard/Pagination";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Button } from "@/components/ui/button";
-import { ArrowUpDown, Download } from "lucide-react";
-import { StatusPill } from "../components/dashboard/StatusPill";
 import {
   Dialog,
   DialogContent,
@@ -31,7 +29,7 @@ import type {
 } from "@/lib/api";
 import { historyApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { Search } from "lucide-react";
+import { ArrowUpDown, Download, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
   Bar,
@@ -45,14 +43,15 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { StatusPill } from "../components/dashboard/StatusPill";
 
 type AssetType = "stencil" | "placa";
 type SortDirection = "asc" | "desc";
-type AnalyticsDays = 30 | 60 | 90;
+type AnalyticsDays = 30;
 type ExportFormat = "pdf" | "png" | "jpg";
 
 const PAGE_SIZE = 9;
-const ANALYTICS_DAY_OPTIONS: AnalyticsDays[] = [30, 60, 90];
+const ANALYTICS_DAY_OPTIONS: AnalyticsDays[] = [30];
 const ANOMALOUS_ROW_COLOR = "#DB0101";
 const MULTIPLE_ROW_COLOR = "#9061F9";
 
@@ -73,8 +72,7 @@ const emptyPlateFilters: HistoryPlateFilters = {
 
 function formatDate(iso?: string | null) {
   if (!iso) return "-";
-  return new Intl.DateTimeFormat("pt-BR", {
-  }).format(new Date(iso));
+  return new Intl.DateTimeFormat("pt-BR", {}).format(new Date(iso));
 }
 
 function formatTime(iso?: string | null) {
@@ -394,7 +392,9 @@ function WashTimeTooltip({
 
   return (
     <div className="rounded bg-[#202124] px-2 py-1.5 text-[10px] font-medium text-white shadow">
-      <p>{point.day_label} - {point.time_label}</p>
+      <p>
+        {point.day_label} - {point.time_label}
+      </p>
       <p>{WASH_CATEGORY_META[point.category].label}</p>
       <p>ID {point.id}</p>
     </div>
@@ -493,7 +493,9 @@ function WashIntervalChart({ analytics }: { analytics: StencilWashAnalytics }) {
   const bars = analytics.interval_bars.map((bar) => ({
     ...bar,
     interval_hours:
-      bar.interval_minutes == null ? 0 : Math.max(bar.interval_minutes / 60, 0.25),
+      bar.interval_minutes == null
+        ? 0
+        : Math.max(bar.interval_minutes / 60, 0.25),
   }));
 
   return (
@@ -515,7 +517,10 @@ function WashIntervalChart({ analytics }: { analytics: StencilWashAnalytics }) {
       <div className="grid gap-4 md:grid-cols-[1fr_150px]">
         <div className="h-[210px] min-w-0">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={bars} margin={{ top: 8, right: 12, bottom: 2, left: -14 }}>
+            <BarChart
+              data={bars}
+              margin={{ top: 8, right: 12, bottom: 2, left: -14 }}
+            >
               <CartesianGrid stroke="#ECEFF3" vertical={false} />
               <XAxis
                 dataKey="day_index"
@@ -535,7 +540,10 @@ function WashIntervalChart({ analytics }: { analytics: StencilWashAnalytics }) {
                 axisLine={false}
                 tickLine={false}
               />
-              <Tooltip content={<WashIntervalTooltip />} cursor={{ fill: "#F3F4F6" }} />
+              <Tooltip
+                content={<WashIntervalTooltip />}
+                cursor={{ fill: "#F3F4F6" }}
+              />
               <Bar dataKey="interval_hours" radius={[3, 3, 0, 0]} barSize={10}>
                 {bars.map((bar) => (
                   <Cell
@@ -876,7 +884,9 @@ function StencilTable({
                   category === "anomalous" && "bg-red-50",
                   category === "multiple" && "bg-violet-50",
                 )}
-                style={color ? { boxShadow: `inset 4px 0 0 ${color}` } : undefined}
+                style={
+                  color ? { boxShadow: `inset 4px 0 0 ${color}` } : undefined
+                }
               >
                 <td className="px-4 py-4 text-[16px] tabular text-foreground">
                   {formatDate(row.created_at)}
@@ -1032,189 +1042,194 @@ function StencilDetailsModal({
 
   return (
     <>
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent id="stencil-report-modal" className="max-h-[88vh] max-w-[1060px] overflow-y-auto rounded-md p-0">
-        <DialogHeader className="sr-only">
-          <DialogTitle>Informações detalhadas do stencil</DialogTitle>
-        </DialogHeader>
-        <div className="p-5">
-          <div className="mb-4 flex items-start justify-between gap-4 pr-8">
-            <h2 className="text-[15px] font-bold">Informações detalhadas</h2>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={!canExport}
-              onClick={() => onExportOpenChange(true)}
-              className="h-7 gap-1 rounded-sm px-2 text-[10px]"
-            >
-              <Download className="h-3 w-3" />
-              Exportar relatório individual
-            </Button>
-          </div>
-
-          {loading || !detail ? (
-            <div className="py-16 text-center text-sm text-muted-foreground">
-              Carregando histórico...
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent
+          id="stencil-report-modal"
+          className="max-h-[88vh] max-w-[1060px] overflow-y-auto rounded-md p-0"
+        >
+          <DialogHeader className="sr-only">
+            <DialogTitle>Informações detalhadas do stencil</DialogTitle>
+          </DialogHeader>
+          <div className="p-5">
+            <div className="mb-4 flex items-start justify-between gap-4 pr-8">
+              <h2 className="text-[15px] font-bold">Informações detalhadas</h2>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!canExport}
+                onClick={() => onExportOpenChange(true)}
+                className="h-7 gap-1 rounded-sm px-2 text-[10px]"
+              >
+                <Download className="h-3 w-3" />
+                Exportar relatório individual
+              </Button>
             </div>
-          ) : (
-            <div id="stencil-report-content" className="grid gap-5 bg-white md:grid-cols-[205px_1fr]">
-              <aside className="space-y-4 md:sticky md:top-0 md:self-start">
-                <DetailMetric
-                  label="Dados do Stencil"
-                  value={detail.stencil_code}
-                />
 
-                <DetailMetric
-                  label="Total de Lavagens Registradas"
-                  value={`${String(detail.asset?.total_washes ?? 0).padStart(3, "0")} lavagens`}
-                />
-
-                <div className="space-y-3 border-t pt-4">
-                  <p className="text-[11px] font-medium text-muted-foreground">
-                    Dados cadastrais
-                  </p>
+            {loading || !detail ? (
+              <div className="py-16 text-center text-sm text-muted-foreground">
+                Carregando histórico...
+              </div>
+            ) : (
+              <div
+                id="stencil-report-content"
+                className="grid gap-5 bg-white md:grid-cols-[205px_1fr]"
+              >
+                <aside className="space-y-4 md:sticky md:top-0 md:self-start">
                   <DetailMetric
-                    label="Código Stencil"
+                    label="Dados do Stencil"
                     value={detail.stencil_code}
                   />
-                  <div className="grid grid-cols-2 gap-3">
+
+                  <DetailMetric
+                    label="Total de Lavagens Registradas"
+                    value={`${String(detail.asset?.total_washes ?? 0).padStart(3, "0")} lavagens`}
+                  />
+
+                  <div className="space-y-3 border-t pt-4">
+                    <p className="text-[11px] font-medium text-muted-foreground">
+                      Dados cadastrais
+                    </p>
                     <DetailMetric
-                      label="Endereçamento"
-                      value={String(detail.addressing ?? "").padStart(3, "0")}
+                      label="Código Stencil"
+                      value={detail.stencil_code}
                     />
-                    <DetailMetric
-                      label="Espessura"
-                      value={
-                        detail.asset?.thickness != null
-                          ? Number(detail.asset.thickness).toFixed(2)
-                          : "-"
+                    <div className="grid grid-cols-2 gap-3">
+                      <DetailMetric
+                        label="Endereçamento"
+                        value={String(detail.addressing ?? "").padStart(3, "0")}
+                      />
+                      <DetailMetric
+                        label="Espessura"
+                        value={
+                          detail.asset?.thickness != null
+                            ? Number(detail.asset.thickness).toFixed(2)
+                            : "-"
+                        }
+                      />
+                      <DetailMetric
+                        label="ID Fabricante"
+                        value={detail.asset?.manufacture_id || "-"}
+                      />
+                      <DetailMetric
+                        label="País de Origem"
+                        value={detail.asset?.country || "-"}
+                      />
+                    </div>
+                  </div>
+                </aside>
+
+                <div className="min-w-0 space-y-4">
+                  <div className="rounded-sm bg-[#DBEBFB] p-4">
+                    <p className="mb-2 text-[11px] font-medium text-[#2563A8]">
+                      Dados desta lavagem
+                    </p>
+                    <div className="grid gap-3 md:grid-cols-[1fr_0.8fr_0.7fr_1.2fr_0.8fr]">
+                      <DetailMetric label="ID Lavagem" value={detail.id} />
+                      <DetailMetric
+                        label="Data"
+                        value={formatDate(detail.created_at)}
+                      />
+                      <DetailMetric
+                        label="Hora"
+                        value={formatTime(detail.created_at)}
+                      />
+                      <DetailMetric
+                        label="Operador"
+                        value={detail.operator || "-"}
+                      />
+                      <DetailMetric
+                        label="Linha"
+                        value={detail.line_name || "-"}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rounded-sm border bg-white p-4">
+                    <p className="mb-2 text-[11px] font-medium text-muted-foreground">
+                      Dados da última lavagem
+                    </p>
+                    <div className="grid gap-3 md:grid-cols-[1fr_0.8fr_0.7fr_1.2fr_0.8fr]">
+                      <DetailMetric
+                        label="ID Lavagem"
+                        value={detail.asset?.last_wash_details?.id ?? "-"}
+                      />
+                      <DetailMetric
+                        label="Data"
+                        value={formatDate(detail.asset?.last_wash)}
+                      />
+                      <DetailMetric
+                        label="Hora"
+                        value={formatTime(detail.asset?.last_wash)}
+                      />
+                      <DetailMetric
+                        label="Operador"
+                        value={detail.asset?.last_wash_details?.operator ?? "-"}
+                      />
+                      <DetailMetric
+                        label="Linha"
+                        value={detail.line_name || "-"}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <Select
+                      value={String(analyticsDays)}
+                      onValueChange={(value) =>
+                        onAnalyticsDaysChange(Number(value) as AnalyticsDays)
                       }
-                    />
-                    <DetailMetric
-                      label="ID Fabricante"
-                      value={detail.asset?.manufacture_id || "-"}
-                    />
-                    <DetailMetric
-                      label="País de Origem"
-                      value={detail.asset?.country || "-"}
-                    />
+                    >
+                      <SelectTrigger className="h-8 w-[142px] rounded-sm text-[11px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ANALYTICS_DAY_OPTIONS.map((days) => (
+                          <SelectItem key={days} value={String(days)}>
+                            Últimos {days} dias
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                </div>
-              </aside>
 
-              <div className="min-w-0 space-y-4">
-                <div className="rounded-sm bg-[#DBEBFB] p-4">
-                  <p className="mb-2 text-[11px] font-medium text-[#2563A8]">
-                    Dados desta lavagem
-                  </p>
-                  <div className="grid gap-3 md:grid-cols-[1fr_0.8fr_0.7fr_1.2fr_0.8fr]">
-                    <DetailMetric
-                      label="ID Lavagem"
-                      value={detail.id}
-                    />
-                    <DetailMetric
-                      label="Data"
-                      value={formatDate(detail.created_at)}
-                    />
-                    <DetailMetric
-                      label="Hora"
-                      value={formatTime(detail.created_at)}
-                    />
-                    <DetailMetric
-                      label="Operador de Lavagem"
-                      value={detail.operator || "-"}
-                    />
-                    <DetailMetric
-                      label="Linha"
-                      value={detail.line_name || "-"}
-                    />
-                  </div>
+                  {analyticsLoading ? (
+                    <div className="grid h-[245px] place-items-center rounded-md border bg-white text-sm text-muted-foreground">
+                      Carregando gráficos...
+                    </div>
+                  ) : analyticsError || !analytics ? (
+                    <div className="grid h-[245px] place-items-center rounded-md border bg-white px-4 text-center text-sm text-muted-foreground">
+                      {analyticsError ||
+                        "Não foi possível carregar os gráficos."}
+                    </div>
+                  ) : analytics.counts.total === 0 ? (
+                    <div className="grid h-[245px] place-items-center rounded-md border bg-white text-sm text-muted-foreground">
+                      Nenhuma lavagem encontrada nos últimos{" "}
+                      {analytics.period.days} dias.
+                    </div>
+                  ) : (
+                    <>
+                      <WashTimeChart analytics={analytics} />
+                      <WashIntervalChart analytics={analytics} />
+                    </>
+                  )}
                 </div>
-
-                <div className="rounded-sm border bg-white p-4">
-                  <p className="mb-2 text-[11px] font-medium text-muted-foreground">
-                    Dados da última lavagem
-                  </p>
-                  <div className="grid gap-3 md:grid-cols-[1fr_0.8fr_0.7fr_1.2fr_0.8fr]">
-                    <DetailMetric
-                      label="ID Lavagem"
-                      value={detail.asset?.last_wash_details?.id ?? "-"}
-                    />
-                    <DetailMetric
-                      label="Data"
-                      value={formatDate(detail.asset?.last_wash)}
-                    />
-                    <DetailMetric
-                      label="Hora"
-                      value={formatTime(detail.asset?.last_wash)}
-                    />
-                    <DetailMetric
-                      label="Operador de Lavagem"
-                      value={detail.asset?.last_wash_details?.operator ?? "-"}
-                    />
-                    <DetailMetric
-                      label="Linha"
-                      value={detail.line_name || "-"}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end">
-                  <Select
-                    value={String(analyticsDays)}
-                    onValueChange={(value) =>
-                      onAnalyticsDaysChange(Number(value) as AnalyticsDays)
-                    }
-                  >
-                    <SelectTrigger className="h-8 w-[142px] rounded-sm text-[11px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ANALYTICS_DAY_OPTIONS.map((days) => (
-                        <SelectItem key={days} value={String(days)}>
-                          Últimos {days} dias
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {analyticsLoading ? (
-                  <div className="grid h-[245px] place-items-center rounded-md border bg-white text-sm text-muted-foreground">
-                    Carregando gráficos...
-                  </div>
-                ) : analyticsError || !analytics ? (
-                  <div className="grid h-[245px] place-items-center rounded-md border bg-white px-4 text-center text-sm text-muted-foreground">
-                    {analyticsError || "Não foi possível carregar os gráficos."}
-                  </div>
-                ) : analytics.counts.total === 0 ? (
-                  <div className="grid h-[245px] place-items-center rounded-md border bg-white text-sm text-muted-foreground">
-                    Nenhuma lavagem encontrada nos últimos {analytics.period.days} dias.
-                  </div>
-                ) : (
-                  <>
-                    <WashTimeChart analytics={analytics} />
-                    <WashIntervalChart analytics={analytics} />
-                  </>
-                )}
               </div>
-            </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
-    {detail && analytics && (
-      <ExportReportDialog
-        detail={detail}
-        analytics={analytics}
-        format={exportFormat}
-        open={exportOpen}
-        onFormatChange={onExportFormatChange}
-        onOpenChange={onExportOpenChange}
-        onExport={onExport}
-      />
-    )}
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+      {detail && analytics && (
+        <ExportReportDialog
+          detail={detail}
+          analytics={analytics}
+          format={exportFormat}
+          open={exportOpen}
+          onFormatChange={onExportFormatChange}
+          onOpenChange={onExportOpenChange}
+          onExport={onExport}
+        />
+      )}
     </>
   );
 }
@@ -1262,11 +1277,26 @@ function ExportReportDialog({
                   <p className="text-[10px] font-medium text-[#2563A8]">
                     Dados desta lavagem
                   </p>
-                  <div className="mt-2 grid grid-cols-4 gap-2">
-                    <DetailMetric label="ID Lavagem" value={detail.id} />
-                    <DetailMetric label="Data" value={formatDate(detail.created_at)} />
-                    <DetailMetric label="Hora" value={formatTime(detail.created_at)} />
-                    <DetailMetric label="Linha" value={detail.line_name || "-"} />
+                  <div className="mt-2 space-y-2">
+                    <DetailMetric
+                      label="ID Lavagem"
+                      value={detail.id}
+                      className="[&_p:last-child]:break-all [&_p:last-child]:text-[16px]"
+                    />
+                    <div className="grid grid-cols-3 gap-2">
+                      <DetailMetric
+                        label="Data"
+                        value={formatDate(detail.created_at)}
+                      />
+                      <DetailMetric
+                        label="Hora"
+                        value={formatTime(detail.created_at)}
+                      />
+                      <DetailMetric
+                        label="Linha"
+                        value={detail.line_name || "-"}
+                      />
+                    </div>
                   </div>
                 </div>
                 <div className="grid grid-cols-[1fr_130px] gap-3 rounded-sm border p-3">
@@ -1277,11 +1307,21 @@ function ExportReportDialog({
                     <AnalyticsLegend />
                     <div className="mt-3 h-[120px] rounded-sm bg-[#F8FAFC] p-2">
                       <ResponsiveContainer width="100%" height="100%">
-                        <ScatterChart margin={{ top: 4, right: 4, bottom: 0, left: -22 }}>
+                        <ScatterChart
+                          margin={{ top: 4, right: 4, bottom: 0, left: -22 }}
+                        >
                           <CartesianGrid stroke="#ECEFF3" vertical={false} />
                           <XAxis dataKey="day_index" type="number" hide />
-                          <YAxis dataKey="hour_decimal" type="number" hide domain={[7, 17]} />
-                          <Scatter data={analytics.time_points} isAnimationActive={false}>
+                          <YAxis
+                            dataKey="hour_decimal"
+                            type="number"
+                            hide
+                            domain={[7, 17]}
+                          />
+                          <Scatter
+                            data={analytics.time_points}
+                            isAnimationActive={false}
+                          >
                             {analytics.time_points.map((point) => (
                               <Cell
                                 key={point.id}
@@ -1296,7 +1336,9 @@ function ExportReportDialog({
                   <AnalyticsCounters analytics={analytics} />
                 </div>
                 <div className="rounded-sm border p-3">
-                  <p className="text-[12px] font-bold">Intervalo entre lavagens</p>
+                  <p className="text-[12px] font-bold">
+                    Intervalo entre lavagens
+                  </p>
                   <div className="mt-2 h-[120px] rounded-sm bg-[#F8FAFC] p-2">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
@@ -1311,7 +1353,11 @@ function ExportReportDialog({
                       >
                         <XAxis dataKey="day_index" type="number" hide />
                         <YAxis hide />
-                        <Bar dataKey="interval_hours" radius={[2, 2, 0, 0]} barSize={6}>
+                        <Bar
+                          dataKey="interval_hours"
+                          radius={[2, 2, 0, 0]}
+                          barSize={6}
+                        >
                           {analytics.interval_bars.map((bar) => (
                             <Cell
                               key={bar.date_key}
@@ -1349,7 +1395,7 @@ function ExportReportDialog({
               <Button
                 type="button"
                 className="h-9 rounded-sm bg-[#1D55D8] text-[12px] text-white hover:bg-[#1649BD]"
-                onClick={onExport}
+                // onClick={onExport}
               >
                 <Download className="mr-1 h-3.5 w-3.5" />
                 Exportar
@@ -1431,7 +1477,7 @@ function PlateDetailsModal({
                   />
                   <DetailMetric label="Turno" value={detail.shift} />
                   <DetailMetric
-                    label="Operador de Lavagem"
+                    label="Operador"
                     value={detail.operator || "-"}
                   />
                 </div>
@@ -1540,13 +1586,18 @@ const History = () => {
     setPlatePage(1);
   }, [sort]);
 
-  const loadStencilAnalytics = async (stencilId: string, days: AnalyticsDays) => {
+  const loadStencilAnalytics = async (
+    stencilId: string,
+    days: AnalyticsDays,
+  ) => {
     setStencilAnalytics(null);
     setAnalyticsError("");
     setAnalyticsLoading(true);
 
     try {
-      setStencilAnalytics(await historyApi.getStencilWashAnalytics(stencilId, days));
+      setStencilAnalytics(
+        await historyApi.getStencilWashAnalytics(stencilId, days),
+      );
     } catch {
       setStencilAnalytics(null);
       setAnalyticsError("Não foi possível carregar os gráficos deste stencil.");

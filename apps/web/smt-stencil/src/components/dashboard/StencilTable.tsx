@@ -1,9 +1,11 @@
 import { cn } from "@/lib/utils";
 import { StatusPill } from "./StatusPill";
-import { isWashOutsideStandardSchedule } from "@/data/mockWashes";
+import {
+  isWashOutsideStandardSchedule,
+  type StencilAttentionType,
+} from "@/data/mockWashes";
 import type { StencilWash } from "@/data/mockWashes";
-import attentionIcon from "@/assets/icon-attention-triangle.svg";
-import { ArrowUpDown } from "lucide-react";
+import { AlertTriangle, ArrowUpDown } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -17,6 +19,31 @@ interface Props {
   sort?: "asc" | "desc" | null;
   onToggleSort?: () => void;
 }
+
+const ATTENTION_STYLE: Record<
+  StencilAttentionType,
+  {
+    row: string;
+    icon: string;
+    title: string;
+    message: (row: StencilWash) => string;
+  }
+> = {
+  multiple: {
+    row: "border-y border-[#9061F9] bg-[#EDEBFE]",
+    icon: "text-[#9061F9]",
+    title: "Lavagem múltipla",
+    message: (row) =>
+      `Nova lavagem registrada no dia ${row.data} às ${row.hora}.`,
+  },
+  anomalous: {
+    row: "border-y border-[#DB0101] bg-[#FBD5D5]",
+    icon: "text-[#DB0101]",
+    title: "Intervalo anormal",
+    message: (row) =>
+      `A última lavagem aconteceu no dia ${row.data} às ${row.hora}.`,
+  },
+};
 
 export function StencilTable({
   rows,
@@ -57,13 +84,19 @@ export function StencilTable({
             const selected = row.id === selectedId;
             const attention =
               row.attention ?? isWashOutsideStandardSchedule(row.hora);
+            const attentionType =
+              row.attentionType ??
+              (attention ? ("anomalous" as StencilAttentionType) : undefined);
+            const attentionStyle = attentionType
+              ? ATTENTION_STYLE[attentionType]
+              : undefined;
             return (
               <tr
                 key={row.id}
                 onClick={() => onSelect(row)}
                 className={cn(
                   "cursor-pointer border-t border-border transition-colors",
-                  attention && "bg-row-attention",
+                  attentionStyle?.row,
                   selected && "bg-row-selected",
                   !attention && !selected && "hover:bg-row-stripe",
                 )}
@@ -87,10 +120,12 @@ export function StencilTable({
                     {attention && (
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <img
-                            src={attentionIcon}
-                            alt=""
-                            className="h-5 w-5 shrink-0"
+                          <AlertTriangle
+                            aria-hidden="true"
+                            className={cn(
+                              "h-5 w-5 shrink-0",
+                              attentionStyle?.icon,
+                            )}
                           />
                         </TooltipTrigger>
                         <TooltipContent
@@ -99,11 +134,10 @@ export function StencilTable({
                           className="max-w-xs rounded-2xl border border-slate-700 bg-slate-950/95 p-4 text-white shadow-xl"
                         >
                           <p className="text-sm font-semibold">
-                            Intervalo anormal
+                            {attentionStyle?.title}
                           </p>
                           <p className="mt-1 text-sm text-slate-200">
-                            A última lavagem aconteceu no dia {row.data} às{" "}
-                            {row.hora}.
+                            {attentionStyle?.message(row)}
                           </p>
                         </TooltipContent>
                       </Tooltip>

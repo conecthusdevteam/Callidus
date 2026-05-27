@@ -409,12 +409,7 @@ function withTodayPlateCounts(washes: ApiPlate[]): ApiPlate[] {
 }
 
 function isOutsideStencilReservedHours(iso: string) {
-  const hour = Number(
-    new Intl.DateTimeFormat("pt-BR", {
-      hour: "2-digit",
-      hour12: false,
-    }).format(new Date(iso)),
-  );
+  const hour = Number(iso.split("T")[1]?.split(":")[0]);
 
   return hour !== 11 && hour !== 16;
 }
