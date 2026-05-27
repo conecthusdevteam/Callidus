@@ -1,5 +1,5 @@
-@baseUrl=http://localhost:5000
-@stencilId=st_0-KP4r02k2Ex5p_FkBGGo
+@baseUrl=http://localhost:3000
+@stencilId=st_gc2KQiSWYLOGjrZBxmgGl
 @missingStencilId=stencil_missing
 @seedStencilCode=REST-STENCIL-1778695640
 @missingStencilCode=QR-INEXISTENTE

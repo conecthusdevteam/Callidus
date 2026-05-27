@@ -454,6 +454,38 @@ describe('StencilsService', () => {
     expect(repository.findOneBy).toHaveBeenNthCalledWith(2, { id: stencil.id });
   });
 
+  it('rejects new washes for inactive stencils', async () => {
+    const stencil = makeStencil({ status: WashStatus.INACTIVE });
+    const repository = makeRepository({
+      findOneBy: jest.fn().mockResolvedValue(stencil),
+    });
+    const washRepository = makeWashRepository();
+    const service = makeService(repository, washRepository);
+
+    await expect(
+      service.createWash(stencil.id, { operator: 'Carlos Souza' }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(washRepository.create).not.toHaveBeenCalled();
+    expect(washRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('rejects new washes by QR code for inactive stencils', async () => {
+    const stencil = makeStencil({ status: WashStatus.INACTIVE });
+    const repository = makeRepository({
+      findOneBy: jest.fn().mockResolvedValue(stencil),
+    });
+    const washRepository = makeWashRepository();
+    const service = makeService(repository, washRepository);
+
+    await expect(
+      service.createWashByStencilCode(stencil.stencilCode, {
+        operator: 'Carlos Souza',
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(washRepository.create).not.toHaveBeenCalled();
+    expect(washRepository.save).not.toHaveBeenCalled();
+  });
+
   it('returns null when creating wash for missing stencil', async () => {
     const repository = makeRepository({
       findOneBy: jest.fn().mockResolvedValue(null),

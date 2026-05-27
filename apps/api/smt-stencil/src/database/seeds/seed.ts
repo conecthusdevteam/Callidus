@@ -65,8 +65,8 @@ const OPERATORS = ['João Silva', 'Maria Santos', 'Carlos Lima', 'Ana Costa', 'P
 const SHIFTS = [1, 2];
 const PHASES = [1, 2];
 
-const STATUSES = [WashStatus.ACTIVE, WashStatus.INACTIVE];
-const ANALYTICS_SEED_DAYS = 90;
+const INACTIVE_STENCIL_INTERVAL = 7;
+const ANALYTICS_SEED_DAYS = 30;
 const PLANNED_MANAUS_HOURS = [11, 16];
 const ANOMALOUS_MANAUS_HOURS = [7, 8, 9, 10, 12, 13, 14, 15, 17];
 
@@ -300,7 +300,10 @@ function generateStencilData(index: number): Partial<Stencil> {
   const thickness = randomFloat(0.05, 0.15, 6);
   const addressing = String(random(1, 100)).padStart(3, '0');
   const lineName = LINE_NAMES[random(0, LINE_NAMES.length - 1)];
-  const status = STATUSES[random(0, STATUSES.length - 1)];
+  const status =
+    index % INACTIVE_STENCIL_INTERVAL === 0
+      ? WashStatus.INACTIVE
+      : WashStatus.ACTIVE;
   const createdAt = randomDateForToday();
 
   const stencil = new Stencil();
@@ -433,6 +436,8 @@ async function runSeed() {
     console.log('\n📦 Generate 35 Stencils...');
     let stencilsInserted = 0;
     let stencilsSkipped = 0;
+    let activeStencilsInserted = 0;
+    let inactiveStencilsInserted = 0;
     const createdStencils: Stencil[] = [];
 
     for (let i = 1; i <= 35; i++) {
@@ -446,6 +451,8 @@ async function runSeed() {
         const savedStencil = await stencilRepo.save(stencil);
         createdStencils.push(savedStencil);
         stencilsInserted++;
+        if (savedStencil.status === WashStatus.ACTIVE) activeStencilsInserted++;
+        else inactiveStencilsInserted++;
       } else {
         stencilsSkipped++;
       }
@@ -460,11 +467,14 @@ async function runSeed() {
     console.log(
       `   ✅ Stencils: ${stencilsInserted} inserted, ${stencilsSkipped} existing`,
     );
+    console.log(
+      `   📊 Status: ${activeStencilsInserted} active, ${inactiveStencilsInserted} inactive`,
+    );
 
     // ============================================
-    // 1.1 WASHES FOR STENCILS (analytics-friendly 90-day history)
+    // 1.1 WASHES FOR STENCILS (analytics-friendly 30-day history)
     // ============================================
-    console.log('\n🧼 Generating Washes for Stencils (last 90 days)...');
+    console.log('\n🧼 Generating Washes for Stencils (last 30 days)...');
     let stencilWashesInserted = 0;
     let plannedProfileCount = 0;
     let mixedProfileCount = 0;

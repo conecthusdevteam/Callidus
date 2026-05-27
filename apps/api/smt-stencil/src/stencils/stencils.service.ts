@@ -11,7 +11,7 @@ const MANAUS_TIME_ZONE = 'America/Manaus';
 const MANAUS_UTC_OFFSET_HOURS = 4;
 const RESERVED_WASH_HOURS = [11, 16];
 const DEFAULT_ANALYTICS_DAYS = 30;
-const ALLOWED_ANALYTICS_DAYS = [30, 60, 90] as const;
+const ALLOWED_ANALYTICS_DAYS = [30] as const;
 
 type WashCategory = 'planned' | 'anomalous' | 'multiple';
 
@@ -76,7 +76,7 @@ export class StencilsService {
     private readonly repository: Repository<Stencil>,
     @InjectRepository(StencilWash)
     private readonly washRepository: Repository<StencilWash>,
-  ) { }
+  ) {}
 
   async create(dto: CreateStencilDto) {
     const existingStencil = await this.findByStencilCode(dto.stencilCode);
@@ -98,9 +98,7 @@ export class StencilsService {
         ...(filters?.manufactureId
           ? { manufactureId: Like(`%${filters.manufactureId}%`) }
           : {}),
-        ...(filters?.country
-          ? { country: Like(`%${filters.country}%`) }
-          : {}),
+        ...(filters?.country ? { country: Like(`%${filters.country}%`) } : {}),
         ...(filters?.status ? { status: filters.status as WashStatus } : {}),
         ...(filters?.lineName ? { lineName: filters.lineName } : {}),
       },
@@ -160,10 +158,10 @@ export class StencilsService {
 
     queryBuilder.orderBy('wash.createdAt', 'DESC');
 
-    if (filters?.page && filters?.limit) { 
+    if (filters?.page && filters?.limit) {
       const skip = (filters.page - 1) * filters.limit;
       queryBuilder.skip(skip).take(filters.limit);
-    } 
+    }
 
     const [data, total] = await queryBuilder.getManyAndCount();
 
@@ -225,9 +223,16 @@ export class StencilsService {
     ]);
     const previousWash = previousWashes[0] ?? null;
     const washesByDay = this.groupWashesByManausDay(periodWashes);
-    const categoriesByWashId = this.getWashCategories(periodWashes, washesByDay);
+    const categoriesByWashId = this.getWashCategories(
+      periodWashes,
+      washesByDay,
+    );
     const timePoints = periodWashes.map((wash) =>
-      this.toAnalyticsPoint(wash, startUtc, categoriesByWashId.get(wash.id) ?? 'anomalous'),
+      this.toAnalyticsPoint(
+        wash,
+        startUtc,
+        categoriesByWashId.get(wash.id) ?? 'anomalous',
+      ),
     );
     const intervalBars = this.getIntervalBars(
       periodWashes,
@@ -279,6 +284,9 @@ export class StencilsService {
   async createWash(id: string, dto: CreateStencilWashDto) {
     const stencil = await this.repository.findOneBy({ id });
     if (!stencil) return null;
+    if (stencil.status === WashStatus.INACTIVE) {
+      throw new ConflictException('Inactive stencils cannot receive new washes');
+    }
 
     const wash = this.washRepository.create({
       stencilId: stencil.id,
@@ -400,8 +408,8 @@ export class StencilsService {
     const average =
       intervals.length > 0
         ? Math.round(
-          intervals.reduce((sum, value) => sum + value, 0) / intervals.length,
-        )
+            intervals.reduce((sum, value) => sum + value, 0) / intervals.length,
+          )
         : null;
 
     const washesByManausDay = this.countWashesByManausDay(orderedAsc);
@@ -443,7 +451,8 @@ export class StencilsService {
   ) {
     return washes.reduce((acc, wash) => {
       const manausParts = this.getManausDateParts(wash.createdAt);
-      const hasMultiple = (washesByDay.get(manausParts.dayKey)?.length ?? 0) > 1;
+      const hasMultiple =
+        (washesByDay.get(manausParts.dayKey)?.length ?? 0) > 1;
       const isPlanned = RESERVED_WASH_HOURS.includes(manausParts.hour);
       acc.set(
         wash.id,
@@ -492,7 +501,8 @@ export class StencilsService {
         const ordered = [...washes].sort(
           (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
         );
-        const category = categoriesByWashId.get(ordered[0]?.id ?? '') ?? 'anomalous';
+        const category =
+          categoriesByWashId.get(ordered[0]?.id ?? '') ?? 'anomalous';
         const dayParts = this.getManausDateParts(ordered[0].createdAt);
 
         if (ordered.length > 1) {
@@ -646,9 +656,7 @@ export class StencilsService {
     const startUtc = new Date(
       todayStartUtc.getTime() - (days - 1) * 24 * 60 * 60 * 1000,
     );
-    const endUtc = new Date(
-      todayStartUtc.getTime() + 24 * 60 * 60 * 1000 - 1,
-    );
+    const endUtc = new Date(todayStartUtc.getTime() + 24 * 60 * 60 * 1000 - 1);
 
     return { startUtc, endUtc };
   }
