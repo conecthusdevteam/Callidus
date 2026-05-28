@@ -28,7 +28,7 @@ export function PlacaTable({
                 onClick={onToggleSort}
                 className="inline-flex items-center gap-2 text-left font-semibold text-white"
               >
-                <span>Data</span>
+                <span>Hora</span>
                 <ArrowUpDown
                   className={cn(
                     "h-4 w-4 transition-transform",
@@ -37,10 +37,10 @@ export function PlacaTable({
                 />
               </button>
             </th>
-            <th className="table-head-cell px-4 py-3 text-left">Hora</th>
             <th className="table-head-cell px-4 py-3 text-left">Turno</th>
             <th className="table-head-cell px-4 py-3 text-left">Modelo</th>
             <th className="table-head-cell px-4 py-3 text-left">Fase</th>
+            <th className="table-head-cell px-4 py-3 text-left">Serial</th>
             <th className="table-head-cell px-4 py-3 text-left">Linha</th>
           </tr>
         </thead>
@@ -62,14 +62,12 @@ export function PlacaTable({
                 )}
               >
                 <td className="px-4 py-4 tabular text-foreground">
-                  {row.data}
-                </td>
-                <td className="px-4 py-4 tabular text-foreground">
                   {row.hora}
                 </td>
                 <td className="px-4 py-4 text-foreground">{row.turno}</td>
                 <td className="px-4 py-4 text-foreground">{row.modelo}</td>
                 <td className="px-4 py-4 text-foreground">{row.fase}</td>
+                <td className="px-4 py-4 text-foreground">{row.serial}</td>
                 <td className="px-4 py-4 text-foreground">{row.linha}</td>
               </tr>
             );
