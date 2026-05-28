@@ -16,18 +16,25 @@ import { CreateStencilWashDto } from './dto/create-stencil-wash.dto';
 import { CreateStencilDto } from './dto/create-stencil.dto';
 import { UpdateStencilDto } from './dto/update-stencil.dto';
 import { StencilsService } from './stencils.service';
+import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('stencils')
 @Controller('stencils')
 export class StencilsController {
   constructor(private readonly stencilsService: StencilsService) { }
 
   @Post()
+  @ApiOperation({ summary: 'Create a new stencil' })
+  @ApiResponse({ status: 201, description: 'The stencil has been successfully created.' })
+  @ApiResponse({ status: 400, description: 'Bad Request.' })
   @HttpCode(201)
   create(@Body() dto: CreateStencilDto) {
     return this.stencilsService.create(dto);
   }
 
   @Get()
+  @ApiOperation({ summary: 'Retrieve all stencils' })
+  @ApiResponse({ status: 200, description: 'Returns a list of stencils.' })
   async findAll(
     @Query('stencilCode') stencilCode?: string,
     @Query('manufactureId') manufactureId?: string,
@@ -59,11 +66,15 @@ export class StencilsController {
   }
 
   @Get('lines')
+  @ApiOperation({ summary: 'Retrieve all stencil lines' })
+  @ApiResponse({ status: 200, description: 'Returns a list of stencil lines.' })
   findLines() {
     return this.stencilsService.findLines();
   }
 
   @Get('washes')
+  @ApiOperation({ summary: 'Retrieve recent stencil washes' })
+  @ApiResponse({ status: 200, description: 'Returns a list of recent stencil washes.' })
   findRecentWashes(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
@@ -77,6 +88,15 @@ export class StencilsController {
   }
 
   @Get('washes/today')
+  @ApiOperation({ summary: 'Retrieve today\'s stencil washes' })
+  @ApiQuery({ name: 'stencilCode', required: false, type: String, description: 'Filter by stencil code' })
+  @ApiQuery({ name: 'manufactureId', required: false, type: String, description: 'Filter by manufacture ID' })
+  @ApiQuery({ name: 'country', required: false, type: String, description: 'Filter by country' })
+  @ApiQuery({ name: 'status', required: false, type: String, description: 'Filter by status' })
+  @ApiQuery({ name: 'lineName', required: false, type: String, description: 'Filter by line name' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page', example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Limit per page', example: 10 })
+  @ApiResponse({ status: 200, description: 'Returns a list of today\'s stencil washes.' })
   async findTodayWashes(
     @Query('stencilCode') stencilCode?: string,
     @Query('manufactureId') manufactureId?: string,
@@ -107,6 +127,9 @@ export class StencilsController {
   }
 
   @Get('stencilCode/:stencilCode')
+  @ApiOperation({ summary: 'Retrieve a specific stencil by code' })
+  @ApiResponse({ status: 200, description: 'Returns the requested stencil.' })
+  @ApiResponse({ status: 404, description: 'Stencil not found.' })
   async findByCode(@Param('stencilCode') stencilCode: string) {
     const stencil = await this.stencilsService.findDetailByStencilCode(stencilCode);
     if (!stencil) throw new NotFoundException();
@@ -114,6 +137,10 @@ export class StencilsController {
   }
 
   @Post(':id/washes')
+  @ApiOperation({ summary: 'Create a wash record for a specific stencil' })
+  @ApiResponse({ status: 201, description: 'The wash record has been successfully created.' })
+  @ApiResponse({ status: 404, description: 'Stencil not found.' })
+  @ApiResponse({ status: 409, description: 'Inactive stencil cannot receive new washes.' })
   @HttpCode(201)
   async createWash(@Param('id') id: string, @Body() dto: CreateStencilWashDto) {
     const wash = await this.stencilsService.createWash(id, dto);
@@ -122,6 +149,10 @@ export class StencilsController {
   }
 
   @Post('stencilCode/:stencilCode/washes')
+  @ApiOperation({ summary: 'Create a wash record for a specific stencil by code' })
+  @ApiResponse({ status: 201, description: 'The wash record has been successfully created.' })
+  @ApiResponse({ status: 404, description: 'Stencil not found.' })
+  @ApiResponse({ status: 409, description: 'Inactive stencil cannot receive new washes.' })
   @HttpCode(201)
   async createWashByCode(
     @Param('stencilCode') stencilCode: string,
@@ -135,7 +166,26 @@ export class StencilsController {
     return wash;
   }
 
+  @Get(':id/wash-analytics')
+  @ApiOperation({ summary: 'Retrieve stencil wash analytics for the selected period' })
+  @ApiResponse({ status: 200, description: 'Returns classified wash analytics.' })
+  @ApiResponse({ status: 404, description: 'Stencil not found.' })
+  async findWashAnalytics(
+    @Param('id') id: string,
+    @Query('days') days?: string,
+  ) {
+    const analytics = await this.stencilsService.findWashAnalytics(
+      id,
+      days ? Number(days) : undefined,
+    );
+    if (!analytics) throw new NotFoundException();
+    return analytics;
+  }
+
   @Get(':id')
+  @ApiOperation({ summary: 'Retrieve a specific stencil' })
+  @ApiResponse({ status: 200, description: 'Returns the requested stencil.' })
+  @ApiResponse({ status: 404, description: 'Stencil not found.' })
   async findOne(@Param('id') id: string) {
     const stencil = await this.stencilsService.findOne(id);
     if (!stencil) throw new NotFoundException();
@@ -143,6 +193,9 @@ export class StencilsController {
   }
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Update a specific stencil' })
+  @ApiResponse({ status: 200, description: 'Returns the updated stencil.' })
+  @ApiResponse({ status: 404, description: 'Stencil not found.' })
   async update(@Param('id') id: string, @Body() dto: UpdateStencilDto) {
     const stencil = await this.stencilsService.update(id, dto);
     if (!stencil) throw new NotFoundException();
@@ -150,6 +203,9 @@ export class StencilsController {
   }
 
   @Delete(':id')
+  @ApiOperation({ summary: 'Delete a specific stencil' })
+  @ApiResponse({ status: 204, description: 'The stencil has been successfully deleted.' })
+  @ApiResponse({ status: 404, description: 'Stencil not found.' })
   @HttpCode(204)
   async remove(@Param('id') id: string) {
     const stencil = await this.stencilsService.remove(id);

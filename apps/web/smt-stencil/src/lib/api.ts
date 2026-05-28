@@ -42,7 +42,7 @@ export const stencilsApi = {
       throw new Error("[SIMULAÇÃO] SGS indisponível");
     }
     const washesResponse = await apiRequest<ApiTodayStencilWashesResponse>(
-      "/stencils/washes/today?limit=100",
+      "/stencils/washes/today",
     );
     return withTodayStencilCountsAndAnomalies(
       getPaginatedRows(washesResponse).map(normalizeTodayStencilWash),
@@ -57,7 +57,7 @@ export const platesApi = {
       throw new Error("[SIMULAÇÃO] CLP indisponível");
     }
     const washesResponse = await apiRequest<ApiTodayPlateWashesResponse>(
-      "/plates/washes/today?limit=100",
+      "/plates/washes/today",
     );
     return withTodayPlateCounts(
       getPaginatedRows(washesResponse).map(normalizeTodayPlateWash),
@@ -76,11 +76,27 @@ function buildQuery(params: Record<string, string | undefined>) {
   return queryString ? `?${queryString}` : "";
 }
 
+async function getAllPages<T>(endpoint: string, limit = 100): Promise<T[]> {
+  const first = await apiRequest<ApiPaginatedResponse<T>>(
+    `${endpoint}${endpoint.includes("?") ? "&" : "?"}page=1&limit=${limit}`,
+  );
+  const items = [...first.items];
+
+  for (let page = 2; page <= first.total_pages; page += 1) {
+    const response = await apiRequest<ApiPaginatedResponse<T>>(
+      `${endpoint}${endpoint.includes("?") ? "&" : "?"}page=${page}&limit=${limit}`,
+    );
+    items.push(...response.items);
+  }
+
+  return items;
+}
+
 export const historyApi = {
   getStencils: async (
     filters: HistoryStencilFilters = {},
-  ): Promise<HistoryStencilSummary[]> =>
-    apiRequest<HistoryStencilSummary[]>(
+  ): Promise<HistoryStencilSummary[]> => {
+    return apiRequest<HistoryStencilSummary[]>(
       `/stencils${buildQuery({
         stencilCode: filters.codigo,
         manufactureId: filters.idFabricante,
@@ -88,23 +104,30 @@ export const historyApi = {
         status: filters.status,
         lineName: filters.linha,
       })}`,
-    ),
+    );
+  },
 
-  getStencil: async (id: string): Promise<HistoryStencilDetail> =>
-    apiRequest<HistoryStencilDetail>(`/stencils/${id}`),
+  getStencil: async (id: string): Promise<HistoryStencilDetail> => {
+    return apiRequest<HistoryStencilDetail>(`/stencils/${id}`);
+  },
+
+  getStencilWashAnalytics: async (
+    id: string,
+    days = 30,
+  ): Promise<StencilWashAnalytics> => {
+    return apiRequest<StencilWashAnalytics>(`/stencils/${id}/wash-analytics?days=${days}`);
+  },
 
   getStencilWashes: async (
     filters: HistoryStencilFilters = {},
   ): Promise<ApiStencil[]> => {
-    const [washesResponse, stencils] = await Promise.all([
-      apiRequest<ApiPaginatedResponse<ApiStencil>>(
-        "/stencils/washes?limit=100",
-      ),
+    const [washes, stencils] = await Promise.all([
+      getAllPages<ApiStencil>("/stencils/washes"),
       apiRequest<HistoryStencilSummary[]>("/stencils"),
     ]);
     const stencilsById = new Map(stencils.map((stencil) => [stencil.id, stencil]));
 
-    return washesResponse.items
+    return washes
       .map((wash) => ({
         ...wash,
         asset: stencilsById.get(wash.stencil_id),
@@ -138,29 +161,31 @@ export const historyApi = {
 
   getPlates: async (
     filters: HistoryPlateFilters = {},
-  ): Promise<HistoryPlateSummary[]> =>
-    apiRequest<HistoryPlateSummary[]>(
+  ): Promise<HistoryPlateSummary[]> => {
+    return apiRequest<HistoryPlateSummary[]>(
       `/plates${buildQuery({
         plate_model: filters.modelo,
         blank_id: filters.blankId,
         serial: filters.serial,
         line: filters.linha,
       })}`,
-    ),
+    );
+  },
 
-  getPlate: async (id: string): Promise<HistoryPlateDetail> =>
-    apiRequest<HistoryPlateDetail>(`/plates/${id}`),
+  getPlate: async (id: string): Promise<HistoryPlateDetail> => {
+    return apiRequest<HistoryPlateDetail>(`/plates/${id}`);
+  },
 
   getPlateWashes: async (
     filters: HistoryPlateFilters = {},
   ): Promise<ApiPlate[]> => {
-    const [washesResponse, plates] = await Promise.all([
-      apiRequest<ApiPaginatedResponse<ApiPlate>>("/plates/washes?limit=100"),
+    const [washes, plates] = await Promise.all([
+      getAllPages<ApiPlate>("/plates/washes"),
       apiRequest<HistoryPlateSummary[]>("/plates"),
     ]);
     const platesById = new Map(plates.map((plate) => [plate.id, plate]));
 
-    return washesResponse.items
+    return washes
       .map((wash) => ({
         ...wash,
         asset: platesById.get(wash.plate_id),
@@ -186,8 +211,9 @@ export const historyApi = {
       });
   },
 
-  getLines: async (): Promise<string[]> =>
-    apiRequest<string[]>("/stencils/lines"),
+  getLines: async (): Promise<string[]> => {
+    return apiRequest<string[]>("/stencils/lines");
+  },
 };
 
 // ── Shapes exatos que o back entrega ─────────────────────────────────────────
@@ -383,13 +409,7 @@ function withTodayPlateCounts(washes: ApiPlate[]): ApiPlate[] {
 }
 
 function isOutsideStencilReservedHours(iso: string) {
-  const hour = Number(
-    new Intl.DateTimeFormat("pt-BR", {
-      timeZone: "America/Manaus",
-      hour: "2-digit",
-      hour12: false,
-    }).format(new Date(iso)),
-  );
+  const hour = Number(iso.split("T")[1]?.split(":")[0]);
 
   return hour !== 11 && hour !== 16;
 }
@@ -465,6 +485,52 @@ export interface HistoryStencilSummary {
 
 export interface HistoryStencilDetail extends HistoryStencilSummary {
   washes_history: HistoryStencilWash[];
+}
+
+export type WashAnalyticsCategory = "planned" | "anomalous" | "multiple";
+
+export interface StencilWashAnalyticsPoint {
+  id: string;
+  operator: string;
+  created_at: string;
+  date_key: string;
+  day_label: string;
+  day_index: number;
+  time_label: string;
+  hour_decimal: number;
+  category: WashAnalyticsCategory;
+}
+
+export interface StencilWashIntervalBar {
+  date_key: string;
+  day_label: string;
+  day_index: number;
+  interval_minutes: number | null;
+  category: WashAnalyticsCategory;
+  wash_ids: string[];
+}
+
+export interface StencilWashAnalytics {
+  stencil: HistoryStencilSummary;
+  period: {
+    days: number;
+    start: string;
+    end: string;
+  };
+  counts: {
+    planned: number;
+    anomalous: number;
+    multiple: number;
+    total: number;
+  };
+  time_points: StencilWashAnalyticsPoint[];
+  interval_bars: StencilWashIntervalBar[];
+  interval_summary: {
+    shortest_interval_minutes: number | null;
+    shortest_interval_date: string | null;
+    longest_interval_minutes: number | null;
+    longest_interval_date: string | null;
+  };
 }
 
 export interface HistoryPlateWash {

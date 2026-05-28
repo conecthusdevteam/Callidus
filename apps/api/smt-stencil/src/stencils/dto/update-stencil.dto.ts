@@ -1,4 +1,4 @@
-import { PartialType } from '@nestjs/mapped-types';
+import { PartialType } from '@nestjs/swagger';
 import { CreateStencilDto } from './create-stencil.dto';
 
-export class UpdateStencilDto extends PartialType(CreateStencilDto) {}
+export class UpdateStencilDto extends PartialType(CreateStencilDto) { }

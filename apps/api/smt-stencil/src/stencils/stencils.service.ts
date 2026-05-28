@@ -1,6 +1,6 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Like, Repository } from 'typeorm';
+import { Between, LessThan, Like, Repository } from 'typeorm';
 import { CreateStencilWashDto } from './dto/create-stencil-wash.dto';
 import { CreateStencilDto } from './dto/create-stencil.dto';
 import { UpdateStencilDto } from './dto/update-stencil.dto';
@@ -10,6 +10,10 @@ import { Stencil, WashStatus } from './entities/stencil.entity';
 const MANAUS_TIME_ZONE = 'America/Manaus';
 const MANAUS_UTC_OFFSET_HOURS = 4;
 const RESERVED_WASH_HOURS = [11, 16];
+const DEFAULT_ANALYTICS_DAYS = 30;
+const ALLOWED_ANALYTICS_DAYS = [30] as const;
+
+type WashCategory = 'planned' | 'anomalous' | 'multiple';
 
 type StencilWashHistoryItem = {
   id: string;
@@ -26,6 +30,27 @@ type StencilMetrics = {
   mid_range: number | null;
   anomaly: boolean;
   washes_history: StencilWashHistoryItem[];
+};
+
+type StencilWashAnalyticsPoint = {
+  id: string;
+  operator: string;
+  created_at: Date;
+  date_key: string;
+  day_label: string;
+  day_index: number;
+  time_label: string;
+  hour_decimal: number;
+  category: WashCategory;
+};
+
+type StencilWashIntervalBar = {
+  date_key: string;
+  day_label: string;
+  day_index: number;
+  interval_minutes: number | null;
+  category: WashCategory;
+  wash_ids: string[];
 };
 
 type StencilFilters = {
@@ -51,7 +76,7 @@ export class StencilsService {
     private readonly repository: Repository<Stencil>,
     @InjectRepository(StencilWash)
     private readonly washRepository: Repository<StencilWash>,
-  ) { }
+  ) {}
 
   async create(dto: CreateStencilDto) {
     const existingStencil = await this.findByStencilCode(dto.stencilCode);
@@ -73,9 +98,7 @@ export class StencilsService {
         ...(filters?.manufactureId
           ? { manufactureId: Like(`%${filters.manufactureId}%`) }
           : {}),
-        ...(filters?.country
-          ? { country: Like(`%${filters.country}%`) }
-          : {}),
+        ...(filters?.country ? { country: Like(`%${filters.country}%`) } : {}),
         ...(filters?.status ? { status: filters.status as WashStatus } : {}),
         ...(filters?.lineName ? { lineName: filters.lineName } : {}),
       },
@@ -94,10 +117,6 @@ export class StencilsService {
 
   async findTodayStencilWashes(filters?: StencilFilters) {
     const { startUtc, endUtc } = this.getManausDayRange(new Date());
-
-    const page = filters?.page || 1;
-    const limit = filters?.limit || 10;
-    const skip = (page - 1) * limit;
 
     const queryBuilder = this.washRepository
       .createQueryBuilder('wash')
@@ -139,7 +158,10 @@ export class StencilsService {
 
     queryBuilder.orderBy('wash.createdAt', 'DESC');
 
-    queryBuilder.skip(skip).take(limit);
+    if (filters?.page && filters?.limit) {
+      const skip = (filters.page - 1) * filters.limit;
+      queryBuilder.skip(skip).take(filters.limit);
+    }
 
     const [data, total] = await queryBuilder.getManyAndCount();
 
@@ -147,9 +169,9 @@ export class StencilsService {
       data,
       meta: {
         total,
-        page,
-        limit,
-        total_pages: Math.ceil(total / limit),
+        page: filters?.page || 1,
+        limit: filters?.limit || total,
+        total_pages: filters?.limit ? Math.ceil(total / filters.limit) : 1,
       },
     };
   }
@@ -165,6 +187,81 @@ export class StencilsService {
     if (!stencil) return null;
 
     return this.toDetail(stencil);
+  }
+
+  async findWashAnalytics(id: string, days = DEFAULT_ANALYTICS_DAYS) {
+    const stencil = await this.repository.findOne({
+      where: { id },
+      relations: {
+        washes: true,
+      },
+    });
+
+    if (!stencil) return null;
+
+    const periodDays = this.normalizeAnalyticsDays(days);
+    const { startUtc, endUtc } = this.getManausAnalyticsRange(
+      new Date(),
+      periodDays,
+    );
+    const [periodWashes, previousWashes] = await Promise.all([
+      this.washRepository.find({
+        where: {
+          stencilId: id,
+          createdAt: Between(startUtc, endUtc),
+        },
+        order: { createdAt: 'ASC' },
+      }),
+      this.washRepository.find({
+        where: {
+          stencilId: id,
+          createdAt: LessThan(startUtc),
+        },
+        order: { createdAt: 'DESC' },
+        take: 1,
+      }),
+    ]);
+    const previousWash = previousWashes[0] ?? null;
+    const washesByDay = this.groupWashesByManausDay(periodWashes);
+    const categoriesByWashId = this.getWashCategories(
+      periodWashes,
+      washesByDay,
+    );
+    const timePoints = periodWashes.map((wash) =>
+      this.toAnalyticsPoint(
+        wash,
+        startUtc,
+        categoriesByWashId.get(wash.id) ?? 'anomalous',
+      ),
+    );
+    const intervalBars = this.getIntervalBars(
+      periodWashes,
+      previousWash,
+      startUtc,
+      washesByDay,
+      categoriesByWashId,
+    );
+
+    return {
+      stencil: this.toSummary(stencil),
+      period: {
+        days: periodDays,
+        start: startUtc,
+        end: endUtc,
+      },
+      counts: {
+        planned: timePoints.filter((point) => point.category === 'planned')
+          .length,
+        anomalous: timePoints.filter((point) => point.category === 'anomalous')
+          .length,
+        multiple: timePoints.filter((point) => point.category === 'multiple')
+          .length,
+        total: timePoints.length,
+      },
+      time_points: timePoints,
+      interval_bars: intervalBars,
+      interval_summary: this.getIntervalSummary(intervalBars),
+    };
   }
 
   findByStencilCode(stencilCode: string): Promise<Stencil | null> {
@@ -187,6 +284,9 @@ export class StencilsService {
   async createWash(id: string, dto: CreateStencilWashDto) {
     const stencil = await this.repository.findOneBy({ id });
     if (!stencil) return null;
+    if (stencil.status === WashStatus.INACTIVE) {
+      throw new ConflictException('Inactive stencils cannot receive new washes');
+    }
 
     const wash = this.washRepository.create({
       stencilId: stencil.id,
@@ -308,8 +408,8 @@ export class StencilsService {
     const average =
       intervals.length > 0
         ? Math.round(
-          intervals.reduce((sum, value) => sum + value, 0) / intervals.length,
-        )
+            intervals.reduce((sum, value) => sum + value, 0) / intervals.length,
+          )
         : null;
 
     const washesByManausDay = this.countWashesByManausDay(orderedAsc);
@@ -345,6 +445,132 @@ export class StencilsService {
     return Math.round((current.getTime() - previous.getTime()) / 60000);
   }
 
+  private getWashCategories(
+    washes: StencilWash[],
+    washesByDay: Map<string, StencilWash[]>,
+  ) {
+    return washes.reduce((acc, wash) => {
+      const manausParts = this.getManausDateParts(wash.createdAt);
+      const hasMultiple =
+        (washesByDay.get(manausParts.dayKey)?.length ?? 0) > 1;
+      const isPlanned = RESERVED_WASH_HOURS.includes(manausParts.hour);
+      acc.set(
+        wash.id,
+        hasMultiple ? 'multiple' : isPlanned ? 'planned' : 'anomalous',
+      );
+      return acc;
+    }, new Map<string, WashCategory>());
+  }
+
+  private toAnalyticsPoint(
+    wash: StencilWash,
+    startUtc: Date,
+    category: WashCategory,
+  ): StencilWashAnalyticsPoint {
+    const manausParts = this.getManausDateParts(wash.createdAt);
+
+    return {
+      id: wash.id,
+      operator: wash.operator,
+      created_at: wash.createdAt,
+      date_key: manausParts.dayKey,
+      day_label: manausParts.dayLabel,
+      day_index: this.diffDaysFromRangeStart(manausParts.dayKey, startUtc),
+      time_label: manausParts.timeLabel,
+      hour_decimal: manausParts.hour + manausParts.minute / 60,
+      category,
+    };
+  }
+
+  private getIntervalBars(
+    periodWashes: StencilWash[],
+    previousWash: StencilWash | null,
+    startUtc: Date,
+    washesByDay: Map<string, StencilWash[]>,
+    categoriesByWashId: Map<string, WashCategory>,
+  ): StencilWashIntervalBar[] {
+    const previousByWashId = new Map<string, StencilWash>();
+
+    periodWashes.forEach((wash, index) => {
+      const previous = index === 0 ? previousWash : periodWashes[index - 1];
+      if (previous) previousByWashId.set(wash.id, previous);
+    });
+
+    return [...washesByDay.entries()]
+      .map(([dateKey, washes]) => {
+        const ordered = [...washes].sort(
+          (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
+        );
+        const category =
+          categoriesByWashId.get(ordered[0]?.id ?? '') ?? 'anomalous';
+        const dayParts = this.getManausDateParts(ordered[0].createdAt);
+
+        if (ordered.length > 1) {
+          const intervals = ordered
+            .slice(1)
+            .map((wash, index) =>
+              this.diffMinutes(wash.createdAt, ordered[index].createdAt),
+            );
+
+          return {
+            date_key: dateKey,
+            day_label: dayParts.dayLabel,
+            day_index: this.diffDaysFromRangeStart(dateKey, startUtc),
+            interval_minutes: Math.min(...intervals),
+            category,
+            wash_ids: ordered.map((wash) => wash.id),
+          };
+        }
+
+        const previous = previousByWashId.get(ordered[0].id);
+
+        return {
+          date_key: dateKey,
+          day_label: dayParts.dayLabel,
+          day_index: this.diffDaysFromRangeStart(dateKey, startUtc),
+          interval_minutes: previous
+            ? this.diffMinutes(ordered[0].createdAt, previous.createdAt)
+            : null,
+          category,
+          wash_ids: [ordered[0].id],
+        };
+      })
+      .sort((a, b) => a.day_index - b.day_index);
+  }
+
+  private getIntervalSummary(intervalBars: StencilWashIntervalBar[]) {
+    const barsWithInterval = intervalBars.filter(
+      (bar): bar is StencilWashIntervalBar & { interval_minutes: number } =>
+        bar.interval_minutes !== null,
+    );
+
+    const shortest = barsWithInterval.reduce<
+      (StencilWashIntervalBar & { interval_minutes: number }) | null
+    >(
+      (current, bar) =>
+        !current || bar.interval_minutes < current.interval_minutes
+          ? bar
+          : current,
+      null,
+    );
+    const longest = barsWithInterval.reduce<
+      (StencilWashIntervalBar & { interval_minutes: number }) | null
+    >(
+      (current, bar) =>
+        !current || bar.interval_minutes > current.interval_minutes
+          ? bar
+          : current,
+      null,
+    );
+
+    return {
+      shortest_interval_minutes: shortest?.interval_minutes ?? null,
+      shortest_interval_date: shortest?.day_label ?? null,
+      longest_interval_minutes: longest?.interval_minutes ?? null,
+      longest_interval_date: longest?.day_label ?? null,
+    };
+  }
+
   private isAnomaly(createdAt: Date, washesByManausDay: Map<string, number>) {
     const manausParts = this.getManausDateParts(createdAt);
     const hasMoreThanOneWashInDay =
@@ -364,6 +590,14 @@ export class StencilsService {
     }, new Map<string, number>());
   }
 
+  private groupWashesByManausDay(washes: StencilWash[]) {
+    return washes.reduce((acc, wash) => {
+      const { dayKey } = this.getManausDateParts(wash.createdAt);
+      acc.set(dayKey, [...(acc.get(dayKey) ?? []), wash]);
+      return acc;
+    }, new Map<string, StencilWash[]>());
+  }
+
   private getManausDateParts(date: Date) {
     const parts = new Intl.DateTimeFormat('en-CA', {
       timeZone: MANAUS_TIME_ZONE,
@@ -371,6 +605,7 @@ export class StencilsService {
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
+      minute: '2-digit',
       hour12: false,
     }).formatToParts(date);
 
@@ -379,8 +614,22 @@ export class StencilsService {
 
     return {
       dayKey: `${value('year')}-${value('month')}-${value('day')}`,
+      dayLabel: `${value('day')}/${value('month')}`,
       hour: Number(value('hour')),
+      minute: Number(value('minute')),
+      timeLabel: `${value('hour')}:${value('minute')}`,
     };
+  }
+
+  private diffDaysFromRangeStart(dayKey: string, startUtc: Date) {
+    const [year, month, day] = dayKey.split('-').map(Number);
+    const currentStartUtc = new Date(
+      Date.UTC(year, month - 1, day, MANAUS_UTC_OFFSET_HOURS, 0, 0, 0),
+    );
+
+    return Math.round(
+      (currentStartUtc.getTime() - startUtc.getTime()) / (24 * 60 * 60 * 1000),
+    );
   }
 
   private getManausDayRange(date: Date) {
@@ -390,6 +639,24 @@ export class StencilsService {
       Date.UTC(year, month - 1, day, MANAUS_UTC_OFFSET_HOURS, 0, 0, 0),
     );
     const endUtc = new Date(startUtc.getTime() + 24 * 60 * 60 * 1000 - 1);
+
+    return { startUtc, endUtc };
+  }
+
+  private normalizeAnalyticsDays(days: number) {
+    return ALLOWED_ANALYTICS_DAYS.includes(
+      days as (typeof ALLOWED_ANALYTICS_DAYS)[number],
+    )
+      ? days
+      : DEFAULT_ANALYTICS_DAYS;
+  }
+
+  private getManausAnalyticsRange(date: Date, days: number) {
+    const { startUtc: todayStartUtc } = this.getManausDayRange(date);
+    const startUtc = new Date(
+      todayStartUtc.getTime() - (days - 1) * 24 * 60 * 60 * 1000,
+    );
+    const endUtc = new Date(todayStartUtc.getTime() + 24 * 60 * 60 * 1000 - 1);
 
     return { startUtc, endUtc };
   }
