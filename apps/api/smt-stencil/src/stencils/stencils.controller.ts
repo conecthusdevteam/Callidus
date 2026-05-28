@@ -140,6 +140,7 @@ export class StencilsController {
   @ApiOperation({ summary: 'Create a wash record for a specific stencil' })
   @ApiResponse({ status: 201, description: 'The wash record has been successfully created.' })
   @ApiResponse({ status: 404, description: 'Stencil not found.' })
+  @ApiResponse({ status: 409, description: 'Inactive stencil cannot receive new washes.' })
   @HttpCode(201)
   async createWash(@Param('id') id: string, @Body() dto: CreateStencilWashDto) {
     const wash = await this.stencilsService.createWash(id, dto);
@@ -151,6 +152,7 @@ export class StencilsController {
   @ApiOperation({ summary: 'Create a wash record for a specific stencil by code' })
   @ApiResponse({ status: 201, description: 'The wash record has been successfully created.' })
   @ApiResponse({ status: 404, description: 'Stencil not found.' })
+  @ApiResponse({ status: 409, description: 'Inactive stencil cannot receive new washes.' })
   @HttpCode(201)
   async createWashByCode(
     @Param('stencilCode') stencilCode: string,
@@ -162,6 +164,22 @@ export class StencilsController {
     );
     if (!wash) throw new NotFoundException();
     return wash;
+  }
+
+  @Get(':id/wash-analytics')
+  @ApiOperation({ summary: 'Retrieve stencil wash analytics for the selected period' })
+  @ApiResponse({ status: 200, description: 'Returns classified wash analytics.' })
+  @ApiResponse({ status: 404, description: 'Stencil not found.' })
+  async findWashAnalytics(
+    @Param('id') id: string,
+    @Query('days') days?: string,
+  ) {
+    const analytics = await this.stencilsService.findWashAnalytics(
+      id,
+      days ? Number(days) : undefined,
+    );
+    if (!analytics) throw new NotFoundException();
+    return analytics;
   }
 
   @Get(':id')
