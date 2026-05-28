@@ -1045,7 +1045,7 @@ function StencilDetailsModal({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
           id="stencil-report-modal"
-          className="max-h-[88vh] max-w-[1060px] overflow-y-auto rounded-md p-0"
+          className="max-h-[88vh] max-w-[1060px] overflow-y-hidden rounded-md p-0"
         >
           <DialogHeader className="sr-only">
             <DialogTitle>Informações detalhadas do stencil</DialogTitle>
@@ -1209,8 +1209,10 @@ function StencilDetailsModal({
                     </div>
                   ) : (
                     <>
-                      <WashTimeChart analytics={analytics} />
-                      <WashIntervalChart analytics={analytics} />
+                      <div className="flex-1 overflow-y-auto max-h-[400px] space-y-4 p-5">
+                        <WashTimeChart analytics={analytics} />
+                        <WashIntervalChart analytics={analytics} />
+                      </div>
                     </>
                   )}
                 </div>
