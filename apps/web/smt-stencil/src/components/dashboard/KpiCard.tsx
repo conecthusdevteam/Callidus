@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
 interface KpiCardProps {
-  label: string;
+  label: React.ReactNode;
   value: string | number;
   variant?: "default" | "primary" | "neutral" | "attention";
   className?: string;
