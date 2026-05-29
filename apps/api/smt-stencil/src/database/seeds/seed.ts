@@ -67,82 +67,67 @@ const PHASES = [1, 2];
 
 const INACTIVE_STENCIL_INTERVAL = 7;
 const ANALYTICS_SEED_DAYS = 30;
-const PLANNED_MANAUS_HOURS = [11, 16];
-const ANOMALOUS_MANAUS_HOURS = [7, 8, 9, 10, 12, 13, 14, 15, 17];
 
 const MIN_HOUR_UTC = 11;
 const MAX_HOUR_UTC = 21;
+
+const PLANNED_HOURS_UTC = [15, 20];
+const ANOMALOUS_HOURS_UTC = [11, 12, 13, 14, 16, 17, 18, 19, 21];
+
+const SINGLE_WASH_PERCENTAGE = 0.85;
+const PEAK_HOUR_PROBABILITY = 0.75;
+
+const PEAK_HOURS_UTC = [
+  { start: 15, end: 16 },
+  { start: 20, end: 21 }
+];
+
 
 function isWeekday(date: Date): boolean {
   const day = date.getDay();
   return day !== 0 && day !== 6;
 }
 
-function randomDateForPastDay(date: Date, planned: boolean = false): Date {
-  const PEAK_HOURS = [
-    { start: 15, end: 16 },
-    { start: 20, end: 21 }
-  ];
+function getLastBusinessDays(days: number = ANALYTICS_SEED_DAYS): Date[] {
+  const businessDays: Date[] = [];
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
 
-  const usePeakHour = planned ? Math.random() < 0.9 : Math.random() < 0.65;
+  let currentDate = new Date(today);
+  let daysFound = 0;
 
-  let hours: number;
-  let minutes: number;
-  let seconds: number;
-
-  if (usePeakHour) {
-    const peak = PEAK_HOURS[random(0, PEAK_HOURS.length - 1)];
-    hours = random(peak.start, peak.end);
-    minutes = random(0, hours === peak.end ? 0 : 59);
-    seconds = random(0, 59);
-  } else {
-    hours = random(MIN_HOUR_UTC, MAX_HOUR_UTC);
-    minutes = random(0, hours === MAX_HOUR_UTC ? 0 : 59);
-    seconds = random(0, 59);
+  while (daysFound < days) {
+    if (isWeekday(currentDate)) {
+      businessDays.unshift(new Date(currentDate));
+      daysFound++;
+    }
+    currentDate.setUTCDate(currentDate.getUTCDate() - 1);
   }
 
+  return businessDays;
+}
+
+function randomPastDate(date: Date): Date {
+  const hours = random(MIN_HOUR_UTC, MAX_HOUR_UTC);
+  const minutes = random(0, hours === MAX_HOUR_UTC ? 0 : 59);
+  const seconds = random(0, 59);
+
   const result = new Date(date);
-  result.setHours(0, 0, 0, 0);
-  result.setHours(hours, minutes, seconds);
+  result.setUTCHours(0, 0, 0, 0);
+  result.setUTCHours(hours, minutes, seconds);
 
   return result;
 }
 
-function randomDateForToday(planned: boolean = false): Date {
+function randomCurrentDate(): Date {
   const now = new Date();
   const currentHourUTC = now.getUTCHours();
   const currentMinutesUTC = now.getUTCMinutes();
   const currentSecondsUTC = now.getUTCSeconds();
 
-  const PEAK_HOURS = [
-    { start: 15, end: 16 },
-    { start: 20, end: 21 }
-  ];
-
-  const usePeakHour = planned ? Math.random() < 0.9 : Math.random() < 0.65;
-
-  if (usePeakHour) {
-    const peak = PEAK_HOURS[random(0, PEAK_HOURS.length - 1)];
-    let hours = random(peak.start, peak.end);
-
-    if (hours > currentHourUTC) {
-      hours = currentHourUTC;
-    }
-
-    const isCurrentHour = hours === currentHourUTC;
-    const minutes = isCurrentHour
-      ? random(0, currentMinutesUTC)
-      : random(0, hours === peak.end ? 0 : 59);
-
-    const seconds = random(0, isCurrentHour && minutes === currentMinutesUTC ? currentSecondsUTC : 59);
-
+  if (currentHourUTC < MIN_HOUR_UTC) {
     const date = new Date(now);
-    date.setUTCHours(hours, minutes, seconds, 0);
-
-    if (date > now) {
-      return new Date(now);
-    }
-
+    date.setUTCHours(MIN_HOUR_UTC, 0, 0, 0);
     return date;
   }
 
@@ -153,12 +138,6 @@ function randomDateForToday(planned: boolean = false): Date {
 
     const date = new Date(now);
     date.setUTCHours(hours, minutes, seconds, 0);
-    return date;
-  }
-
-  if (currentHourUTC < MIN_HOUR_UTC) {
-    const date = new Date(now);
-    date.setUTCHours(MIN_HOUR_UTC, 0, 0, 0);
     return date;
   }
 
@@ -181,33 +160,147 @@ function randomDateForToday(planned: boolean = false): Date {
   return date;
 }
 
-function getLast30Days(): Date[] {
-  const days: Date[] = [];
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+function randomWashDate(dayOffset: number, planned: boolean, forcePeakHour: boolean = false): Date {
+  const now = new Date();
+  const targetDate = new Date(now);
+  targetDate.setUTCDate(targetDate.getUTCDate() - dayOffset);
+  targetDate.setUTCHours(0, 0, 0, 0);
 
-  for (let i = 0; i < 30; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() - i)
-    days.push(date)
+  const isToday = dayOffset === 0;
+  let hourUTC: number;
+  let minute: number;
+  let second: number;
+
+  if (forcePeakHour) {
+    const peak = PEAK_HOURS_UTC[random(0, PEAK_HOURS_UTC.length - 1)];
+    hourUTC = random(peak.start, peak.end);
+    minute = random(0, hourUTC === peak.end ? 0 : 59);
+    second = random(0, 59);
+  }
+  else if (planned) {
+    if (Math.random() < 0.95) {
+      const peak = PEAK_HOURS_UTC[random(0, PEAK_HOURS_UTC.length - 1)];
+      hourUTC = random(peak.start, peak.end);
+      minute = random(0, hourUTC === peak.end ? 0 : 59);
+      second = random(0, 59);
+    } else {
+      hourUTC = PLANNED_HOURS_UTC[random(0, PLANNED_HOURS_UTC.length - 1)];
+      minute = random(0, 59);
+      second = random(0, 59);
+    }
+  }
+  else {
+    hourUTC = ANOMALOUS_HOURS_UTC[random(0, ANOMALOUS_HOURS_UTC.length - 1)];
+    minute = random(0, 59);
+    second = random(0, 59);
   }
 
-  return days.reverse();
+  const resultDate = new Date(targetDate);
+  resultDate.setUTCHours(hourUTC, minute, second, 0);
+
+  if (isToday && resultDate > now) {
+    const currentHourUTC = now.getUTCHours();
+    const currentMinutesUTC = now.getUTCMinutes();
+    const currentSecondsUTC = now.getUTCSeconds();
+
+    if (currentHourUTC >= MIN_HOUR_UTC) {
+      resultDate.setUTCHours(currentHourUTC, currentMinutesUTC, currentSecondsUTC, 0);
+    } else {
+      resultDate.setUTCHours(MIN_HOUR_UTC, 0, 0, 0);
+    }
+  }
+
+  return resultDate;
 }
 
-function generateWashDates(washCount: number, forceSingleWash: boolean = false, planned: boolean = false): Date[] {
-  const weekdays = getLast30Days();
+function generateStencilAnalyticsWashDates(index: number): Date[] {
+  const dates: Date[] = [];
+  const businessDays = getLastBusinessDays(ANALYTICS_SEED_DAYS);
+
+  const isSingleWashProfile = Math.random() < SINGLE_WASH_PERCENTAGE;
+
+  if (isSingleWashProfile) {
+    const washCount = random(15, 25);
+
+    const shuffledDays = [...businessDays];
+    for (let i = shuffledDays.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffledDays[i], shuffledDays[j]] = [shuffledDays[j], shuffledDays[i]];
+    }
+
+    const selectedDays = shuffledDays.slice(0, Math.min(washCount, businessDays.length));
+
+    for (const day of selectedDays) {
+      const dayOffset = Math.floor((new Date().getTime() - day.getTime()) / (1000 * 60 * 60 * 24));
+      const usePeakHour = Math.random() < PEAK_HOUR_PROBABILITY;
+      dates.push(randomWashDate(dayOffset, true, usePeakHour));
+    }
+  } else {
+    const multipleDaysCount = random(10, Math.min(20, businessDays.length));
+    const multipleDays = [...businessDays.slice(-multipleDaysCount)];
+
+    for (const day of multipleDays) {
+      const dayOffset = Math.floor((new Date().getTime() - day.getTime()) / (1000 * 60 * 60 * 24));
+
+      dates.push(randomWashDate(dayOffset, true, true));
+
+      if (Math.random() < 0.4) {
+        dates.push(randomWashDate(dayOffset, false, false));
+      }
+
+      if (Math.random() < 0.2) {
+        dates.push(randomWashDate(dayOffset, false, false));
+      }
+    }
+
+    const extraWashesCount = random(5, 12);
+    const remainingDays = [...businessDays];
+    for (let i = remainingDays.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [remainingDays[i], remainingDays[j]] = [remainingDays[j], remainingDays[i]];
+    }
+
+    const extraDays = remainingDays.slice(0, extraWashesCount);
+    for (const day of extraDays) {
+      const dayOffset = Math.floor((new Date().getTime() - day.getTime()) / (1000 * 60 * 60 * 24));
+      const usePeakHour = Math.random() < PEAK_HOUR_PROBABILITY;
+      dates.push(randomWashDate(dayOffset, true, usePeakHour));
+    }
+  }
+
+  return dates.sort((a, b) => a.getTime() - b.getTime());
+}
+
+function getLastWeekdays(days: number = 5): Date[] {
+  const weekdays: Date[] = [];
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+
+  let currentDate = new Date(today);
+
+  while (weekdays.length < days) {
+    if (isWeekday(currentDate)) {
+      weekdays.unshift(new Date(currentDate));
+    }
+    currentDate.setUTCDate(currentDate.getUTCDate() - 1);
+  }
+
+  return weekdays;
+}
+
+function generateWashDates(washCount: number, forceSingleWash: boolean = false): Date[] {
+  const weekdays = getLastWeekdays(5);
   const dates: Date[] = [];
 
   if (forceSingleWash) {
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setUTCHours(0, 0, 0, 0);
 
     const dayIndex = random(0, weekdays.length - 1);
     const selectedDay = weekdays[dayIndex];
     const isToday = selectedDay.getTime() === today.getTime();
 
-    const washDate = isToday ? randomDateForToday(planned) : randomDateForPastDay(selectedDay, planned);
+    const washDate = isToday ? randomCurrentDate() : randomPastDate(selectedDay);
     dates.push(washDate);
 
     return dates;
@@ -217,14 +310,14 @@ function generateWashDates(washCount: number, forceSingleWash: boolean = false, 
     const dayIndex = random(0, weekdays.length - 1);
     const selectedDay = weekdays[dayIndex];
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setUTCHours(0, 0, 0, 0);
 
     let washDate: Date;
 
     if (selectedDay.getTime() === today.getTime()) {
-      washDate = randomDateForToday();
+      washDate = randomCurrentDate();
     } else {
-      washDate = randomDateForPastDay(selectedDay);
+      washDate = randomPastDate(selectedDay);
     }
 
     dates.push(washDate);
@@ -244,7 +337,7 @@ function generateStencilData(index: number): Partial<Stencil> {
     index % INACTIVE_STENCIL_INTERVAL === 0
       ? WashStatus.INACTIVE
       : WashStatus.ACTIVE;
-  const createdAt = randomDateForToday();
+  const createdAt = randomCurrentDate();
 
   const stencil = new Stencil();
   stencil.stencilCode = `${stencilCodeBase}-${String(index).padStart(4, '0')}`;
@@ -269,7 +362,7 @@ function generatePlateData(index: number): Partial<Plate> {
   const country = COUNTRIES[random(0, COUNTRIES.length - 1)];
   const thickness = randomFloat(0.05, 0.15, 2);
   const addressing = String(random(1, 100)).padStart(3, '0');
-  const createdAt = randomDateForToday();
+  const createdAt = randomCurrentDate();
 
   const plate = new Plate();
   plate.plateModel = plateModel;
@@ -286,20 +379,8 @@ function generatePlateData(index: number): Partial<Plate> {
   return plate;
 }
 
-function generateStencilWashes(stencilId: string, washCount: number, forceSingleWash: boolean = false, planned: boolean = false): Partial<StencilWash>[] {
-  const washDates = generateWashDates(washCount, forceSingleWash, planned);
-
-  return washDates.map((date) => {
-    const wash = new StencilWash();
-    wash.stencilId = stencilId;
-    wash.operator = OPERATORS[random(0, OPERATORS.length - 1)];
-    wash.createdAt = date;
-    return wash;
-  });
-}
-
-function generatePlateWashes(plateId: string, washCount: number, forceSingleWash: boolean = false, planned: boolean = false): Partial<PlateWash>[] {
-  const washDates = generateWashDates(washCount, forceSingleWash, planned);
+function generatePlateWashes(plateId: string, washCount: number, forceSingleWash: boolean = false): Partial<PlateWash>[] {
+  const washDates = generateWashDates(washCount, forceSingleWash);
 
   return washDates.map((date) => {
     const wash = new PlateWash();
@@ -312,10 +393,7 @@ function generatePlateWashes(plateId: string, washCount: number, forceSingleWash
   });
 }
 
-async function stencilExists(
-  dataSource: DataSource,
-  stencilCode: string,
-): Promise<boolean> {
+async function stencilExists(dataSource: DataSource, stencilCode: string): Promise<boolean> {
   const result = await dataSource
     .getRepository(Stencil)
     .createQueryBuilder('stencil')
@@ -325,10 +403,7 @@ async function stencilExists(
   return result > 0;
 }
 
-async function plateExists(
-  dataSource: DataSource,
-  serialNumber: string,
-): Promise<boolean> {
+async function plateExists(dataSource: DataSource, serialNumber: string): Promise<boolean> {
   const result = await dataSource
     .getRepository(Plate)
     .createQueryBuilder('plate')
@@ -338,13 +413,15 @@ async function plateExists(
   return result > 0;
 }
 
+// ============================================
+// MAIN SEED
+// ============================================
 async function runSeed() {
   console.log('🚀 Initializing seed of Stencils, Plates and Washes (SQL Server)...');
   console.log(`📊 Host: ${process.env.DB_HOST}:${process.env.DB_PORT}`);
   console.log(`💾 Database: ${process.env.DB_DATABASE}`);
-
-  const weekdays = getLast30Days();
-  console.log(`\n📅 Last 5 weekdays: ${weekdays.map(d => d.toLocaleDateString()).join(', ')}`);
+  console.log(`⏰ Timezone: All dates stored in UTC`);
+  console.log(`🕐 Today's range: 11:00 UTC (07:00 Manaus) until current time\n`);
 
   const dataSource = new DataSource({
     type: 'mssql',
@@ -416,39 +493,37 @@ async function runSeed() {
     // ============================================
     console.log('\n🧼 Generating Washes for Stencils (last 30 days)...');
     let stencilWashesInserted = 0;
-    let singleWashCount = 0;
-    let multiWashCount = 0;
-
-    const totalStencilsCount = createdStencils.length;
-    const singleWashTarget = Math.floor(totalStencilsCount * 0.8);
+    let plannedProfileCount = 0;
+    let mixedProfileCount = 0;
+    let multipleProfileCount = 0;
 
     for (let i = 0; i < createdStencils.length; i++) {
       const stencil = createdStencils[i];
-      const useSingleWash = i < singleWashTarget;
+      const washes = generateStencilAnalyticsWashDates(i);
 
-      if (useSingleWash) {
-        const washes = generateStencilWashes(stencil.id, 1, true, true);
-        for (const washData of washes) {
-          const wash = stencilWashRepo.create(washData);
-          await stencilWashRepo.save(wash);
-          stencilWashesInserted++;
-          singleWashCount++;
-        }
-      } else {
-        const washCount = random(3, 8);
-        const washes = generateStencilWashes(stencil.id, washCount, false, false);
-        for (const washData of washes) {
-          const wash = stencilWashRepo.create(washData);
-          await stencilWashRepo.save(wash);
-          stencilWashesInserted++;
-          multiWashCount++;
-        }
+      if (i % 10 <= 5) plannedProfileCount++;
+      else if (i % 10 <= 7) mixedProfileCount++;
+      else multipleProfileCount++;
+
+      for (const date of washes) {
+        const wash = stencilWashRepo.create({
+          stencilId: stencil.id,
+          operator: OPERATORS[random(0, OPERATORS.length - 1)],
+          createdAt: date,
+        });
+        await stencilWashRepo.save(wash);
+        stencilWashesInserted++;
+      }
+
+      if ((i + 1) % 10 === 0) {
+        console.log(`   ✅ Processed ${i + 1}/${createdStencils.length} stencils`);
       }
     }
 
     console.log(`   ✅ Stencil Washes: ${stencilWashesInserted} inserted`);
-    console.log(`   📊 Distribution: ${singleWashCount} stencils with 1 wash (concentrated), ${multiWashCount} with multiple washes`);
-
+    console.log(
+      `   📊 Profiles: ${plannedProfileCount} planned-heavy, ${mixedProfileCount} mixed, ${multipleProfileCount} multiple-day`,
+    );
 
     // ============================================
     // 2. SEED DE PLATES (35 registers)
@@ -500,7 +575,7 @@ async function runSeed() {
       const useSingleWash = i < plateSingleWashTarget;
 
       if (useSingleWash) {
-        const washes = generatePlateWashes(plate.id, 1, true, true);
+        const washes = generatePlateWashes(plate.id, 1, true);
         for (const washData of washes) {
           const wash = plateWashRepo.create(washData);
           await plateWashRepo.save(wash);
@@ -509,7 +584,7 @@ async function runSeed() {
         }
       } else {
         const washCount = random(3, 8);
-        const washes = generatePlateWashes(plate.id, washCount, false, false);
+        const washes = generatePlateWashes(plate.id, washCount, false);
         for (const washData of washes) {
           const wash = plateWashRepo.create(washData);
           await plateWashRepo.save(wash);
@@ -539,7 +614,7 @@ async function runSeed() {
     console.log(`   Stencil Washes: ${stencilWashesInserted} inserted.`);
     console.log(`   Plates: ${platesInserted} inserted, ${platesSkipped} existing.`);
     console.log(`   Plate Washes: ${plateWashesInserted} inserted.`);
-    console.log(`   New registers total: ${stencilsInserted + platesInserted + stencilWashesInserted + plateWashesInserted}`);
+    console.log(`   Total new registers: ${stencilsInserted + platesInserted + stencilWashesInserted + plateWashesInserted}`);
 
     console.log('\n📈 DATABASE TOTAL:');
     console.log(`   Stencils: ${totalStencils}`);
