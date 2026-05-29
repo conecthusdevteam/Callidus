@@ -1,6 +1,7 @@
 export type WashOrigin = "stencil" | "placa";
 
 export type StatusBadge = "Ativo" | "Inativo";
+export type StencilAttentionType = "multiple" | "anomalous";
 
 export interface StencilWash {
   id: string;
@@ -11,6 +12,7 @@ export interface StencilWash {
   motivo: StatusBadge;
   linha: string;
   attention?: boolean;
+  attentionType?: StencilAttentionType;
   product?: string;
   idFabricante?: string;
   pais?: string;

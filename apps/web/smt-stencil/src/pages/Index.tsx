@@ -12,7 +12,8 @@ import { useDashboardData } from "@/hooks/useDashboardData";
 import { isWashOutsideStandardSchedule } from "@/data/mockWashes";
 import type { StencilWash, PlacaWash } from "@/data/mockWashes";
 import {
-  FilterPopover,
+  FilterTrigger,
+  FilterPanel,
   type StencilFilters,
   type PlacaFilters,
   emptyStencilFilters,
@@ -71,9 +72,9 @@ const Index = () => {
     stencil: "desc",
     placas: "desc",
   });
+  const [filterOpen, setFilterOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  // Fecha o painel ao clicar fora dele
   useEffect(() => {
     if (!selected) return;
     function handleClick(e: MouseEvent) {
@@ -106,10 +107,7 @@ const Index = () => {
   const filteredStencils = useMemo(
     () =>
       data.stencils.filter((row) => {
-        if (
-          showAttention &&
-          !(row.attention ?? isWashOutsideStandardSchedule(row.hora))
-        )
+        if (showAttention && !isWashOutsideStandardSchedule(row.hora))
           return false;
         if (
           stencilFilters.codigo &&
@@ -205,7 +203,17 @@ const Index = () => {
           {/* ── KPIs ── */}
           <section className="flex gap-3 shrink-0">
             <KpiCard
-              label="Lavagens do dia"
+              label={
+                <>
+                  Lavagens do dia{" "}
+                  <span className="font-bold">
+                    {new Date().toLocaleDateString("pt-BR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                    })}
+                  </span>
+                </>
+              }
               value={data.totalDia}
               variant="primary"
             />
@@ -229,10 +237,8 @@ const Index = () => {
 
           {/* ── Linha principal: tabela + coluna lateral ── */}
           <section className="flex flex-1 gap-4 overflow-hidden min-h-0 min-w-0 w-full">
-            {/* Coluna da tabela — flex-1 + min-w-0 para encolher corretamente */}
             <div className="flex flex-1 flex-col overflow-hidden min-h-0 min-w-0">
-              {/* Barra de controles */}
-              <div className="mb-2 flex items-center justify-between gap-3 shrink-0 min-w-0">
+              <div className="mb-2 flex items-center justify-between gap-3 shrink-0 min-w-0 relative">
                 <div className="inline-flex rounded-lg border bg-card p-1 shadow-card shrink-0">
                   <TabButton
                     active={tab === "stencil"}
@@ -256,18 +262,6 @@ const Index = () => {
                   </TabButton>
                 </div>
 
-                <div className="flex flex-1 justify-center px-2 min-w-0 overflow-hidden">
-                  <WashNotification
-                    notifications={newEvents.map((e) => ({
-                      id: e.id,
-                      origin: e.origin,
-                    }))}
-                    onDismiss={dismissEvent}
-                    isInline
-                    currentTab={tab}
-                  />
-                </div>
-
                 <div className="flex items-center gap-3 shrink-0">
                   {tab === "stencil" && (
                     <div className="inline-flex rounded-lg border bg-card p-1 shadow-card">
@@ -287,17 +281,23 @@ const Index = () => {
                       </TabButton>
                     </div>
                   )}
-                  <FilterPopover
-                    tab={tab}
-                    stencilFilters={stencilFilters}
-                    placaFilters={placaFilters}
-                    onApplyStencil={setStencilFilters}
-                    onApplyPlaca={setPlacaFilters}
+                  <FilterTrigger
+                    open={filterOpen}
+                    onToggle={() => setFilterOpen((v) => !v)}
                   />
                 </div>
               </div>
 
-              {/* Tabela — cresce até preencher, scroll interno */}
+              <div className={filterOpen ? "block" : "hidden"}>
+                <FilterPanel
+                  tab={tab}
+                  stencilFilters={stencilFilters}
+                  placaFilters={placaFilters}
+                  onApplyStencil={setStencilFilters}
+                  onApplyPlaca={setPlacaFilters}
+                />
+              </div>
+
               <div className="flex-1 overflow-auto min-h-0 min-w-0 rounded-lg border bg-card">
                 {tab === "stencil" ? (
                   <StencilTable
@@ -328,7 +328,6 @@ const Index = () => {
                 )}
               </div>
 
-              {/* Paginação */}
               <div className="shrink-0">
                 {tab === "stencil" ? (
                   <Pagination
@@ -348,13 +347,10 @@ const Index = () => {
               </div>
             </div>
 
-            {/* Coluna lateral — largura fixa, não encolhe */}
             <aside className="relative w-[500px] shrink-0 flex flex-col gap-4 overflow-hidden min-h-0 mt-16">
-              {/* Placeholders sempre presentes */}
               <div className="flex-1 rounded-xl bg-[#E5E7EB] min-h-0" />
               <div className="flex-1 rounded-xl bg-[#E5E7EB] min-h-0" />
 
-              {/* Card flutuante de detalhes — sobrepõe os placeholders quando há seleção */}
               {selected && (
                 <div
                   ref={panelRef}
@@ -370,6 +366,11 @@ const Index = () => {
           </section>
         </main>
       </div>
+
+      <WashNotification
+        notifications={newEvents.map((e) => ({ id: e.id, origin: e.origin }))}
+        onDismiss={dismissEvent}
+      />
     </div>
   );
 };

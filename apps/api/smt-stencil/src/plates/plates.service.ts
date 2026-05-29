@@ -80,10 +80,6 @@ export class PlatesService {
   async findTodayPlateWashes(filters?: PlateFilters) {
     const { startUtc, endUtc } = this.getManausDayRange(new Date());
 
-    const page = filters?.page || 1;
-    const limit = filters?.limit || 10;
-    const skip = (page - 1) * limit;
-
     const queryBuilder = this.washRepository
       .createQueryBuilder('wash')
       .leftJoinAndSelect('wash.plate', 'plate')
@@ -118,7 +114,10 @@ export class PlatesService {
 
     queryBuilder.orderBy('wash.createdAt', 'DESC');
 
-    queryBuilder.skip(skip).take(limit);
+    if (filters?.page && filters?.limit) {
+      const skip = (filters.page - 1) * filters.limit;
+      queryBuilder.skip(skip).take(filters.limit);
+    }
 
     const [data, total] = await queryBuilder.getManyAndCount();
 
@@ -126,9 +125,9 @@ export class PlatesService {
       data,
       meta: {
         total,
-        page,
-        limit,
-        total_pages: Math.ceil(total / limit),
+        page: filters?.page || 1,
+        limit: filters?.limit || total,
+        total_pages: filters?.limit ? Math.ceil(total / filters.limit) : 1,
       },
     };
   }

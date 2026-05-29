@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { CircleAlert, X } from "lucide-react";
+import { X } from "lucide-react";
 import type { WashOrigin } from "@/data/mockWashes";
 
 export interface WashNotificationItem {
@@ -30,11 +30,10 @@ export function WashNotification({
       })
     : notifications;
 
-  const current = filtered[0] ?? null;
-
-  if (!current) return null;
+  if (filtered.length === 0) return null;
 
   if (isInline) {
+    const current = filtered[0];
     return (
       <InlineNotificationItem
         key={current.id}
@@ -47,23 +46,23 @@ export function WashNotification({
 
   return (
     <div
-      className="fixed right-6 top-20 z-50"
+      className="fixed right-4 top-4 z-50 flex flex-col gap-2"
       role="region"
       aria-label="Notificações de novas lavagens"
     >
-      <NotificationItem
-        key={current.id}
-        item={current}
-        onDismiss={onDismiss}
-        autoDismissMs={autoDismissMs}
-      />
+      {filtered.map((n) => (
+        <StackedNotificationItem
+          key={n.id}
+          item={n}
+          onDismiss={onDismiss}
+          autoDismissMs={autoDismissMs}
+        />
+      ))}
     </div>
   );
 }
 
-// ── Item fixo (canto superior direito) ───────────────────────────────────────
-
-function NotificationItem({
+function StackedNotificationItem({
   item,
   onDismiss,
   autoDismissMs,
@@ -90,50 +89,69 @@ function NotificationItem({
     };
   }, [item.id, autoDismissMs]);
 
-  const message =
-    item.origin === "stencil"
-      ? "Lavagem de stencil registrada."
-      : "Lavagem de placa registrada.";
+  const isStencil = item.origin === "stencil";
+  const message = isStencil
+    ? "Lavagem de stencil registrada."
+    : "Lavagem de placa registrada.";
+
+  const backgroundColor = isStencil ? "#C3DDFD" : "#D1E7DD";
+  const borderColor = isStencil ? "#76A9FA" : "#A3CFBB";
+  const textColor = isStencil ? "#1B427F" : "#2B8E37";
+  const iconColor = isStencil ? "#1C64F2" : "#2B8E37";
 
   return (
     <div
       role="status"
       aria-live="polite"
       style={{
-        width: 390,
-        height: 40,
-        borderRadius: 4,
-        padding: "8px 16px",
-        backgroundColor: "hsl(var(--toast-success-bg))",
-        border: "1px solid hsl(var(--toast-success-border))",
-        color: "hsl(var(--toast-success-fg))",
+        minWidth: 260,
+        maxWidth: 320,
+        borderRadius: 6,
+        padding: "8px 12px",
+        backgroundColor,
+        border: `1px solid ${borderColor}`,
+        color: textColor,
         fontFamily: "'Geist', 'Inter', system-ui, sans-serif",
         fontWeight: 500,
-        fontSize: 14,
-        gap: 8,
+        fontSize: 13,
         opacity: visible ? 1 : 0,
         transform: visible ? "translateY(0)" : "translateY(-8px)",
         transition: "opacity 200ms ease, transform 200ms ease",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
       }}
-      className="flex items-center justify-between shadow-card"
+      className="flex items-center justify-between gap-2"
     >
       <span className="flex items-center gap-2">
-        <CircleAlert className="h-5 w-5" aria-hidden />
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          fill="none"
+          style={{ color: iconColor, flexShrink: 0 }}
+        >
+          <circle cx="8" cy="8" r="7" stroke={iconColor} strokeWidth="1.5" />
+          <path
+            d="M8 7v4"
+            stroke={iconColor}
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+          <circle cx="8" cy="5" r="0.75" fill={iconColor} />
+        </svg>
         {message}
       </span>
       <button
         type="button"
         aria-label="Fechar notificação"
         onClick={() => onDismissRef.current(item.id)}
-        className="ml-2 inline-flex h-5 w-5 items-center justify-center opacity-70 hover:opacity-100"
+        style={{ color: textColor, opacity: 0.6 }}
+        className="hover:opacity-100 transition-opacity shrink-0"
       >
-        <X className="h-4 w-4" />
+        <X className="h-3.5 w-3.5" />
       </button>
     </div>
   );
 }
-
-// ── Item inline (barra de controles) ─────────────────────────────────────────
 
 function InlineNotificationItem({
   item,
@@ -196,11 +214,22 @@ function InlineNotificationItem({
       className="flex items-center justify-between shadow-card"
     >
       <span className="flex items-center gap-2">
-        <CircleAlert
-          className="h-5 w-5"
-          aria-hidden
-          style={{ color: iconColor }}
-        />
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 16 16"
+          fill="none"
+          style={{ color: iconColor, flexShrink: 0 }}
+        >
+          <circle cx="8" cy="8" r="7" stroke={iconColor} strokeWidth="1.5" />
+          <path
+            d="M8 7v4"
+            stroke={iconColor}
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+          <circle cx="8" cy="5" r="0.75" fill={iconColor} />
+        </svg>
         {message}
       </span>
       <button

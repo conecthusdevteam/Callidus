@@ -1,24 +1,29 @@
 import type { ApiStencil, ApiPlate } from "@/lib/api";
-import type { StencilWash, PlacaWash } from "@/data/mockWashes";
+import {
+  isWashOutsideStandardSchedule,
+  type StencilWash,
+  type PlacaWash,
+} from "@/data/mockWashes";
 
 function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", {
-    timeZone: "America/Manaus",
-  }).format(new Date(iso));
+  if (!iso) return "—";
+  const [year, month, day] = iso.split("T")[0].split("-");
+  return `${day}/${month}/${year}`;
 }
 
 function formatTime(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "America/Manaus",
-  }).format(new Date(iso));
+  if (!iso) return "—";
+  const timePart = iso.split("T")[1];
+  const [hours, minutes] = timePart.split(":");
+  return `${hours}:${minutes}`;
 }
 
 export function mapStencilApiToWash(s: ApiStencil): StencilWash {
   const data = formatDate(s.created_at);
   const hora = formatTime(s.created_at);
   const asset = s.asset;
+  const isMultiple = (asset?.total_washes ?? 0) > 1;
+  const attention = s.non_standard || isWashOutsideStandardSchedule(hora);
   return {
     id: s.id,
     data,
@@ -27,7 +32,12 @@ export function mapStencilApiToWash(s: ApiStencil): StencilWash {
     enderecamento: String(s.addressing).padStart(3, "0"),
     motivo: s.status === "active" ? "Ativo" : "Inativo",
     linha: s.line_name,
-    attention: s.non_standard,
+    attention,
+    attentionType: attention
+      ? isMultiple
+        ? "multiple"
+        : "anomalous"
+      : undefined,
     product: s.stencil_code,
     idFabricante: asset?.manufacture_id ?? "—",
     pais: asset?.country ?? "—",
