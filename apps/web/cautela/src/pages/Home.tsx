@@ -132,10 +132,7 @@ function DetalhesCautelaPortaria({
       complete: true,
     },
     {
-      label:
-        cautela.status === "Reprovado"
-          ? "Cautela reprovada"
-          : "Cautela aprovada",
+      label: cautela.status === "Reprovado" ? "Reprovado" : "Cautela Aprovada",
       data:
         cautela.status === "Reprovado"
           ? cautela.reprovadoEm
@@ -146,11 +143,14 @@ function DetalhesCautelaPortaria({
     {
       label:
         cautela.status === "Encerrada"
-          ? "Saída autorizada"
-          : "Validação da portaria",
+          ? "Encerrada"
+          : cautela.status === "Saída Autorizada"
+            ? "Saída Autorizada"
+            : "Ativa",
       data: cautela.entradaValidadaEm,
       complete:
-        cautela.status === "Aprovado" ||
+        (cautela.status === "Aprovado" &&
+          cautela.etapaFluxo !== "APROVADA_PELO_GESTOR") ||
         cautela.status === "Saída Autorizada" ||
         cautela.status === "Encerrada",
     },
@@ -196,31 +196,33 @@ function DetalhesCautelaPortaria({
           </div>
         )}
         <div className="float-right ml-5 mb-5 w-[160px]">
-          <p className="mb-4 text-[12px] font-bold text-[#404040]">
+          <p className="text-[12px] text-center font-bold text-[#404040] mb-4">
             Acompanhe seu pedido de cautela
           </p>
           <div>
             {progresso.map((item, index) => (
               <div key={item.label} className="flex gap-2 items-start">
-                <div className="flex flex-col min-w-0 text-right flex-1">
+                <div className="flex flex-col min-w-0 text-center flex-1">
                   <p
-                    className={`text-[11px] leading-tight ${item.complete ? "text-black" : "text-[#BDBDBD]"}`}
+                    className={`text-[10px] leading-tight ${item.complete ? "text-black" : "text-[#BDBDBD]"}`}
                   >
                     {item.label}
-                  </p>
-                  <p className="text-[12px] text-[#404040] mt-0.5">
-                    {item.data?.split(", ")[1] ?? item.data ?? ""}
                   </p>
                 </div>
                 <div className="flex flex-col items-center flex-shrink-0">
                   <span
-                    className={`h-4 w-4 rounded-full flex-shrink-0 ${item.complete ? "bg-[#3BB14A]" : "bg-[#BDBDBD]"}`}
+                    className={`h-4 w-4 rounded-full ${item.complete ? "bg-[#3BB14A]" : "bg-[#BDBDBD]"}`}
                   />
                   {index < progresso.length - 1 && (
                     <span
-                      className={`w-0.5 h-16 ${progresso[index + 1].complete ? "bg-[#3BB14A]" : "bg-[#BDBDBD]"}`}
+                      className={`w-0.5 h-40 ${progresso[index + 1].complete ? "bg-[#3BB14A]" : "bg-[#BDBDBD]"}`}
                     />
                   )}
+                </div>
+                <div className="flex flex-col min-w-0 text-left flex-1">
+                  <p className="text-[12px] text-[#404040]">
+                    {item.data?.split(", ")[1] ?? item.data ?? ""}
+                  </p>
                 </div>
               </div>
             ))}
@@ -638,7 +640,7 @@ export default function Home() {
   const painelDetalhes = cautelaSelecionada ? (
     <div
       ref={painelDetalhesRef}
-      className="fixed top-22 left-[630px] w-[380px] bg-white border border-gray-200 rounded-xl shadow-2xl z-10 max-h-[90%] overflow-y-auto"
+      className="fixed top-22 left-[630px] w-[540px] bg-white border border-gray-200 rounded-xl shadow-2xl z-10 max-h-[90%] overflow-y-auto"
     >
       <DetalhesCautelaPortaria
         cautela={cautelaSelecionada}

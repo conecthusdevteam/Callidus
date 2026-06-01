@@ -168,6 +168,12 @@ function DetalhesConteudo({
           )}
         </div>
       )}
+      <div className="float-right ml-5 mb-5 w-[160px]">
+        <p className="mb-4 text-[12px] font-bold text-[#404040]">
+          Acompanhe seu pedido de cautela
+        </p>
+        <div></div>
+      </div>
 
       <div className="mb-4">
         <p className="text-base font-bold text-black">Id da cautela</p>
@@ -401,12 +407,26 @@ function ContadorRecebidas({
   );
 }
 
-function BadgeHistorico({ status }: { status: StatusCautela }) {
-  if (status === "Aprovado") {
+function BadgeHistorico({
+  status,
+  etapaFluxo,
+}: {
+  status: StatusCautela;
+  etapaFluxo?: string;
+}) {
+  if (status === "Aprovado" && etapaFluxo === "APROVADA_PELO_GESTOR") {
     return (
       <span className="inline-flex items-center gap-1 w-fit px-2 py-1 rounded-full text-[12px] font-semibold border border-[#31C48D] bg-[#BCF0DA] text-[#065F46]">
         <span className="w-2 h-2 rounded-full bg-[#0E9F6E]" />
         Em Validação
+      </span>
+    );
+  }
+  if (status === "Aprovado") {
+    return (
+      <span className="inline-flex items-center gap-1 w-fit px-2 py-1 rounded-full text-[12px] font-semibold border border-[#31C48D] bg-[#BCF0DA] text-[#065F46]">
+        <span className="w-2 h-2 rounded-full bg-[#0E9F6E]" />
+        Ativa
       </span>
     );
   }
@@ -666,7 +686,6 @@ export default function Gestor() {
   function statusHistorico(c: CautelaComDecisao): StatusCautela {
     if (c.decisaoLocal === "aprovado") return "Aprovado";
     if (c.decisaoLocal === "reprovado") return "Reprovado";
-    if (c.status === "Saída Autorizada") return "Aprovado";
     return c.status as StatusCautela;
   }
 
@@ -937,7 +956,7 @@ export default function Gestor() {
           {/* Recebidas — painel ao lado da aba */}
           {cautelaSelecionada && origemDetalhe === "recebidas" && (
             <div
-              className="fixed top-20 w-[420px] z-50 overflow-y-auto"
+              className="fixed top-20 w-[540px] z-50 overflow-y-auto"
               style={{ left: "620px", maxHeight: "calc(100vh - 100px)" }}
               onClick={(e) => e.stopPropagation()}
             >
@@ -945,6 +964,7 @@ export default function Gestor() {
                 cautela={cautelaSelecionada}
                 onFechar={() => setCautelaSelecionada(null)}
                 variant="recebida"
+                mostrarAcompanhamento
                 acoes={
                   !isSomenteLeitura(cautelaSelecionada) ? (
                     <>
@@ -1071,7 +1091,10 @@ export default function Gestor() {
                         {cautela.id}
                       </span>
                       <span className="flex justify-center">
-                        <BadgeHistorico status={statusHistorico(cautela)} />
+                        <BadgeHistorico
+                          status={statusHistorico(cautela)}
+                          etapaFluxo={cautela.etapaFluxo}
+                        />
                       </span>
                       <span className="flex justify-center truncate text-[18px]">
                         {cautela.status === "Reprovado"

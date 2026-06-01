@@ -164,8 +164,9 @@ export function BadgeStatus({
   if (status === "Encerrada") return <BadgeEncerrada />;
   if (status === "Saída Autorizada") return <BadgeSaidaAutorizada />;
   if (status === "Aprovado" && etapaFluxo === "APROVADA_PELO_GESTOR")
-    return <BadgeAtiva />;
-  if (status === "Aprovado") return <BadgeAprovado />;
+    return <BadgeAprovado />;
+  if (status === "Aprovado") return <BadgeAtiva />;
   if (status === "Reprovado") return <BadgeReprovado />;
+  if (etapaFluxo === "APROVADA_PELO_GESTOR") return <BadgeAprovado />;
   return <BadgeAnalise />;
 }

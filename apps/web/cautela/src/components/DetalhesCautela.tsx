@@ -43,16 +43,18 @@ export default function DetalhesCautela({
       cautela.status === "Aprovado" &&
       cautela.etapaFluxo === "APROVADA_PELO_GESTOR"
     )
-      return `Ativa ${cautela.entradaValidadaEm ? `desde ${cautela.entradaValidadaEm}` : ""}`;
-    if (cautela.status === "Aprovado")
       return `Em Validação ${cautela.aprovadoEm ? `desde ${cautela.aprovadoEm}` : ""}`;
+    if (cautela.status === "Aprovado")
+      return `Ativa ${cautela.entradaValidadaEm ? `desde ${cautela.entradaValidadaEm}` : ""}`;
     if (cautela.status === "Reprovado")
       return `Reprovado ${cautela.reprovadoEm ? `em ${cautela.reprovadoEm}` : ""}`;
     return "Em Aprovação";
   };
 
   const badgeClass = () => {
-    if (cautela.status === "Aprovado" || cautela.status === "Saída Autorizada")
+    if (cautela.status === "Saída Autorizada")
+      return "bg-amber-100 border border-amber-400 text-amber-800";
+    if (cautela.status === "Aprovado")
       return "bg-[#D1FAE5] border border-[#34D399] text-[#065F46]";
     if (cautela.status === "Reprovado")
       return "bg-[#FEE2E2] border border-[#F05252] text-[#9B1C1C]";
@@ -94,7 +96,8 @@ export default function DetalhesCautela({
             : "Ativa",
       data: cautela.entradaValidadaEm,
       complete:
-        cautela.etapaFluxo === "APROVADA_PELO_GESTOR" ||
+        (cautela.status === "Aprovado" &&
+          cautela.etapaFluxo !== "APROVADA_PELO_GESTOR") ||
         cautela.status === "Saída Autorizada" ||
         cautela.status === "Encerrada",
     },
@@ -123,9 +126,7 @@ export default function DetalhesCautela({
       </button>
 
       {!ocultarBanner &&
-        (variant === "recebida" ||
-          cautela.status === "Saída Autorizada" ||
-          cautela.status === "Aprovado") &&
+        (variant === "recebida" || cautela.status === "Saída Autorizada") &&
         !titulo && (
           <div className="px-4 pt-8">
             <div
@@ -149,9 +150,7 @@ export default function DetalhesCautela({
         <div
           className={`px-4 pb-2 ${
             !ocultarBanner &&
-            (cautela.status === "Saída Autorizada" ||
-              cautela.status === "Aprovado" ||
-              variant === "recebida")
+            (cautela.status === "Saída Autorizada" || variant === "recebida")
               ? "pt-1"
               : "pt-8"
           }`}
@@ -226,21 +225,18 @@ export default function DetalhesCautela({
         </p>
 
         {mostrarAcompanhamento && (
-          <div className="float-right ml-5 mb-5 w-[160px]">
-            <p className="text-[12px] font-bold text-[#404040] mb-4">
-              Acompanhe seu pedido de cautela
+          <div className="float-right ml-5 mb-5 mt-[-155px] w-[160px]">
+            <p className="text-[12px] text-center font-bold text-[#404040] mb-4">
+              Acompanhe o pedido de cautela
             </p>
             <div>
               {progresso.map((item, index) => (
                 <div key={item.label} className="flex gap-2 items-start">
-                  <div className="flex flex-col min-w-0 text-right flex-1">
+                  <div className="flex flex-col min-w-0 text-center flex-1">
                     <p
-                      className={`text-[11px] leading-tight ${item.complete ? "text-black" : "text-[#BDBDBD]"}`}
+                      className={`text-[10px] leading-tight ${item.complete ? "text-black" : "text-[#BDBDBD]"}`}
                     >
                       {item.label}
-                    </p>
-                    <p className="text-[12px] text-[#404040] mt-0.5">
-                      {item.data?.split(", ")[1] ?? item.data ?? ""}
                     </p>
                   </div>
                   <div className="flex flex-col items-center flex-shrink-0">
@@ -249,9 +245,14 @@ export default function DetalhesCautela({
                     />
                     {index < progresso.length - 1 && (
                       <span
-                        className={`w-0.5 h-16 ${progresso[index + 1].complete ? "bg-[#3BB14A]" : "bg-[#BDBDBD]"}`}
+                        className={`w-0.5 h-30 ${progresso[index + 1].complete ? "bg-[#3BB14A]" : "bg-[#BDBDBD]"}`}
                       />
                     )}
+                  </div>
+                  <div className="flex flex-col min-w-0 text-left flex-1">
+                    <p className="text-[12px] text-[#404040]">
+                      {item.data?.split(", ")[1] ?? item.data ?? ""}
+                    </p>
                   </div>
                 </div>
               ))}

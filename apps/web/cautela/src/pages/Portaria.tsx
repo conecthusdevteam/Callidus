@@ -37,12 +37,26 @@ function isCautelaAtivaPortaria(cautela: Cautela) {
 
 // ─── Badge inline para tabela ─────────────────────────────────────────────────
 
-function BadgeTabela({ status }: { status: StatusCautela }) {
-  if (status === "Aprovado") {
+function BadgeTabela({
+  status,
+  etapaFluxo,
+}: {
+  status: StatusCautela;
+  etapaFluxo?: string;
+}) {
+  if (status === "Aprovado" && etapaFluxo === "APROVADA_PELO_GESTOR") {
     return (
       <span className="inline-flex items-center gap-1 w-fit px-2 py-1 rounded-full text-[12px] font-semibold border border-[#31C48D] bg-[#BCF0DA] text-[#065F46]">
         <span className="w-2 h-2 rounded-full bg-[#0E9F6E]" />
         Em Validação
+      </span>
+    );
+  }
+  if (status === "Aprovado") {
+    return (
+      <span className="inline-flex items-center gap-1 w-fit px-2 py-1 rounded-full text-[12px] font-semibold border border-[#31C48D] bg-[#BCF0DA] text-[#065F46]">
+        <span className="w-2 h-2 rounded-full bg-[#0E9F6E]" />
+        Ativa
       </span>
     );
   }
@@ -194,7 +208,7 @@ function BannerCard({ status }: { status: StatusCautela }) {
   if (status === "Saída Autorizada") {
     return (
       <div className="w-full text-center py-1 px-3 rounded mb-3 bg-amber-100 border border-amber-400 text-amber-800 text-[12px] font-bold uppercase tracking-wide">
-        Saída Autorizada
+        Autorizado a sair
       </div>
     );
   }
@@ -715,7 +729,7 @@ export default function Portaria() {
                 onClick={() => setCautelaSelecionada(null)}
               />
               <div
-                className="fixed top-21 w-[480px] z-20 overflow-y-auto"
+                className="fixed top-21 w-[540px] z-20 overflow-y-auto"
                 style={{
                   left: origemDetalhe === "ativas" ? "620px" : "50%",
                   transform:
@@ -731,6 +745,7 @@ export default function Portaria() {
                   cautela={cautelaSelecionada}
                   onFechar={() => setCautelaSelecionada(null)}
                   variant="historico"
+                  mostrarAcompanhamento
                   acoes={
                     <>
                       {cautelaSelecionada.etapaFluxo ===
