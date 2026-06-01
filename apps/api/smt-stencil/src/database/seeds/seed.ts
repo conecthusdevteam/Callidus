@@ -71,7 +71,6 @@ const ANALYTICS_SEED_DAYS = 30;
 const MIN_HOUR_UTC = 11;
 const MAX_HOUR_UTC = 21;
 
-const PLANNED_HOURS_UTC = [15, 20];
 const ANOMALOUS_HOURS_UTC = [11, 12, 13, 14, 16, 17, 18, 19, 21];
 
 const SINGLE_WASH_PERCENTAGE = 0.85;
@@ -85,7 +84,7 @@ const PEAK_HOURS_UTC = [
 
 function isWeekday(date: Date): boolean {
   const day = date.getDay();
-  return day !== 0 && day !== 6;
+  return day !== 0;
 }
 
 function getLastBusinessDays(days: number = ANALYTICS_SEED_DAYS): Date[] {
