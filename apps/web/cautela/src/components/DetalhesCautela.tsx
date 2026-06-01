@@ -22,26 +22,33 @@ export default function DetalhesCautela({
   ocultarBanner = false,
 }: DetalhesCautelaProps) {
   const bannerLabel =
-    cautela.status === "Saída Autorizada"
-      ? "Autorizado a sair"
-      : "Autorizado a entrar";
+    variant === "recebida"
+      ? "Nova cautela solicitada"
+      : cautela.status === "Saída Autorizada"
+        ? "Saída Autorizada"
+        : "Ativa";
 
   const bannerClass =
-    cautela.status === "Saída Autorizada"
-      ? "bg-[#FCE96A] text-[#171717]"
-      : cautela.status === "Aprovado"
-        ? "bg-[#D1FAE5] text-[#171717]"
-        : "bg-[#FCE96A] text-[#111827]";
+    variant === "recebida"
+      ? "bg-[#FCE96A] border border-amber-300 text-[#111827]"
+      : cautela.status === "Saída Autorizada"
+        ? "bg-amber-100 border border-amber-400 text-amber-800"
+        : "bg-[#D1FAE5] border border-[#34D399] text-[#065F46]";
 
   const badgeLabel = () => {
-    if (cautela.status === "Aprovado")
-      return `Aprovado ${cautela.aprovadoEm ? `em ${cautela.aprovadoEm}` : ""}`;
-    if (cautela.status === "Reprovado")
-      return `Reprovado ${cautela.reprovadoEm ? `em ${cautela.reprovadoEm}` : ""}`;
     if (cautela.status === "Encerrada")
       return `Encerrada ${cautela.encerradaEm ? `em ${cautela.encerradaEm}` : ""}`;
-    if (cautela.status === "Saída Autorizada") return "Aguardando saída";
-    return "Em análise";
+    if (cautela.status === "Saída Autorizada") return "Saída Autorizada";
+    if (
+      cautela.status === "Aprovado" &&
+      cautela.etapaFluxo === "APROVADA_PELO_GESTOR"
+    )
+      return `Ativa ${cautela.entradaValidadaEm ? `desde ${cautela.entradaValidadaEm}` : ""}`;
+    if (cautela.status === "Aprovado")
+      return `Em Validação ${cautela.aprovadoEm ? `desde ${cautela.aprovadoEm}` : ""}`;
+    if (cautela.status === "Reprovado")
+      return `Reprovado ${cautela.reprovadoEm ? `em ${cautela.reprovadoEm}` : ""}`;
+    return "Em Aprovação";
   };
 
   const badgeClass = () => {
@@ -65,15 +72,12 @@ export default function DetalhesCautela({
 
   const progresso = [
     {
-      label: "Pedido realizado",
+      label: "Em Aprovação",
       data: cautela.data?.split(", ")[1],
       complete: true,
     },
     {
-      label:
-        cautela.status === "Reprovado"
-          ? "Cautela reprovada"
-          : "Cautela aprovada",
+      label: cautela.status === "Reprovado" ? "Reprovado" : "Em Validação",
       data:
         cautela.status === "Reprovado"
           ? cautela.reprovadoEm
@@ -84,11 +88,13 @@ export default function DetalhesCautela({
     {
       label:
         cautela.status === "Encerrada"
-          ? "Saída autorizada"
-          : "Validação da portaria",
+          ? "Encerrada"
+          : cautela.status === "Saída Autorizada"
+            ? "Saída Autorizada"
+            : "Ativa",
       data: cautela.entradaValidadaEm,
       complete:
-        cautela.status === "Aprovado" ||
+        cautela.etapaFluxo === "APROVADA_PELO_GESTOR" ||
         cautela.status === "Saída Autorizada" ||
         cautela.status === "Encerrada",
     },
@@ -121,7 +127,7 @@ export default function DetalhesCautela({
           cautela.status === "Saída Autorizada" ||
           cautela.status === "Aprovado") &&
         !titulo && (
-          <div className="px-4 pt-8 pb-0">
+          <div className="px-4 pt-8">
             <div
               className={`w-full text-center py-1 text-[13px] font-bold rounded-lg ${bannerClass}`}
             >
@@ -141,10 +147,11 @@ export default function DetalhesCautela({
       {/* Badge status */}
       {!titulo && (
         <div
-          className={`px-4 pb-2 pt-8 ${
-            cautela.status === "Saída Autorizada" ||
-            cautela.status === "Aprovado" ||
-            variant === "recebida"
+          className={`px-4 pb-2 ${
+            !ocultarBanner &&
+            (cautela.status === "Saída Autorizada" ||
+              cautela.status === "Aprovado" ||
+              variant === "recebida")
               ? "pt-1"
               : "pt-8"
           }`}
@@ -223,38 +230,29 @@ export default function DetalhesCautela({
             <p className="text-[12px] font-bold text-[#404040] mb-4">
               Acompanhe seu pedido de cautela
             </p>
-            <div className="space-y-0">
+            <div>
               {progresso.map((item, index) => (
-                <div
-                  key={item.label}
-                  className="grid grid-cols-[1fr_18px_auto] gap-2"
-                >
-                  <p
-                    className={`text-[11px] leading-tight ${
-                      item.complete ? "text-black" : "text-[#BDBDBD]"
-                    }`}
-                  >
-                    {item.label}
-                  </p>
-                  <div className="flex flex-col items-center">
+                <div key={item.label} className="flex gap-2 items-start">
+                  <div className="flex flex-col min-w-0 text-right flex-1">
+                    <p
+                      className={`text-[11px] leading-tight ${item.complete ? "text-black" : "text-[#BDBDBD]"}`}
+                    >
+                      {item.label}
+                    </p>
+                    <p className="text-[12px] text-[#404040] mt-0.5">
+                      {item.data?.split(", ")[1] ?? item.data ?? ""}
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-center flex-shrink-0">
                     <span
-                      className={`h-4 w-4 rounded-full ${
-                        item.complete ? "bg-[#3BB14A]" : "bg-[#BDBDBD]"
-                      }`}
+                      className={`h-4 w-4 rounded-full ${item.complete ? "bg-[#3BB14A]" : "bg-[#BDBDBD]"}`}
                     />
                     {index < progresso.length - 1 && (
                       <span
-                        className={`h-20 w-0.5 ${
-                          progresso[index + 1].complete
-                            ? "bg-[#3BB14A]"
-                            : "bg-[#BDBDBD]"
-                        }`}
+                        className={`w-0.5 h-16 ${progresso[index + 1].complete ? "bg-[#3BB14A]" : "bg-[#BDBDBD]"}`}
                       />
                     )}
                   </div>
-                  <p className="text-[12px] text-[#404040]">
-                    {item.data?.split(", ")[1] ?? item.data ?? ""}
-                  </p>
                 </div>
               ))}
             </div>

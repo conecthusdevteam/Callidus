@@ -71,7 +71,7 @@ function CardCautelaPortaria({
         </div>
 
         <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-1">
-          <BadgeStatus status={status} />
+          <BadgeStatus status={status} etapaFluxo={cautela.etapaFluxo} />
 
           {isNaoLida && (
             <span className="inline-flex items-center rounded-lg px-2 py-0.5 text-[12px] font-semibold bg-[#FCE96A] text-black mt-0.5">

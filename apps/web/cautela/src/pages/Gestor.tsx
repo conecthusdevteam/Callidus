@@ -41,6 +41,27 @@ interface CautelaComDecisao extends Cautela {
 
 // ─── Painel de detalhes ───────────────────────────────────────────────────────
 
+function formatarData(valor: string): { data: string; hora: string } {
+  if (!valor) return { data: "", hora: "--:--" };
+  if (valor.includes(", ")) {
+    const [data, hora] = valor.split(", ");
+    return { data, hora };
+  }
+  try {
+    const d = new Date(valor);
+    if (isNaN(d.getTime())) return { data: valor, hora: "--:--" };
+    return {
+      data: d.toLocaleDateString("pt-BR"),
+      hora: d.toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    };
+  } catch {
+    return { data: valor, hora: "--:--" };
+  }
+}
+
 function DetalhesConteudo({
   cautela,
   onAutorizarSaida,
@@ -345,6 +366,18 @@ function CardCautelaRecebida({
   );
 }
 
+function ultimaAcaoData(cautela: Cautela): string {
+  if (cautela.status === "Encerrada" && cautela.encerradaEm)
+    return cautela.encerradaEm;
+  if (cautela.status === "Saída Autorizada" && cautela.entradaValidadaEm)
+    return cautela.entradaValidadaEm;
+  if (cautela.status === "Reprovado" && cautela.reprovadoEm)
+    return cautela.reprovadoEm;
+  if (cautela.status === "Aprovado" && cautela.aprovadoEm)
+    return cautela.aprovadoEm;
+  return cautela.data;
+}
+
 function ContadorRecebidas({
   total,
   mostrarBolinha,
@@ -371,9 +404,17 @@ function ContadorRecebidas({
 function BadgeHistorico({ status }: { status: StatusCautela }) {
   if (status === "Aprovado") {
     return (
-      <span className="inline-flex items-center gap-1 w-fit px-2 py-1 rounded-full text-[12px] font-semibold border border-[#31C48D] bg-[#F0FDF4] text-[#065F46]">
+      <span className="inline-flex items-center gap-1 w-fit px-2 py-1 rounded-full text-[12px] font-semibold border border-[#31C48D] bg-[#BCF0DA] text-[#065F46]">
         <span className="w-2 h-2 rounded-full bg-[#0E9F6E]" />
-        Aprovado
+        Em Validação
+      </span>
+    );
+  }
+  if (status === "Saída Autorizada") {
+    return (
+      <span className="inline-flex items-center gap-1 w-fit px-2 py-1 rounded-full text-[12px] font-semibold border border-amber-400 bg-amber-100 text-amber-800">
+        <span className="w-2 h-2 rounded-full bg-amber-400" />
+        Saída Autorizada
       </span>
     );
   }
@@ -389,7 +430,7 @@ function BadgeHistorico({ status }: { status: StatusCautela }) {
     return (
       <span className="inline-flex items-center gap-1 w-fit px-2 py-1 rounded-full text-[12px] font-semibold border border-[#A3A3A3] bg-[#F4F4F4] text-[#525252]">
         <span className="w-2 h-2 rounded-full bg-[#A3A3A3]" />
-        Encerrado
+        Encerrada
       </span>
     );
   }
@@ -992,7 +1033,7 @@ export default function Gestor() {
               <span>Hora</span>
               <span className="flex justify-center">Id da cautela</span>
               <span className="flex justify-center">Status</span>
-              <span className="flex justify-center">Acesso</span>
+              <span className="flex justify-center">Tipo</span>
               <span>Editar</span>
             </div>
 
@@ -1007,9 +1048,7 @@ export default function Gestor() {
                   paginaHistorico * ITENS_POR_PAGINA,
                 )
                 .map((cautela, i) => {
-                  const partes = cautela.data?.split(", ") ?? [];
-                  const data = partes[0] ?? "";
-                  const hora = partes[1] ?? "--:--";
+                  const { data, hora } = formatarData(ultimaAcaoData(cautela));
                   const selecionada = cautelaSelecionada?.id === cautela.id;
                   return (
                     <div

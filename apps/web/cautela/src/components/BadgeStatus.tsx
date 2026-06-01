@@ -16,7 +16,7 @@ export function BadgeAnalise() {
         <path d="M12 8v5" strokeWidth="2" strokeLinecap="round" />
         <circle cx="12" cy="16" r="0.8" fill="currentColor" stroke="none" />
       </svg>
-      Em análise
+      Em Aprovação
     </span>
   );
 }
@@ -63,7 +63,7 @@ export function BadgeAprovado() {
           d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
         />
       </svg>
-      Aprovado
+      Em Validação
     </span>
   );
 }
@@ -110,12 +110,62 @@ export function BadgeEncerrada() {
   );
 }
 
+export function BadgeAtiva() {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[13px] font-medium bg-[#BCF0DA] text-[#065F46] border border-[#31C48D]">
+      <svg
+        className="w-3.5 h-3.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2.5}
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+        />
+      </svg>
+      Ativa
+    </span>
+  );
+}
+
+export function BadgeSaidaAutorizada() {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[13px] font-medium bg-amber-100 text-amber-800 border border-amber-400">
+      <svg
+        className="w-3.5 h-3.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2.5}
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+        />
+      </svg>
+      Saída Autorizada
+    </span>
+  );
+}
+
 // ─── Seletor de Badge por status ──────────────────────────────────────────────
 
-export function BadgeStatus({ status }: { status: StatusCautela }) {
-  if (status === "Saída Autorizada") return <BadgeAprovado />;
+export function BadgeStatus({
+  status,
+  etapaFluxo,
+}: {
+  status: StatusCautela;
+  etapaFluxo?: string;
+}) {
+  if (status === "Encerrada") return <BadgeEncerrada />;
+  if (status === "Saída Autorizada") return <BadgeSaidaAutorizada />;
+  if (status === "Aprovado" && etapaFluxo === "APROVADA_PELO_GESTOR")
+    return <BadgeAtiva />;
   if (status === "Aprovado") return <BadgeAprovado />;
   if (status === "Reprovado") return <BadgeReprovado />;
-  if (status === "Encerrada") return <BadgeEncerrada />;
   return <BadgeAnalise />;
 }
