@@ -1,22 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Cautela, StatusCautela } from "../data/cautelaTypes";
-import {
-  getCautelas,
-  closeCautela,
-  validateEntry,
-  markCautelaAsRead,
-} from "../lib/api";
 import { useLocation } from "react-router-dom";
 import { AvatarStatus } from "../components/AvatarStatus";
 import { BadgeStatus } from "../components/BadgeStatus";
 import { BannerStatus, JustificativaBox } from "../components/BannerStatus";
-import {
-  TabelaCautelados,
-  ListaCautelados,
-} from "../components/TabelaCautelados";
-import { ModalEncerrada } from "../components/ModalGestor";
-import { matchesSearch } from "../lib/cautelaUtils";
 import DetalhesCautela from "../components/DetalhesCautela";
+import { ModalEncerrada } from "../components/ModalGestor";
+import {
+  ListaCautelados,
+  TabelaCautelados,
+} from "../components/TabelaCautelados";
+import type { Cautela, StatusCautela } from "../data/cautelaTypes";
+import {
+  closeCautela,
+  getCautelas,
+  markCautelaAsRead,
+  validateEntry,
+} from "../lib/api";
+import { matchesSearch } from "../lib/cautelaUtils";
 
 const STATUS_HISTORICO: StatusCautela[] = [
   "Encerrada",
@@ -24,7 +24,7 @@ const STATUS_HISTORICO: StatusCautela[] = [
   "Aprovado",
   "Saída Autorizada",
 ];
-const ITENS_POR_PAGINA = 8;
+const ITENS_POR_PAGINA = 6;
 
 type MobileView = "lista" | "detalhe";
 
@@ -37,12 +37,34 @@ function isCautelaAtivaPortaria(cautela: Cautela) {
 
 // ─── Badge inline para tabela ─────────────────────────────────────────────────
 
-function BadgeTabela({ status }: { status: StatusCautela }) {
+function BadgeTabela({
+  status,
+  etapaFluxo,
+}: {
+  status: StatusCautela;
+  etapaFluxo?: string;
+}) {
+  if (status === "Aprovado" && etapaFluxo === "APROVADA_PELO_GESTOR") {
+    return (
+      <span className="inline-flex items-center gap-1 w-fit px-2 py-1 rounded-full text-[12px] font-semibold border border-[#31C48D] bg-[#BCF0DA] text-[#065F46]">
+        <span className="w-2 h-2 rounded-full bg-[#0E9F6E]" />
+        Em Validação
+      </span>
+    );
+  }
   if (status === "Aprovado") {
     return (
-      <span className="inline-flex items-center gap-1 w-fit px-2 py-1 rounded-full text-[12px] font-semibold border border-[#31C48D] bg-[#F0FDF4] text-[#065F46]">
+      <span className="inline-flex items-center gap-1 w-fit px-2 py-1 rounded-full text-[12px] font-semibold border border-[#31C48D] bg-[#BCF0DA] text-[#065F46]">
         <span className="w-2 h-2 rounded-full bg-[#0E9F6E]" />
-        Aprovado
+        Ativa
+      </span>
+    );
+  }
+  if (status === "Saída Autorizada") {
+    return (
+      <span className="inline-flex items-center gap-1 w-fit px-2 py-1 rounded-full text-[12px] font-semibold border border-amber-400 bg-amber-100 text-amber-800">
+        <span className="w-2 h-2 rounded-full bg-amber-400" />
+        Saída Autorizada
       </span>
     );
   }
@@ -58,7 +80,7 @@ function BadgeTabela({ status }: { status: StatusCautela }) {
     return (
       <span className="inline-flex items-center gap-1 w-fit px-2 py-1 rounded-full text-[12px] font-semibold border border-[#A3A3A3] bg-[#F4F4F4] text-[#525252]">
         <span className="w-2 h-2 rounded-full bg-[#A3A3A3]" />
-        Encerrado
+        Encerrada
       </span>
     );
   }
@@ -231,7 +253,7 @@ function CardCautelaPortaria({
   return (
     <div
       onClick={onClick}
-      className={`rounded-lg p-5 cursor-pointer transition-all hover:shadow-md mb-3 w-full max-w-[460px] mx-auto ${borderClass}`}
+      className={`rounded-lg p-5 cursor-pointer transition-all hover:shadow-md mb-3 w-full max-w-[440px] mx-auto ${borderClass}`}
     >
       <BannerCard status={status} />
 
@@ -239,22 +261,13 @@ function CardCautelaPortaria({
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <AvatarStatus status={status} />
           <div>
-            <p className="text-[18px] font-bold leading-tight text-[#404040]">
+            <p className="text-[14px] font-bold leading-tight text-[#404040] break-words text-left">
               {cautela.visitante || "Nome do proprietário"}
-            </p>
-            <p className="text-[15px] text-[#404040] mt-1">
-              Data: {cautela.data || "00/00/0000"}
-            </p>
-            <p className="text-[15px] text-[#404040] mt-0.5">
-              Ciente:{" "}
-              <span className="font-bold">
-                {(cautela.gestor || "").toUpperCase()}
-              </span>
             </p>
           </div>
         </div>
         <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-1">
-          <BadgeStatus status={status} />
+          <BadgeStatus status={status} etapaFluxo={cautela.etapaFluxo} />
           {isNaoLida && (
             <span className="inline-flex items-center rounded-lg px-2 py-0.5 text-[12px] font-semibold bg-[#FCE96A] text-black mt-0.5">
               Nova
@@ -262,6 +275,16 @@ function CardCautelaPortaria({
           )}
         </div>
       </div>
+
+      <p className="text-[14px] text-[#404040] mt-1">
+        Data: {cautela.data || "00/00/0000"}
+      </p>
+      <p className="text-[14px] text-[#404040] mt-0.5">
+        Ciente:{" "}
+        <span className="font-bold text-[14px]">
+          {(cautela.gestor || "").toUpperCase()}
+        </span>
+      </p>
 
       <div className="border-t border-black my-3" />
 
@@ -308,6 +331,18 @@ function CardCautelaPortaria({
       </div>
     </div>
   );
+}
+
+function ultimaAcaoData(cautela: Cautela): string {
+  if (cautela.status === "Encerrada" && cautela.encerradaEm)
+    return cautela.encerradaEm;
+  if (cautela.status === "Saída Autorizada" && cautela.entradaValidadaEm)
+    return cautela.entradaValidadaEm;
+  if (cautela.status === "Reprovado" && cautela.reprovadoEm)
+    return cautela.reprovadoEm;
+  if (cautela.status === "Aprovado" && cautela.aprovadoEm)
+    return cautela.aprovadoEm;
+  return cautela.data;
 }
 
 // ─── Painel de detalhes ───────────────────────────────────────────────────────
@@ -661,7 +696,7 @@ export default function Portaria() {
       <div className="hidden lg:flex h-[calc(100vh-60px)]">
         {/* Coluna esquerda — Cautelas autorizadas */}
         <div
-          className={`w-[550px] flex-shrink-0 px-6 pt-6 pb-4 flex flex-col h-full relative ${
+          className={`w-[440px] flex-shrink-0 px-6 pt-6 pb-4 flex flex-col h-full relative ${
             cautelaSelecionada && origemDetalhe === "ativas" ? "z-10" : "z-0"
           }`}
         >
@@ -695,9 +730,9 @@ export default function Portaria() {
                 onClick={() => setCautelaSelecionada(null)}
               />
               <div
-                className="fixed top-21 w-[480px] z-20 overflow-y-auto"
+                className="fixed top-21 w-[540px] z-20 overflow-y-auto"
                 style={{
-                  left: origemDetalhe === "ativas" ? "620px" : "50%",
+                  left: origemDetalhe === "ativas" ? "500px" : "50%",
                   transform:
                     origemDetalhe === "historico"
                       ? "translateX(-50%)"
@@ -711,6 +746,7 @@ export default function Portaria() {
                   cautela={cautelaSelecionada}
                   onFechar={() => setCautelaSelecionada(null)}
                   variant="historico"
+                  mostrarAcompanhamento
                   acoes={
                     <>
                       {cautelaSelecionada.etapaFluxo ===
@@ -793,7 +829,7 @@ export default function Portaria() {
               <span>Hora</span>
               <span>Id da cautela</span>
               <span className="flex justify-center">Status</span>
-              <span className="flex justify-center">Acesso</span>
+              <span className="flex justify-center">Tipo</span>
               <span className="flex justify-center">Aprovador</span>
             </div>
 
@@ -837,7 +873,7 @@ export default function Portaria() {
                       </span>
                       <span className="flex justify-center truncate">
                         {cautela.status === "Reprovado"
-                          ? "-"
+                          ? "Sem Acesso"
                           : cautela.livreAcesso === "livre"
                             ? "Livre trânsito"
                             : "Entrada única"}
@@ -936,7 +972,9 @@ export default function Portaria() {
                 {historicoFiltrado
                   .slice(0, ITENS_POR_PAGINA)
                   .map((cautela, i) => {
-                    const { data, hora } = formatarData(cautela.data);
+                    const { data, hora } = formatarData(
+                      ultimaAcaoData(cautela),
+                    );
                     return (
                       <div
                         key={cautela.id}
