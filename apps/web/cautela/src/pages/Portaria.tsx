@@ -264,15 +264,6 @@ function CardCautelaPortaria({
             <p className="text-[14px] font-bold leading-tight text-[#404040] break-words text-left">
               {cautela.visitante || "Nome do proprietário"}
             </p>
-            <p className="text-[14px] text-[#404040] mt-1">
-              Data: {cautela.data || "00/00/0000"}
-            </p>
-            <p className="text-[14px] text-[#404040] mt-0.5">
-              Ciente:{" "}
-              <span className="font-bold text-[14px]">
-                {(cautela.gestor || "").toUpperCase()}
-              </span>
-            </p>
           </div>
         </div>
         <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-1">
@@ -284,6 +275,16 @@ function CardCautelaPortaria({
           )}
         </div>
       </div>
+
+      <p className="text-[14px] text-[#404040] mt-1">
+        Data: {cautela.data || "00/00/0000"}
+      </p>
+      <p className="text-[14px] text-[#404040] mt-0.5">
+        Ciente:{" "}
+        <span className="font-bold text-[14px]">
+          {(cautela.gestor || "").toUpperCase()}
+        </span>
+      </p>
 
       <div className="border-t border-black my-3" />
 
@@ -731,7 +732,7 @@ export default function Portaria() {
               <div
                 className="fixed top-21 w-[540px] z-20 overflow-y-auto"
                 style={{
-                  left: origemDetalhe === "ativas" ? "620px" : "50%",
+                  left: origemDetalhe === "ativas" ? "500px" : "50%",
                   transform:
                     origemDetalhe === "historico"
                       ? "translateX(-50%)"

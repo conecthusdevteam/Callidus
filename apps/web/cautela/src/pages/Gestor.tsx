@@ -18,7 +18,6 @@ import {
 } from "../lib/api";
 //import { CardCautelaHistorico } from "../components/CardCautelaHistorico";
 import DetalhesCautela from "../components/DetalhesCautela";
-import ModalEdicaoCautela from "../components/ModalEdicaoCautela";
 import {
   ModalAprovado,
   ModalAutorizarSaida,
@@ -501,6 +500,8 @@ export default function Gestor() {
   const [cautelaEdicao, setCautelaEdicao] = useState<CautelaComDecisao | null>(
     null,
   );
+  const [modalConfirmarAcesso, setModalConfirmarAcesso] = useState(false);
+  const [modalAcessoSucesso, setModalAcessoSucesso] = useState(false);
 
   const carregarCautelas = useCallback(async () => {
     try {
@@ -586,6 +587,12 @@ export default function Gestor() {
     const timer = setTimeout(() => setActionError(""), 6000);
     return () => clearTimeout(timer);
   }, [actionError]);
+
+  useEffect(() => {
+    if (!modalAcessoSucesso) return;
+    const t = setTimeout(() => setModalAcessoSucesso(false), 3000);
+    return () => clearTimeout(t);
+  }, [modalAcessoSucesso]);
 
   const isSomenteLeitura = (c: CautelaComDecisao) =>
     c.decisaoLocal !== undefined ||
@@ -957,7 +964,7 @@ export default function Gestor() {
           {cautelaSelecionada && origemDetalhe === "recebidas" && (
             <div
               className="fixed top-20 w-[540px] z-50 overflow-y-auto"
-              style={{ left: "620px", maxHeight: "calc(100vh - 100px)" }}
+              style={{ left: "500px", maxHeight: "calc(100vh - 100px)" }}
               onClick={(e) => e.stopPropagation()}
             >
               <DetalhesCautela
@@ -1054,7 +1061,6 @@ export default function Gestor() {
               <span className="flex justify-center">Id da cautela</span>
               <span className="flex justify-center">Status</span>
               <span className="flex justify-center">Tipo</span>
-              <span>Editar</span>
             </div>
 
             {historico.length === 0 ? (
@@ -1096,48 +1102,36 @@ export default function Gestor() {
                           etapaFluxo={cautela.etapaFluxo}
                         />
                       </span>
-                      <span className="flex justify-center truncate text-[18px]">
-                        {cautela.status === "Reprovado"
-                          ? "Sem Acesso"
-                          : (
-                                cautela as CautelaComDecisao & {
-                                  livreAcesso?: string;
-                                }
-                              ).livreAcesso === "livre"
-                            ? "Livre trânsito"
-                            : "Entrada única"}
+                      <span className="flex justify-center">
+                        {cautela.status === "Reprovado" ||
+                        cautela.status === "Encerrada" ||
+                        cautela.etapaFluxo === "APROVADA_PELO_GESTOR" ? (
+                          <span className="text-[14px] text-[#6B7280]">
+                            {cautela.status === "Reprovado"
+                              ? "Sem acesso"
+                              : cautela.livreAcesso === "livre"
+                                ? "Livre trânsito"
+                                : "Entrada única"}
+                          </span>
+                        ) : (
+                          <select
+                            value={cautela.livreAcesso ?? "entrada"}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              setCautelaEdicao(cautela);
+                              setLivreAcesso(
+                                e.target.value as "livre" | "entrada",
+                              );
+                              setModalConfirmarAcesso(true);
+                            }}
+                            className="text-[13px] border border-[#D1D5DB] rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-[#2B8E37] cursor-pointer"
+                          >
+                            <option value="entrada">Entrada única</option>
+                            <option value="livre">Livre trânsito</option>
+                          </select>
+                        )}
                       </span>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          console.log("abrindo edição", cautela.id);
-                          setCautelaEdicao(cautela);
-                          setLivreAcesso(cautela.livreAcesso ?? "entrada");
-                        }}
-                        className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors flex justify-center"
-                        title="Editar"
-                      >
-                        <svg
-                          width="18"
-                          height="22"
-                          viewBox="0 0 18 22"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            d="M0 12.25V2.75C0 2.02065 0.289939 1.32139 0.805664 0.805664C1.32139 0.289939 2.02065 0 2.75 0H11.75C11.9489 0 12.1396 0.0790743 12.2803 0.219727L17.2803 5.21973C17.4209 5.36038 17.5 5.55109 17.5 5.75V18.75C17.5 19.4793 17.2101 20.1786 16.6943 20.6943C16.1786 21.2101 15.4793 21.5 14.75 21.5H9.25C8.83579 21.5 8.5 21.1642 8.5 20.75C8.5 20.3358 8.83579 20 9.25 20H14.75C15.0815 20 15.3994 19.8682 15.6338 19.6338C15.8682 19.3994 16 19.0815 16 18.75V6.06055L11.4395 1.5H2.75C2.41848 1.5 2.10063 1.63179 1.86621 1.86621C1.63179 2.10063 1.5 2.41848 1.5 2.75V12.25C1.5 12.6642 1.16421 13 0.75 13C0.335786 13 0 12.6642 0 12.25Z"
-                            fill="#525252"
-                          />
-                          <path
-                            d="M10 4.75V0.75C10 0.335786 10.3358 0 10.75 0C11.1642 0 11.5 0.335786 11.5 0.75V4.75C11.5 5.08152 11.6318 5.39937 11.8662 5.63379C12.1006 5.86821 12.4185 6 12.75 6H16.75C17.1642 6 17.5 6.33579 17.5 6.75C17.5 7.16421 17.1642 7.5 16.75 7.5H12.75C12.0207 7.5 11.3214 7.21006 10.8057 6.69434C10.2899 6.17861 10 5.47935 10 4.75Z"
-                            fill="#525252"
-                          />
-                          <path
-                            d="M10 12.8739C10 12.6936 9.96449 12.5151 9.89553 12.3485C9.82647 12.1818 9.72528 12.0298 9.59768 11.9022C9.47009 11.7746 9.31808 11.6734 9.15139 11.6043C8.9848 11.5354 8.8063 11.4999 8.626 11.4999C8.4457 11.4999 8.2672 11.5354 8.10061 11.6043C7.93392 11.6734 7.78191 11.7746 7.65432 11.9022L2.64455 16.9139C2.53308 17.0253 2.44328 17.1569 2.38088 17.3006L2.32815 17.4481L1.61819 19.8797L4.05081 19.1707L4.19827 19.118C4.34201 19.0556 4.47355 18.9658 4.58498 18.8543L9.59768 13.8456L9.6885 13.7459C9.774 13.6418 9.84373 13.5252 9.89553 13.4002C9.96459 13.2335 10 13.0543 10 12.8739ZM11.5 12.8739C11.5 13.2512 11.4256 13.6249 11.2813 13.9735C11.1729 14.2351 11.0266 14.479 10.8477 14.6971L10.6582 14.9061L5.64553 19.9159C5.31895 20.2425 4.91508 20.4816 4.4717 20.6112L1.60061 21.4481C1.3856 21.5107 1.15739 21.5144 0.940453 21.4588C0.7235 21.4032 0.525584 21.2901 0.367211 21.1317C0.208836 20.9733 0.0956886 20.7754 0.0400624 20.5584C-0.0155236 20.3415 -0.0118497 20.1133 0.0508046 19.8983L0.887719 17.0282C1.01727 16.5845 1.2571 16.1801 1.58401 15.8534L6.59377 10.8416C6.86065 10.5748 7.17771 10.363 7.52639 10.2186C7.87503 10.0742 8.24865 9.99985 8.626 9.99985C9.00335 9.99985 9.37697 10.0742 9.72561 10.2186C10.0743 10.363 10.3914 10.5748 10.6582 10.8416C10.9251 11.1085 11.1368 11.4256 11.2813 11.7743C11.4257 12.1229 11.5 12.4965 11.5 12.8739Z"
-                            fill="#525252"
-                          />
-                        </svg>
-                      </button>
                     </div>
                   );
                 })
@@ -1202,6 +1196,95 @@ export default function Gestor() {
       </div>
 
       {/* Modais */}
+      {modalConfirmarAcesso && cautelaEdicao && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl px-10 py-8 flex flex-col items-center gap-4 min-w-[320px]">
+            <div className="w-14 h-14 rounded-full flex items-center justify-center bg-amber-100">
+              <svg
+                className="w-6 h-6 text-amber-500"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                />
+              </svg>
+            </div>
+            <p className="text-base font-bold text-black text-center">
+              Deseja alterar o tipo de acesso?
+            </p>
+            <div className="flex gap-3 mt-2">
+              <button
+                onClick={() => {
+                  setModalConfirmarAcesso(false);
+                  setCautelaEdicao(null);
+                  void carregarCautelas(); // reseta o select
+                }}
+                className="px-6 py-2 rounded-lg bg-[#F5F5F5] text-[#171717] text-sm font-medium hover:bg-gray-200"
+              >
+                Não
+              </button>
+              <button
+                onClick={async () => {
+                  setModalConfirmarAcesso(false);
+                  const atualizada = await updatePermissionType(
+                    cautelaEdicao.id,
+                    livreAcesso === "livre"
+                      ? "LIVRE_TRANSITO"
+                      : "ENTRADA_UNICA",
+                  );
+                  setCautelas((prev) =>
+                    prev.map((c) =>
+                      c.id === cautelaEdicao.id ? atualizada : c,
+                    ),
+                  );
+                  setCautelaEdicao(null);
+                  setModalAcessoSucesso(true);
+                }}
+                className="px-6 py-2 rounded-lg bg-[#3BB14A] text-white text-sm font-medium hover:bg-[#22592A]"
+              >
+                Sim
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modalAcessoSucesso && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl px-10 py-8 flex flex-col items-center gap-4 min-w-[320px]">
+            <button
+              onClick={() => setModalAcessoSucesso(false)}
+              className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
+            >
+              ✕
+            </button>
+            <div className="w-14 h-14 rounded-full flex items-center justify-center bg-[#D1FAE5]">
+              <svg
+                className="w-6 h-6 text-[#0E9F6E]"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.5}
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            </div>
+            <p className="text-base font-bold text-black text-center">
+              Alteração de acesso realizada com sucesso!
+            </p>
+          </div>
+        </div>
+      )}
+
       {modalDescartar && (
         <ModalDescartar
           onConfirmar={confirmarDescartar}
@@ -1216,23 +1299,6 @@ export default function Gestor() {
       )}
       {modalAutorizarSaida && (
         <ModalAutorizarSaida onClose={() => setModalAutorizarSaida(false)} />
-      )}
-      {cautelaEdicao && (
-        <ModalEdicaoCautela
-          cautela={cautelaEdicao}
-          livreAcesso={livreAcesso}
-          onChangeLivreAcesso={setLivreAcesso}
-          onSalvar={async () => {
-            const atualizada = await updatePermissionType(
-              cautelaEdicao.id,
-              livreAcesso === "livre" ? "LIVRE_TRANSITO" : "ENTRADA_UNICA",
-            );
-            setCautelas((prev) =>
-              prev.map((c) => (c.id === cautelaEdicao.id ? atualizada : c)),
-            );
-          }}
-          onFechar={() => setCautelaEdicao(null)}
-        />
       )}
     </>
   );
