@@ -71,7 +71,6 @@ const ANALYTICS_SEED_DAYS = 30;
 const MIN_HOUR_UTC = 11;
 const MAX_HOUR_UTC = 21;
 
-const PLANNED_HOURS_UTC = [15, 20];
 const ANOMALOUS_HOURS_UTC = [11, 12, 13, 14, 16, 17, 18, 19, 21];
 
 const SINGLE_WASH_PERCENTAGE = 0.85;
@@ -85,7 +84,7 @@ const PEAK_HOURS_UTC = [
 
 function isWeekday(date: Date): boolean {
   const day = date.getDay();
-  return day !== 0 && day !== 6;
+  return day !== 0;
 }
 
 function getLastBusinessDays(days: number = ANALYTICS_SEED_DAYS): Date[] {
@@ -119,54 +118,121 @@ function randomPastDate(date: Date): Date {
   return result;
 }
 
+function randomDateInTimeRange(startDate: Date, endDate: Date): Date {
+  const startTime = startDate.getTime();
+  const endTime = endDate.getTime();
+  const randomTime = startTime + Math.random() * (endTime - startTime);
+  return new Date(randomTime);
+}
+
 function randomCurrentDate(): Date {
   const now = new Date();
   const currentHourUTC = now.getUTCHours();
   const currentMinutesUTC = now.getUTCMinutes();
-  const currentSecondsUTC = now.getUTCSeconds();
 
-  if (currentHourUTC < MIN_HOUR_UTC) {
-    const date = new Date(now);
-    date.setUTCHours(MIN_HOUR_UTC, 0, 0, 0);
-    return date;
-  }
+  const startDate = new Date(now);
+  startDate.setUTCHours(MIN_HOUR_UTC, 0, 0, 0);
+
+  const endDate = new Date(now);
 
   if (currentHourUTC >= MAX_HOUR_UTC) {
-    const hours = random(MIN_HOUR_UTC, MAX_HOUR_UTC);
-    const minutes = random(0, hours === MAX_HOUR_UTC ? 0 : 59);
-    const seconds = random(0, 59);
-
-    const date = new Date(now);
-    date.setUTCHours(hours, minutes, seconds, 0);
-    return date;
+    endDate.setUTCHours(MAX_HOUR_UTC, 0, 0, 0);
+  } else if (currentHourUTC >= MIN_HOUR_UTC) {
+    endDate.setUTCHours(currentHourUTC, currentMinutesUTC, 0, 0);
+  } else {
+    return startDate;
   }
 
-  const hours = random(MIN_HOUR_UTC, currentHourUTC);
-  let minutes = random(0, 59);
-  let seconds = random(0, 59);
-
-  if (hours === currentHourUTC) {
-    minutes = random(0, currentMinutesUTC);
-    seconds = random(0, currentSecondsUTC);
+  if (startDate >= endDate) {
+    return startDate;
   }
 
-  const date = new Date(now);
-  date.setUTCHours(hours, minutes, seconds, 0);
+  const result = randomDateInTimeRange(startDate, endDate);
 
-  if (date > now) {
-    return new Date(now);
-  }
-
-  return date;
+  return result;
 }
 
 function randomWashDate(dayOffset: number, planned: boolean, forcePeakHour: boolean = false): Date {
   const now = new Date();
   const targetDate = new Date(now);
   targetDate.setUTCDate(targetDate.getUTCDate() - dayOffset);
-  targetDate.setUTCHours(0, 0, 0, 0);
 
   const isToday = dayOffset === 0;
+
+  if (isToday) {
+    const currentHourUTC = now.getUTCHours();
+    const currentMinutesUTC = now.getUTCMinutes();
+    const currentSecondsUTC = now.getUTCSeconds();
+
+    if (currentHourUTC < MIN_HOUR_UTC) {
+      const date = new Date(targetDate);
+      date.setUTCHours(MIN_HOUR_UTC, 0, 0, 0);
+      return date;
+    }
+
+    const startTotalMinutes = MIN_HOUR_UTC * 60;
+    const currentTotalMinutes = (currentHourUTC * 60) + currentMinutesUTC;
+
+    if (currentTotalMinutes <= startTotalMinutes) {
+      const date = new Date(targetDate);
+      date.setUTCHours(MIN_HOUR_UTC, 0, 0, 0);
+      return date;
+    }
+
+    let randomMinutes: number;
+
+    if (forcePeakHour) {
+      const peakStartMinutes = 15 * 60;
+      const peakEndMinutes = 16 * 60;
+      const eveningPeakStart = 20 * 60;
+      const eveningPeakEnd = 21 * 60;
+
+      const useMorningPeak = Math.random() < 0.6;
+
+      if (useMorningPeak && peakEndMinutes <= currentTotalMinutes) {
+        randomMinutes = random(peakStartMinutes, Math.min(peakEndMinutes, currentTotalMinutes));
+      } else if (eveningPeakEnd <= currentTotalMinutes) {
+        randomMinutes = random(eveningPeakStart, Math.min(eveningPeakEnd, currentTotalMinutes));
+      } else {
+        randomMinutes = random(startTotalMinutes, currentTotalMinutes);
+      }
+    } else if (planned) {
+      const plannedStart = 13 * 60;
+      const plannedEnd = Math.min(17 * 60, currentTotalMinutes);
+      if (plannedEnd > plannedStart) {
+        randomMinutes = random(plannedStart, plannedEnd);
+      } else {
+        randomMinutes = random(startTotalMinutes, currentTotalMinutes);
+      }
+    } else {
+      const anomalousHours = [11, 12, 18, 19];
+      const anomalousHour = anomalousHours[Math.floor(Math.random() * anomalousHours.length)];
+      let maxMinute = 59;
+      if (anomalousHour === currentHourUTC) {
+        maxMinute = currentMinutesUTC;
+      }
+      randomMinutes = (anomalousHour * 60) + random(0, maxMinute);
+
+      if (randomMinutes > currentTotalMinutes) {
+        randomMinutes = currentTotalMinutes;
+      }
+    }
+
+    const hours = Math.floor(randomMinutes / 60);
+    const minutes = randomMinutes % 60;
+    const seconds = random(0, 59);
+
+    const result = new Date(targetDate);
+    result.setUTCHours(hours, minutes, seconds, 0);
+
+    if (result > now) {
+      return new Date(now);
+    }
+
+    return result;
+  }
+
+
   let hourUTC: number;
   let minute: number;
   let second: number;
@@ -176,20 +242,17 @@ function randomWashDate(dayOffset: number, planned: boolean, forcePeakHour: bool
     hourUTC = random(peak.start, peak.end);
     minute = random(0, hourUTC === peak.end ? 0 : 59);
     second = random(0, 59);
-  }
-  else if (planned) {
-    if (Math.random() < 0.95) {
+  } else if (planned) {
+    if (Math.random() < 0.7) {
       const peak = PEAK_HOURS_UTC[random(0, PEAK_HOURS_UTC.length - 1)];
       hourUTC = random(peak.start, peak.end);
       minute = random(0, hourUTC === peak.end ? 0 : 59);
-      second = random(0, 59);
     } else {
-      hourUTC = PLANNED_HOURS_UTC[random(0, PLANNED_HOURS_UTC.length - 1)];
+      hourUTC = random(13, 17);
       minute = random(0, 59);
-      second = random(0, 59);
     }
-  }
-  else {
+    second = random(0, 59);
+  } else {
     hourUTC = ANOMALOUS_HOURS_UTC[random(0, ANOMALOUS_HOURS_UTC.length - 1)];
     minute = random(0, 59);
     second = random(0, 59);
@@ -197,18 +260,6 @@ function randomWashDate(dayOffset: number, planned: boolean, forcePeakHour: bool
 
   const resultDate = new Date(targetDate);
   resultDate.setUTCHours(hourUTC, minute, second, 0);
-
-  if (isToday && resultDate > now) {
-    const currentHourUTC = now.getUTCHours();
-    const currentMinutesUTC = now.getUTCMinutes();
-    const currentSecondsUTC = now.getUTCSeconds();
-
-    if (currentHourUTC >= MIN_HOUR_UTC) {
-      resultDate.setUTCHours(currentHourUTC, currentMinutesUTC, currentSecondsUTC, 0);
-    } else {
-      resultDate.setUTCHours(MIN_HOUR_UTC, 0, 0, 0);
-    }
-  }
 
   return resultDate;
 }
