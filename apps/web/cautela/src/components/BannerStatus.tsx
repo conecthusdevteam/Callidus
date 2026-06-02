@@ -1,9 +1,5 @@
 import type { Cautela } from "../data/cautelaTypes";
 
-// ─── BannerStatus ─────────────────────────────────────────────────────────────
-// Banner de largura total que exibe o status atual da cautela com ícone e data.
-// Usado em DetalhesCautelaPortaria (Home) e DetalhesConteudo (Gestor).
-
 export function BannerStatus({ cautela }: { cautela: Cautela }) {
   const { status } = cautela;
 
@@ -28,6 +24,14 @@ export function BannerStatus({ cautela }: { cautela: Cautela }) {
     );
   }
 
+  if (status === "Aprovado" && cautela.etapaFluxo === "APROVADA_PELO_GESTOR") {
+    return (
+      <div className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-[#BCF0DA] border border-[#31C48D] text-[#065F46] text-[13px] font-medium">
+        Em Validação {cautela.aprovadoEm ? `desde ${cautela.aprovadoEm}` : ""}
+      </div>
+    );
+  }
+
   if (status === "Aprovado") {
     return (
       <div className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-[#BCF0DA] border border-[#31C48D] text-[#065F46] text-[13px] font-medium">
@@ -44,7 +48,8 @@ export function BannerStatus({ cautela }: { cautela: Cautela }) {
             d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
           />
         </svg>
-        Aprovado {cautela.aprovadoEm ? `em ${cautela.aprovadoEm}` : ""}
+        Ativa{" "}
+        {cautela.entradaValidadaEm ? `desde ${cautela.entradaValidadaEm}` : ""}
       </div>
     );
   }
@@ -93,14 +98,10 @@ export function BannerStatus({ cautela }: { cautela: Cautela }) {
 
   return (
     <div className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-[#FCE96A] border border-[#FACA15] text-[#111827] text-[13px] font-medium">
-      Em análise
+      Em Aprovação
     </div>
   );
 }
-
-// ─── BannerAguardandoSaida ────────────────────────────────────────────────────
-// Banner específico para o lado do Gestor quando status = "Saída Autorizada"
-// (exibe "Aguardando saída" em vez de "Atenção — Ação necessária")
 
 export function BannerAguardandoSaida() {
   return (
@@ -124,7 +125,6 @@ export function BannerAguardandoSaida() {
 }
 
 // ─── JustificativaBox ─────────────────────────────────────────────────────────
-// Caixa vermelha de justificativa, exibida em cautelas reprovadas.
 
 export function JustificativaBox({ motivo }: { motivo: string }) {
   return (
