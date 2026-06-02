@@ -1,22 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Cautela, StatusCautela } from "../data/cautelaTypes";
-import {
-  getCautelas,
-  closeCautela,
-  validateEntry,
-  markCautelaAsRead,
-} from "../lib/api";
 import { useLocation } from "react-router-dom";
 import { AvatarStatus } from "../components/AvatarStatus";
 import { BadgeStatus } from "../components/BadgeStatus";
 import { BannerStatus, JustificativaBox } from "../components/BannerStatus";
-import {
-  TabelaCautelados,
-  ListaCautelados,
-} from "../components/TabelaCautelados";
-import { ModalEncerrada } from "../components/ModalGestor";
-import { matchesSearch } from "../lib/cautelaUtils";
 import DetalhesCautela from "../components/DetalhesCautela";
+import { ModalEncerrada } from "../components/ModalGestor";
+import {
+  ListaCautelados,
+  TabelaCautelados,
+} from "../components/TabelaCautelados";
+import type { Cautela, StatusCautela } from "../data/cautelaTypes";
+import {
+  closeCautela,
+  getCautelas,
+  markCautelaAsRead,
+  validateEntry,
+} from "../lib/api";
+import { matchesSearch } from "../lib/cautelaUtils";
 
 const STATUS_HISTORICO: StatusCautela[] = [
   "Encerrada",
@@ -24,7 +24,7 @@ const STATUS_HISTORICO: StatusCautela[] = [
   "Aprovado",
   "Saída Autorizada",
 ];
-const ITENS_POR_PAGINA = 8;
+const ITENS_POR_PAGINA = 6;
 
 type MobileView = "lista" | "detalhe";
 
@@ -253,7 +253,7 @@ function CardCautelaPortaria({
   return (
     <div
       onClick={onClick}
-      className={`rounded-lg p-5 cursor-pointer transition-all hover:shadow-md mb-3 w-full max-w-[460px] mx-auto ${borderClass}`}
+      className={`rounded-lg p-5 cursor-pointer transition-all hover:shadow-md mb-3 w-full max-w-[440px] mx-auto ${borderClass}`}
     >
       <BannerCard status={status} />
 
@@ -261,15 +261,15 @@ function CardCautelaPortaria({
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <AvatarStatus status={status} />
           <div>
-            <p className="text-[18px] font-bold leading-tight text-[#404040]">
+            <p className="text-[14px] font-bold leading-tight text-[#404040] break-words text-left">
               {cautela.visitante || "Nome do proprietário"}
             </p>
-            <p className="text-[15px] text-[#404040] mt-1">
+            <p className="text-[14px] text-[#404040] mt-1">
               Data: {cautela.data || "00/00/0000"}
             </p>
-            <p className="text-[15px] text-[#404040] mt-0.5">
+            <p className="text-[14px] text-[#404040] mt-0.5">
               Ciente:{" "}
-              <span className="font-bold">
+              <span className="font-bold text-[14px]">
                 {(cautela.gestor || "").toUpperCase()}
               </span>
             </p>
@@ -695,7 +695,7 @@ export default function Portaria() {
       <div className="hidden lg:flex h-[calc(100vh-60px)]">
         {/* Coluna esquerda — Cautelas autorizadas */}
         <div
-          className={`w-[550px] flex-shrink-0 px-6 pt-6 pb-4 flex flex-col h-full relative ${
+          className={`w-[440px] flex-shrink-0 px-6 pt-6 pb-4 flex flex-col h-full relative ${
             cautelaSelecionada && origemDetalhe === "ativas" ? "z-10" : "z-0"
           }`}
         >
@@ -872,7 +872,7 @@ export default function Portaria() {
                       </span>
                       <span className="flex justify-center truncate">
                         {cautela.status === "Reprovado"
-                          ? "-"
+                          ? "Sem Acesso"
                           : cautela.livreAcesso === "livre"
                             ? "Livre trânsito"
                             : "Entrada única"}

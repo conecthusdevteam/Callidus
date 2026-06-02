@@ -1,18 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Cautela, StatusCautela } from "../data/cautelaTypes";
-import { useAuth } from "../context/AuthContext";
-import { createCautela, getCautelas, markCautelaAsRead } from "../lib/api";
-import FormularioCautela, {
-  type FieldErrors,
-} from "../components/FormularioCautela";
 import { useLocation } from "react-router-dom";
 import { AvatarStatus } from "../components/AvatarStatus";
 import { BadgeStatus } from "../components/BadgeStatus";
 import { BannerStatus, JustificativaBox } from "../components/BannerStatus";
+import FormularioCautela, {
+  type FieldErrors,
+} from "../components/FormularioCautela";
 import {
-  TabelaCautelados,
   ListaCautelados,
+  TabelaCautelados,
 } from "../components/TabelaCautelados";
+import { useAuth } from "../context/AuthContext";
+import type { Cautela, StatusCautela } from "../data/cautelaTypes";
+import { createCautela, getCautelas, markCautelaAsRead } from "../lib/api";
 import { matchesSearch, validarDocumento } from "../lib/cautelaUtils";
 
 const STATUS_RECEBIDOS: StatusCautela[] = [
@@ -53,7 +53,7 @@ function CardCautelaPortaria({
           <AvatarStatus status={status} />
 
           <div>
-            <p className="text-[18px] font-bold leading-tight text-[#404040]">
+            <p className="text-[18px] font-bold leading-tight text-[#404040] break-words">
               {cautela.visitante || "Nome do proprietário"}
             </p>
 

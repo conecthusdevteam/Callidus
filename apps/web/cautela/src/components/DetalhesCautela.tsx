@@ -311,10 +311,10 @@ export default function DetalhesCautela({
           <table className="w-full">
             <thead>
               <tr className="bg-[#0E9F6E] text-white">
-                <th className="px-3 py-2 text-left text-[18px] font-bold">
+                <th className="px-3 py-2 text-left text-[14px] font-bold">
                   Descrição
                 </th>
-                <th className="px-3 py-2 text-right text-[18px] font-bold">
+                <th className="px-3 py-2 text-right text-[14px] font-bold">
                   Quantidade
                 </th>
               </tr>
@@ -325,10 +325,10 @@ export default function DetalhesCautela({
                   key={i}
                   className={`border-t border-[#F3F4F6] ${i % 2 === 1 ? "bg-[#F9FAFB]" : "bg-white"}`}
                 >
-                  <td className="px-3 py-2 text-[18px] text-[#111827]">
+                  <td className="px-3 py-2 text-[14px] text-[#111827]">
                     {eq.descricao}
                   </td>
-                  <td className="px-3 py-2 text-[18px] text-[#111827] text-right">
+                  <td className="px-3 py-2 text-[14px] text-[#111827] text-right">
                     {eq.quantidade ?? 1}
                   </td>
                 </tr>

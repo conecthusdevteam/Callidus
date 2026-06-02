@@ -1,31 +1,31 @@
 import { useCallback, useEffect, useState } from "react";
-import { type Cautela, type StatusCautela } from "../data/cautelaTypes";
-import {
-  approveCautela,
-  getCautelas,
-  rejectCautela,
-  authorizeDeparture,
-  updatePermissionType,
-  markCautelaAsRead,
-} from "../lib/api";
-import StatusBadge from "../components/StatusBadge";
+import { AvatarStatus } from "../components/AvatarStatus";
+import { BadgeStatus } from "../components/BadgeStatus";
 import {
   BannerAguardandoSaida,
   JustificativaBox,
 } from "../components/BannerStatus";
-import { AvatarStatus } from "../components/AvatarStatus";
-import { BadgeStatus } from "../components/BadgeStatus";
+import StatusBadge from "../components/StatusBadge";
 import { TabelaCautelados } from "../components/TabelaCautelados";
-//import { CardCautelaHistorico } from "../components/CardCautelaHistorico";
-import { matchesSearch } from "../lib/cautelaUtils";
+import { type Cautela, type StatusCautela } from "../data/cautelaTypes";
 import {
-  ModalAprovado,
-  ModalRecusado,
-  ModalDescartar,
-  ModalAutorizarSaida,
-} from "../components/ModalGestor";
+  approveCautela,
+  authorizeDeparture,
+  getCautelas,
+  markCautelaAsRead,
+  rejectCautela,
+  updatePermissionType,
+} from "../lib/api";
+//import { CardCautelaHistorico } from "../components/CardCautelaHistorico";
 import DetalhesCautela from "../components/DetalhesCautela";
 import ModalEdicaoCautela from "../components/ModalEdicaoCautela";
+import {
+  ModalAprovado,
+  ModalAutorizarSaida,
+  ModalDescartar,
+  ModalRecusado,
+} from "../components/ModalGestor";
+import { matchesSearch } from "../lib/cautelaUtils";
 
 type Tab = "recebidas" | "historico";
 type MobileView =
@@ -293,7 +293,7 @@ function CardCautelaRecebida({
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <AvatarStatus status={status} />
             <div>
-              <p className="text-[18px] font-bold leading-tight text-[#404040] truncate">
+              <p className="text-[14px] font-bold leading-tight text-[#404040] break-words text-left">
                 {cautela.visitante || "Nome do solicitante"}
               </p>
             </div>
@@ -303,12 +303,12 @@ function CardCautelaRecebida({
           </div>
         </div>
 
-        <p className="text-[15px] text-[#404040] mt-1">
+        <p className="text-[14px] text-[#404040] mt-1">
           Data: {cautela.data || "00/00/0000"}
         </p>
-        <p className="text-[15px] text-[#404040] mt-0.5">
+        <p className="text-[14px] text-[#404040] mt-0.5">
           Ciente:{" "}
-          <span className="font-bold">
+          <span className="font-bold text-[14px]">
             {(cautela.gestor || "").toUpperCase()}
           </span>
         </p>
@@ -494,7 +494,7 @@ export default function Gestor() {
     "recebidas",
   );
   const [paginaHistorico, setPaginaHistorico] = useState(1);
-  const ITENS_POR_PAGINA = 8;
+  const ITENS_POR_PAGINA = 6;
   const [livreAcesso, setLivreAcesso] = useState<"livre" | "entrada">(
     "entrada",
   );
@@ -873,7 +873,7 @@ export default function Gestor() {
         )}
 
         {/* Coluna esquerda — Recebidos */}
-        <div className="w-[550px] flex-shrink-0 flex flex-col h-[calc(100vh-60px)] pt-6 pb-4 px-6 relative z-0">
+        <div className="w-[443px] flex-shrink-0 flex flex-col h-[calc(100vh-60px)] pt-6 pb-4 px-6 relative z-0">
           <div
             className="bg-[#22592A] px-5 py-4 flex-shrink-0 rounded-t-xl flex items-center justify-between"
             style={{ boxShadow: "4px 0 8px rgba(0,0,0,0.25)" }}
@@ -1046,7 +1046,7 @@ export default function Gestor() {
           </div>
 
           {/* Tabela */}
-          <div className="w-full max-w-[1200px] bg-white rounded-lg border border-[#E5E7EB] shadow-sm relative z-0 overflow-x-auto">
+          <div className="w-full max-w-[1126px] bg-white rounded-lg border border-[#E5E7EB] shadow-sm relative z-0 overflow-x-auto ml-[-15px]">
             <div className="grid grid-cols-[1.8fr_0.9fr_0.75fr_1.8fr_1.25fr_1.35fr_52px] bg-[#2B8E37] text-white text-[15px] font-bold px-4 py-2 min-w-[800px]">
               <span>Solicitante</span>
               <span>Data</span>
@@ -1098,7 +1098,7 @@ export default function Gestor() {
                       </span>
                       <span className="flex justify-center truncate text-[18px]">
                         {cautela.status === "Reprovado"
-                          ? "-"
+                          ? "Sem Acesso"
                           : (
                                 cautela as CautelaComDecisao & {
                                   livreAcesso?: string;
