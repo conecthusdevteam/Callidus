@@ -1,12 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { AvatarStatus } from "../components/AvatarStatus";
-import { BadgeStatus } from "../components/BadgeStatus";
-import {
-  BannerAguardandoSaida,
-  JustificativaBox,
-} from "../components/BannerStatus";
-import StatusBadge from "../components/StatusBadge";
-import { TabelaCautelados } from "../components/TabelaCautelados";
+import { CardCautelaRecebida } from "../components/CardCautelaRecebida";
 import { type Cautela, type StatusCautela } from "../data/cautelaTypes";
 import {
   approveCautela,
@@ -16,8 +9,8 @@ import {
   rejectCautela,
   updatePermissionType,
 } from "../lib/api";
-//import { CardCautelaHistorico } from "../components/CardCautelaHistorico";
 import DetalhesCautela from "../components/DetalhesCautela";
+import { DetalhesConteudo } from "../components/DetalhesConteudo";
 import {
   ModalAprovado,
   ModalAutorizarSaida,
@@ -38,8 +31,6 @@ interface CautelaComDecisao extends Cautela {
   livreAcesso?: "livre" | "entrada";
 }
 
-// ─── Painel de detalhes ───────────────────────────────────────────────────────
-
 function formatarData(valor: string): { data: string; hora: string } {
   if (!valor) return { data: "", hora: "--:--" };
   if (valor.includes(", ")) {
@@ -59,316 +50,6 @@ function formatarData(valor: string): { data: string; hora: string } {
   } catch {
     return { data: valor, hora: "--:--" };
   }
-}
-
-function DetalhesConteudo({
-  cautela,
-  onAutorizarSaida,
-}: {
-  cautela: CautelaComDecisao;
-  onAutorizarSaida?: () => void;
-}) {
-  const tipoPermissaoLabel =
-    cautela.tipoPermissao === "LIVRE_TRANSITO"
-      ? "Livre trânsito"
-      : "Entrada única";
-  const statusExibido =
-    cautela.decisaoLocal === "aprovado"
-      ? "Aprovado"
-      : cautela.decisaoLocal === "reprovado"
-        ? "Reprovado"
-        : cautela.status;
-
-  const isSomenteLeitura =
-    cautela.decisaoLocal !== undefined ||
-    cautela.status === "Aprovado" ||
-    cautela.status === "Reprovado" ||
-    cautela.status === "Saída Autorizada" ||
-    cautela.status === "Encerrada";
-
-  return (
-    <div>
-      {isSomenteLeitura && (
-        <div className="mb-4">
-          {cautela.status !== "Saída Autorizada" &&
-            cautela.status !== "Encerrada" &&
-            cautela.status !== "Aprovado" &&
-            cautela.status !== "Reprovado" && (
-              <StatusBadge status={statusExibido as StatusCautela} fullWidth />
-            )}
-          {cautela.status === "Aprovado" && (
-            <div className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-[#BCF0DA] border border-[#31C48D] text-[#065F46] text-[13px] font-medium">
-              <svg
-                className="w-4 h-4 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              Aprovado {cautela.aprovadoEm ? `em ${cautela.aprovadoEm}` : ""}
-            </div>
-          )}
-          {cautela.status === "Saída Autorizada" && (
-            <div className="mt-2">
-              <BannerAguardandoSaida />
-            </div>
-          )}
-          {cautela.status === "Reprovado" && (
-            <div className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-[#FBD5D5] border border-[#F05252] text-[#9B1C1C] text-[13px] font-medium">
-              <svg
-                className="w-4 h-4 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              Reprovado {cautela.reprovadoEm ? `em ${cautela.reprovadoEm}` : ""}
-            </div>
-          )}
-          {cautela.status === "Encerrada" && (
-            <div className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-[#F4F4F4] border border-[#A3A3A3] text-[#525252] text-[13px] font-medium">
-              <svg
-                className="w-4 h-4 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                />
-              </svg>
-              Encerrada {cautela.encerradaEm ? `em ${cautela.encerradaEm}` : ""}
-            </div>
-          )}
-          {(cautela.motivoNegativa || cautela.decisaoLocal === "reprovado") && (
-            <div className="mt-3">
-              <JustificativaBox motivo={cautela.motivoNegativa ?? "—"} />
-            </div>
-          )}
-          {cautela.tipoPermissaoAlteradoEm && (
-            <p className="mt-2 text-center text-sm font-semibold text-[#404040]">
-              {tipoPermissaoLabel}
-            </p>
-          )}
-        </div>
-      )}
-      <div className="float-right ml-5 mb-5 w-[160px]">
-        <p className="mb-4 text-[12px] font-bold text-[#404040]">
-          Acompanhe seu pedido de cautela
-        </p>
-        <div></div>
-      </div>
-
-      <div className="mb-4">
-        <p className="text-base font-bold text-black">Id da cautela</p>
-        <p className="text-base text-black">{cautela.id}</p>
-      </div>
-      <div className="mb-3">
-        <p className="text-base font-bold text-black">Setor</p>
-        <p className="text-base text-black">{cautela.setorId || "-"}</p>
-      </div>
-      <div className="mb-4">
-        <p className="text-base font-bold text-black">
-          Data e hora da solicitação
-        </p>
-        <p className="text-base text-black">{cautela.data}</p>
-      </div>
-      <div className="mb-4">
-        <p className="text-base font-bold text-black">Proprietário</p>
-        <p className="text-base text-black">{cautela.visitante}</p>
-      </div>
-      <div className="mb-3">
-        <p className="text-base font-bold text-black">Documento</p>
-        <p className="text-base text-gray-700">{cautela.documento || "-"}</p>
-      </div>
-      <div className="mb-3">
-        <p className="text-base font-bold text-black">Empresa</p>
-        <p className="text-base text-gray-700">{cautela.empresa || "-"}</p>
-      </div>
-      <div className="mb-4">
-        <p className="text-base font-bold text-black">E-mail do proprietário</p>
-        <p className="text-base text-black">{cautela.proprietarioEmail}</p>
-      </div>
-      {cautela.validade && (
-        <div className="mb-4">
-          <p className="text-base font-bold text-black">Válido até:</p>
-          <p className="text-base text-gray-700">{cautela.validade}</p>
-        </div>
-      )}
-      {cautela.aprovadoEm && (
-        <div className="mb-4">
-          <p className="text-base font-bold text-black">Aprovado em:</p>
-          <p className="text-base text-gray-700">{cautela.aprovadoEm}</p>
-        </div>
-      )}
-      {cautela.status === "Encerrada" && cautela.encerradaEm && (
-        <div className="mb-3">
-          <p className="text-base font-bold text-black">
-            Data e hora de saída:
-          </p>
-          <p className="text-base text-gray-700">{cautela.encerradaEm}</p>
-        </div>
-      )}
-
-      <div className="mt-16 mb-2">
-        <TabelaCautelados equipamentos={cautela.equipamentos} />
-      </div>
-
-      {cautela.status === "Aprovado" &&
-        cautela.decisaoLocal === undefined &&
-        onAutorizarSaida && (
-          <button
-            onClick={onAutorizarSaida}
-            className="w-full mt-12 py-2.5 rounded-lg bg-[#3BB14A] text-white text-sm font-semibold hover:bg-green-600 transition-colors"
-          >
-            Autorizar saída
-          </button>
-        )}
-    </div>
-  );
-}
-
-// ─── Card de Recebidas ────────────────────────────────────────────────────────
-
-function CardCautelaRecebida({
-  cautela,
-  onClick,
-  onAprovar,
-  onDescartar,
-  isNaoLida,
-}: {
-  cautela: CautelaComDecisao;
-  index: number;
-  isNaoLida: boolean;
-  onClick: () => void;
-  onAprovar: (id: string) => void;
-  onDescartar: (id: string) => void;
-}) {
-  const isAtencao = cautela.status === "Saída Autorizada";
-  const status = cautela.status as StatusCautela;
-
-  return (
-    <div className="flex justify-center">
-      <div
-        onClick={onClick}
-        className={`rounded-lg p-5 cursor-pointer transition-all hover:shadow-md mb-3 w-full ${
-          isAtencao
-            ? "border border-red-300 bg-[#FFF5F5]"
-            : isNaoLida
-              ? "border-2 border-amber-300 bg-[#FFFBEB]"
-              : "border border-amber-200 bg-white"
-        }`}
-      >
-        <div className="flex justify-center mb-3">
-          <span
-            className={`w-full text-center px-3 py-1 rounded text-[12px] font-bold uppercase tracking-wide ${
-              isAtencao
-                ? "bg-red-100 border border-red-300 text-red-600"
-                : "bg-[#FCE96A] border border-amber-300 text-[#111827]"
-            }`}
-          >
-            {isAtencao
-              ? "Atenção - Solicitação de saída"
-              : "Nova cautela solicitada"}
-          </span>
-        </div>
-
-        <div className="flex items-start justify-between gap-3 mb-2">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <AvatarStatus status={status} />
-            <div>
-              <p className="text-[14px] font-bold leading-tight text-[#404040] break-words text-left">
-                {cautela.visitante || "Nome do solicitante"}
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-1">
-            <BadgeStatus status={isAtencao ? "Aprovado" : "Em análise"} />
-          </div>
-        </div>
-
-        <p className="text-[14px] text-[#404040] mt-1">
-          Data: {cautela.data || "00/00/0000"}
-        </p>
-        <p className="text-[14px] text-[#404040] mt-0.5">
-          Ciente:{" "}
-          <span className="font-bold text-[14px]">
-            {(cautela.gestor || "").toUpperCase()}
-          </span>
-        </p>
-
-        <hr className="border-black my-3" />
-
-        <p className="text-[14px] font-medium text-[#404040] mb-1">
-          Cautelados:
-        </p>
-        <ul className="mb-3 space-y-0.5">
-          {cautela.equipamentos.slice(0, 3).map((eq, i) => (
-            <li
-              key={i}
-              className="text-[14px] text-[#404040] flex items-start gap-1"
-            >
-              <span>•</span>
-              {eq.descricao} - {eq.quantidade ?? 1}
-            </li>
-          ))}
-          {cautela.equipamentos.length > 3 && (
-            <li className="text-[11px] text-[#9CA3AF]">
-              +{cautela.equipamentos.length - 3} item(ns)
-            </li>
-          )}
-        </ul>
-
-        <div
-          className="flex items-center justify-between gap-2 mt-3"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {!isAtencao ? (
-            <div className="flex gap-2">
-              <button
-                onClick={() => onAprovar(cautela.id)}
-                className="px-5 py-2 rounded-lg bg-[#3BB14A] text-white text-sm font-semibold hover:bg-[#22592A] transition-colors"
-              >
-                Aprovar
-              </button>
-              <button
-                onClick={() => onDescartar(cautela.id)}
-                className="px-5 py-2 rounded-lg bg-[#FAFAFA] border border-gray-400 text-black text-sm font-medium hover:bg-gray-100 transition-colors"
-              >
-                Descartar
-              </button>
-            </div>
-          ) : (
-            <div />
-          )}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onClick();
-            }}
-            className="text-[13px] px-4 py-2 bg-gray-100 rounded-lg text-[#171717] font-medium hover:underline whitespace-nowrap"
-          >
-            Ver detalhes
-          </button>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 function ultimaAcaoData(cautela: Cautela): string {
@@ -394,7 +75,7 @@ function ContadorRecebidas({
   return (
     <div className="relative flex-shrink-0">
       <div
-        className="min-w-[35px] h-[35px] px-1.5 mx-6 rounded-full flex items-center justify-center text-white text-[18px] font-bold"
+        className="min-w-[30px] h-[30px] px-1.5 mx-6 rounded-full flex items-center justify-center text-white text-[18px] font-bold"
         style={{ backgroundColor: "#0E9F6E" }}
       >
         {total > 9 ? "9+" : total}
@@ -502,6 +183,9 @@ export default function Gestor() {
   );
   const [modalConfirmarAcesso, setModalConfirmarAcesso] = useState(false);
   const [modalAcessoSucesso, setModalAcessoSucesso] = useState(false);
+  const [abaAtivaMobile, setAbaAtivaMobile] = useState<
+    "solicitadas" | "emSaida"
+  >("solicitadas");
 
   const carregarCautelas = useCallback(async () => {
     try {
@@ -707,81 +391,148 @@ export default function Gestor() {
         )}
 
         {mobileView === "lista" && (
-          <div className="flex-1 overflow-y-auto">
-            <div className="mx-3 mt-3">
-              <div className="bg-[#22592A] rounded-t-lg px-4 py-3 flex items-center justify-between">
-                <h2 className="text-white font-bold text-base">Recebidas</h2>
-                <ContadorRecebidas
-                  total={totalRecebidasNaoLidas}
-                  mostrarBolinha={mostrarBolinhaGestor}
-                />
-              </div>
-              <div className="bg-[#E5E7EB] rounded-b-lg border border-gray-200 px-3 py-2">
-                {recebidas.length === 0 && (
-                  <p className="text-sm text-gray-400 text-center py-4">
-                    Nenhuma cautela pendente.
-                  </p>
-                )}
-                {recebidas.map((c, i) => (
-                  <CardCautelaRecebida
-                    key={c.id}
-                    cautela={c}
-                    index={i}
-                    isNaoLida={c.badgeGestor === "NOVA_CAUTELA_SOLICITADA"}
-                    onClick={() => {
-                      abrirDetalhe(c, "recebidas");
-                      setMobileView("detalhe");
+          <>
+            <div className="relative mx-3 mt-20 h-[56px] flex-shrink-0">
+              <button
+                onClick={() => setAbaAtivaMobile("emSaida")}
+                className={`w-full h-[56px] text-[16px] rounded-t-lg transition-all relative ${
+                  abaAtivaMobile === "emSaida"
+                    ? "bg-[#22592A] text-white font-bold"
+                    : "bg-[#C4EEC9] text-[#2B8E37]"
+                }`}
+              >
+                <div
+                  className="w-full h-full flex items-center justify-center gap-2"
+                  style={{ paddingLeft: "50%" }}
+                >
+                  <span
+                    style={{
+                      fontWeight: abaAtivaMobile === "emSaida" ? 600 : 400,
                     }}
-                    onAprovar={aprovar}
-                    onDescartar={abrirDescartar}
-                  />
-                ))}
-              </div>
+                  >
+                    Em saída
+                  </span>
+                  <div className="relative">
+                    <div className="min-w-[26px] h-[26px] px-1 rounded-full bg-[#0E9F6E] flex items-center justify-center text-white text-[13px] font-bold">
+                      {historico.filter((c) => c.status === "Saída Autorizada")
+                        .length > 9
+                        ? "9+"
+                        : historico.filter(
+                            (c) => c.status === "Saída Autorizada",
+                          ).length}
+                    </div>
+                    {historico.some((c) => c.status === "Saída Autorizada") && (
+                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500 border-2 border-white" />
+                    )}
+                  </div>
+                </div>
+              </button>
+
+              {/* Aba Solicitadas */}
+              <button
+                onClick={() => setAbaAtivaMobile("solicitadas")}
+                className={`absolute top-0 left-0 w-[50%] h-[56px] text-[16px] rounded-t-lg transition-all flex items-center justify-center gap-2 ${
+                  abaAtivaMobile === "solicitadas"
+                    ? "bg-[#22592A] text-white"
+                    : "bg-[#C4EEC9] text-[#22592A]"
+                }`}
+              >
+                <span
+                  style={{
+                    fontWeight: abaAtivaMobile === "solicitadas" ? 600 : 400,
+                  }}
+                >
+                  Solicitadas
+                </span>
+
+                <div className="relative">
+                  <div className="min-w-[26px] h-[26px] px-1 gap-4 rounded-full bg-[#0E9F6E] flex items-center justify-center text-white text-[13px] font-bold">
+                    {recebidas.length > 9 ? "9+" : recebidas.length}
+                  </div>
+
+                  {mostrarBolinhaGestor && (
+                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500 border-2 border-white" />
+                  )}
+                </div>
+              </button>
             </div>
 
-            <div className="mx-3 mt-4 mb-4">
-              <div className="bg-[#22592A] rounded-t-lg px-4 py-3">
-                <h2 className="text-white font-bold text-base">Histórico</h2>
-              </div>
-              <div className="bg-white rounded-b-lg border border-gray-200 overflow-hidden">
-                {historico.length === 0 && (
-                  <p className="text-[13px] text-[#6B7280] text-center py-6">
-                    Nenhuma cautela.
-                  </p>
+            {/* Conteúdo */}
+            <div className="flex-1 overflow-y-auto">
+              <div className="mx-3 bg-[#E5E7EB] rounded-b-lg border border-[#E5E7EB]">
+                {abaAtivaMobile === "solicitadas" && (
+                  <div className="py-2 px-3">
+                    {recebidas.length === 0 ? (
+                      <p className="text-[13px] text-[#6B7280] text-center mt-6 py-4">
+                        Nenhuma cautela pendente.
+                      </p>
+                    ) : (
+                      recebidas.map((c, i) => (
+                        <CardCautelaRecebida
+                          key={c.id}
+                          cautela={c}
+                          index={i}
+                          isNaoLida={
+                            c.badgeGestor === "NOVA_CAUTELA_SOLICITADA"
+                          }
+                          isMobile={true}
+                          livreAcesso={livreAcesso}
+                          onLivreAcessoChange={setLivreAcesso}
+                          onClick={() => {
+                            abrirDetalhe(c, "recebidas");
+                            setMobileView("detalhe");
+                          }}
+                          onAprovar={aprovar}
+                          onDescartar={abrirDescartar}
+                        />
+                      ))
+                    )}
+                  </div>
                 )}
-                {historico.map((c, i) => {
-                  const partes = c.data?.split(", ") ?? [];
-                  const data = partes[0] ?? "";
-                  const hora = partes[1] ?? "--:--";
-                  return (
-                    <div
-                      key={c.id}
-                      onClick={() => {
-                        abrirDetalhe(c, "historico");
-                        setMobileView("detalhe");
-                      }}
-                      className={`px-4 py-3 cursor-pointer border-b border-[#F3F4F6] last:border-0 ${
-                        i % 2 === 1 ? "bg-[#F9FAFB]" : "bg-white"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-[13px] font-medium text-[#111827] truncate">
-                          {c.visitante || "—"}
-                        </span>
-                        <BadgeHistorico status={statusHistorico(c)} />
-                      </div>
-                      <div className="flex gap-3 text-[12px] text-[#6B7280]">
-                        <span>
-                          {data} {hora}
-                        </span>
-                        <span className="truncate font-mono">{c.id}</span>
-                      </div>
-                    </div>
-                  );
-                })}
+
+                {abaAtivaMobile === "emSaida" && (
+                  <div className="py-2 px-3">
+                    {historico.length === 0 ? (
+                      <p className="text-[13px] text-[#6B7280] text-center mt-6 py-4">
+                        Nenhuma cautela.
+                      </p>
+                    ) : (
+                      historico.map((c, i) => {
+                        const partes = c.data?.split(", ") ?? [];
+                        const data = partes[0] ?? "";
+                        const hora = partes[1] ?? "--:--";
+                        return (
+                          <div
+                            key={c.id}
+                            onClick={() => {
+                              abrirDetalhe(c, "historico");
+                              setMobileView("detalhe");
+                            }}
+                            className={`px-4 py-3 cursor-pointer border-b border-[#F3F4F6] last:border-0 rounded-sm mb-1 ${
+                              i % 2 === 1 ? "bg-[#F9FAFB]" : "bg-white"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-[13px] font-medium text-[#111827] truncate">
+                                {c.visitante || "—"}
+                              </span>
+                              <BadgeHistorico status={statusHistorico(c)} />
+                            </div>
+                            <div className="flex gap-3 text-[12px] text-[#6B7280]">
+                              <span>
+                                {data} {hora}
+                              </span>
+                              <span className="truncate font-mono">{c.id}</span>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
               </div>
             </div>
-          </div>
+          </>
         )}
 
         {mobileView === "detalhe" && cautelaSelecionada && (
@@ -880,9 +631,9 @@ export default function Gestor() {
         )}
 
         {/* Coluna esquerda — Recebidos */}
-        <div className="w-[443px] flex-shrink-0 flex flex-col h-[calc(100vh-60px)] pt-6 pb-4 px-6 relative z-0">
+        <div className="w-[432px] h-[calc(100vh-60px)] pt-12 ml-[41px] flex-shrink-0 flex flex-col relative z-0">
           <div
-            className="bg-[#22592A] px-5 py-4 flex-shrink-0 rounded-t-xl flex items-center justify-between"
+            className="bg-[#22592A] px-5 py-4 flex-shrink-0 rounded-t-[5px] flex items-center justify-between"
             style={{ boxShadow: "4px 0 8px rgba(0,0,0,0.25)" }}
           >
             <h2 className="text-white font-bold text-[18px]">Recebidos</h2>
@@ -892,7 +643,7 @@ export default function Gestor() {
             />
           </div>
           <div
-            className="flex-1 h-0 overflow-y-auto bg-[#E5E7EB] flex flex-col gap-3 p-4 pb-8 rounded-b-xl border border-gray-200"
+            className="flex-1 overflow-y-auto bg-[#E5E7EB] flex flex-col gap-3 p-4 pb-8 rounded-b-[5px] border border-gray-200"
             style={{ boxShadow: "4px 0 8px rgba(0,0,0,0.25)" }}
           >
             {recebidas.length === 0 && (
@@ -1022,7 +773,7 @@ export default function Gestor() {
           )}
 
           {/* Barra de pesquisa */}
-          <div className="flex items-center gap-3 mb-8 mt-10 w-full max-w-[780px]">
+          <div className="flex items-center gap-3 mb-[39px] mt-[120px] w-full max-w-[607px]">
             <div className="relative flex-1">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                 <svg

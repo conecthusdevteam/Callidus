@@ -1,14 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { AvatarStatus } from "../components/AvatarStatus";
-import { BadgeStatus } from "../components/BadgeStatus";
-import { BannerStatus, JustificativaBox } from "../components/BannerStatus";
 import DetalhesCautela from "../components/DetalhesCautela";
 import { ModalEncerrada } from "../components/ModalGestor";
-import {
-  ListaCautelados,
-  TabelaCautelados,
-} from "../components/TabelaCautelados";
 import type { Cautela, StatusCautela } from "../data/cautelaTypes";
 import {
   closeCautela,
@@ -17,6 +10,10 @@ import {
   validateEntry,
 } from "../lib/api";
 import { matchesSearch } from "../lib/cautelaUtils";
+import { BadgeTabela } from "../components/BadgeTabelaPortaria";
+import { CautelaPrint } from "../components/CautelaPrint";
+import { CardCautelaPortaria } from "../components/CardCautelaPortaria";
+import { DetalhesCautelaPortaria } from "../components/DetalhesCautelaPortaria";
 
 const STATUS_HISTORICO: StatusCautela[] = [
   "Encerrada",
@@ -34,60 +31,6 @@ function isCautelaAtivaPortaria(cautela: Cautela) {
     cautela.etapaFluxo === "APROVADA_PELO_GESTOR"
   );
 }
-
-// ─── Badge inline para tabela ─────────────────────────────────────────────────
-
-function BadgeTabela({
-  status,
-  etapaFluxo,
-}: {
-  status: StatusCautela;
-  etapaFluxo?: string;
-}) {
-  if (status === "Aprovado" && etapaFluxo === "APROVADA_PELO_GESTOR") {
-    return (
-      <span className="inline-flex items-center gap-1 w-fit px-2 py-1 rounded-full text-[12px] font-semibold border border-[#31C48D] bg-[#BCF0DA] text-[#065F46]">
-        <span className="w-2 h-2 rounded-full bg-[#0E9F6E]" />
-        Em Validação
-      </span>
-    );
-  }
-  if (status === "Aprovado") {
-    return (
-      <span className="inline-flex items-center gap-1 w-fit px-2 py-1 rounded-full text-[12px] font-semibold border border-[#31C48D] bg-[#BCF0DA] text-[#065F46]">
-        <span className="w-2 h-2 rounded-full bg-[#0E9F6E]" />
-        Ativa
-      </span>
-    );
-  }
-  if (status === "Saída Autorizada") {
-    return (
-      <span className="inline-flex items-center gap-1 w-fit px-2 py-1 rounded-full text-[12px] font-semibold border border-amber-400 bg-amber-100 text-amber-800">
-        <span className="w-2 h-2 rounded-full bg-amber-400" />
-        Saída Autorizada
-      </span>
-    );
-  }
-  if (status === "Reprovado") {
-    return (
-      <span className="inline-flex items-center gap-1 w-fit px-2 py-1 rounded-full text-[12px] font-semibold border border-[#F05252] bg-[#FEF2F2] text-[#9B1C1C]">
-        <span className="w-2 h-2 rounded-full bg-[#F05252]" />
-        Reprovado
-      </span>
-    );
-  }
-  if (status === "Encerrada") {
-    return (
-      <span className="inline-flex items-center gap-1 w-fit px-2 py-1 rounded-full text-[12px] font-semibold border border-[#A3A3A3] bg-[#F4F4F4] text-[#525252]">
-        <span className="w-2 h-2 rounded-full bg-[#A3A3A3]" />
-        Encerrada
-      </span>
-    );
-  }
-  return null;
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatarData(valor: string): { data: string; hora: string } {
   if (!valor) return { data: "", hora: "--:--" };
@@ -131,80 +74,7 @@ function paginasVisiveis(
   return pages;
 }
 
-function CautelaPrint({ cautela }: { cautela: Cautela | null }) {
-  if (!cautela) return null;
-  const [data = "—", hora = "—"] = cautela.data?.split(", ") ?? [];
-  const titulo =
-    cautela.status === "Reprovado"
-      ? "REPROVADA"
-      : cautela.status === "Encerrada"
-        ? "ENCERRADA"
-        : "APROVADA";
-  const responsavelLabel =
-    cautela.status === "Reprovado" ? "Reprovado por" : "Aprovado por";
-
-  return (
-    <div className="cautela-print-area">
-      <div className="cautela-print-card">
-        <h1>{titulo}</h1>
-        <p className="print-label">Id da Cautela:</p>
-        <p className="print-value">{cautela.id}</p>
-
-        <div className="print-grid">
-          <div>
-            <p className="print-label">Data da solicitação</p>
-            <p className="print-value">{data}</p>
-          </div>
-          <div>
-            <p className="print-label">Hora da solicitação</p>
-            <p className="print-value">{hora}</p>
-          </div>
-        </div>
-
-        <p className="print-label">Setor</p>
-        <p className="print-value">{cautela.setorId || "-"}</p>
-        <p className="print-label">Proprietário:</p>
-        <p className="print-value">{cautela.visitante || "-"}</p>
-        <p className="print-label">Documento/Matrícula</p>
-        <p className="print-value">{cautela.documento || "-"}</p>
-        <p className="print-label">Email</p>
-        <p className="print-value">{cautela.proprietarioEmail || "-"}</p>
-        <p className="print-label">Empresa</p>
-        <p className="print-value">{cautela.empresa || "-"}</p>
-        <p className="print-label">{responsavelLabel}</p>
-        <p className="print-value">{cautela.gestor || "-"}</p>
-
-        {cautela.status === "Reprovado" && cautela.motivoNegativa && (
-          <>
-            <p className="print-label">Justificativa</p>
-            <p className="print-value">{cautela.motivoNegativa}</p>
-          </>
-        )}
-
-        <table>
-          <thead>
-            <tr>
-              <th>Descrição</th>
-              <th>Quantidade</th>
-            </tr>
-          </thead>
-          <tbody>
-            {cautela.equipamentos.map((item, index) => (
-              <tr key={`${item.descricao}-${index}`}>
-                <td>{item.descricao}</td>
-                <td>{item.quantidade ?? 1}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-// ─── Banner do card ───────────────────────────────────────────────────────────
-
-function BannerCard({ status }: { status: StatusCautela }) {
+export function BannerCard({ status }: { status: StatusCautela }) {
   if (status === "Saída Autorizada") {
     return (
       <div className="w-full text-center py-1 px-3 rounded mb-3 bg-amber-100 border border-amber-400 text-amber-800 text-[12px] font-bold uppercase tracking-wide">
@@ -222,117 +92,6 @@ function BannerCard({ status }: { status: StatusCautela }) {
   return null;
 }
 
-// ─── Card ─────────────────────────────────────────────────────────────────────
-
-function CardCautelaPortaria({
-  cautela,
-  isNaoLida,
-  isSelected,
-  onClick,
-  onAprovarEntrada,
-  onAprovarSaida,
-}: {
-  cautela: Cautela;
-  isNaoLida: boolean;
-  isSelected: boolean;
-  onClick: () => void;
-  onAprovarEntrada?: (id: string) => void;
-  onAprovarSaida?: (id: string) => void;
-}) {
-  const status = cautela.status as StatusCautela;
-  const borderClass = isSelected
-    ? "border-2 border-[#22592A] bg-white"
-    : isNaoLida
-      ? "border-2 border-amber-300 bg-[#FFFAD8]"
-      : status === "Saída Autorizada"
-        ? "border border-amber-300 bg-white"
-        : status === "Aprovado"
-          ? "border border-[#34D399] bg-white"
-          : "border border-[#D1D5DB] bg-white";
-
-  return (
-    <div
-      onClick={onClick}
-      className={`rounded-lg p-5 cursor-pointer transition-all hover:shadow-md mb-3 w-full max-w-[440px] mx-auto ${borderClass}`}
-    >
-      <BannerCard status={status} />
-
-      <div className="flex items-start justify-between gap-3 mb-2">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          <AvatarStatus status={status} />
-          <div>
-            <p className="text-[14px] font-bold leading-tight text-[#404040] break-words text-left">
-              {cautela.visitante || "Nome do proprietário"}
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-1">
-          <BadgeStatus status={status} etapaFluxo={cautela.etapaFluxo} />
-          {isNaoLida && (
-            <span className="inline-flex items-center rounded-lg px-2 py-0.5 text-[12px] font-semibold bg-[#FCE96A] text-black mt-0.5">
-              Nova
-            </span>
-          )}
-        </div>
-      </div>
-
-      <p className="text-[14px] text-[#404040] mt-1">
-        Data: {cautela.data || "00/00/0000"}
-      </p>
-      <p className="text-[14px] text-[#404040] mt-0.5">
-        Ciente:{" "}
-        <span className="font-bold text-[14px]">
-          {(cautela.gestor || "").toUpperCase()}
-        </span>
-      </p>
-
-      <div className="border-t border-black my-3" />
-
-      <div className="flex justify-between items-end gap-4">
-        <div className="flex-1">
-          <p className="text-[14px] font-medium text-[#404040] mb-1">
-            Cautelados:
-          </p>
-          <ListaCautelados equipamentos={cautela.equipamentos ?? []} max={3} />
-        </div>
-      </div>
-
-      <div
-        className="flex items-center justify-between mt-3"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div>
-          {status === "Aprovado" && onAprovarEntrada && (
-            <button
-              onClick={() => onAprovarEntrada(cautela.id)}
-              className="px-5 py-2 rounded-lg bg-[#3BB14A] text-white text-sm font-semibold hover:bg-[#22592A] transition-colors"
-            >
-              Aprovar entrada
-            </button>
-          )}
-          {status === "Saída Autorizada" && onAprovarSaida && (
-            <button
-              onClick={() => onAprovarSaida(cautela.id)}
-              className="px-5 py-2 rounded-lg bg-[#3BB14A] text-white text-sm font-semibold hover:bg-[#22592A] transition-colors"
-            >
-              Aprovar saída
-            </button>
-          )}
-        </div>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onClick();
-          }}
-          className="text-[13px] px-4 py-2 bg-gray-100 rounded-lg text-[#171717] font-medium hover:underline"
-        >
-          Ver detalhes
-        </button>
-      </div>
-    </div>
-  );
-}
-
 function ultimaAcaoData(cautela: Cautela): string {
   if (cautela.status === "Encerrada" && cautela.encerradaEm)
     return cautela.encerradaEm;
@@ -343,161 +102,6 @@ function ultimaAcaoData(cautela: Cautela): string {
   if (cautela.status === "Aprovado" && cautela.aprovadoEm)
     return cautela.aprovadoEm;
   return cautela.data;
-}
-
-// ─── Painel de detalhes ───────────────────────────────────────────────────────
-
-function DetalhesCautelaPortaria({
-  cautela,
-  onFechar,
-  onAprovarEntrada,
-  onAprovarSaida,
-}: {
-  cautela: Cautela;
-  onFechar: () => void;
-  onAprovarEntrada?: () => void;
-  onAprovarSaida?: () => void;
-}) {
-  const tipoPermissaoLabel =
-    cautela.tipoPermissao === "LIVRE_TRANSITO"
-      ? "Livre trânsito"
-      : "Entrada única";
-  const statusFinalizadoLabel =
-    cautela.status === "Reprovado" ? "Reprovado" : "Aprovado";
-  const statusFinalizadoEm =
-    cautela.status === "Reprovado" ? cautela.reprovadoEm : cautela.aprovadoEm;
-
-  return (
-    <div className="relative flex flex-col h-full">
-      <button
-        onClick={onFechar}
-        className="absolute right-3 top-3 z-10 text-black hover:text-gray-500"
-        aria-label="Fechar detalhes"
-      >
-        <svg
-          className="h-4 w-4"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M6 18L18 6M6 6l12 12"
-          />
-        </svg>
-      </button>
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="mb-4">
-          <BannerStatus cautela={cautela} />
-        </div>
-        {cautela.status === "Reprovado" && cautela.motivoNegativa && (
-          <div className="mb-4">
-            <JustificativaBox motivo={cautela.motivoNegativa} />
-          </div>
-        )}
-        {cautela.tipoPermissaoAlteradoEm && (
-          <p className="mb-4 text-center text-sm font-semibold text-[#404040]">
-            {tipoPermissaoLabel}
-          </p>
-        )}
-        <div className="mb-3">
-          <p className="text-sm font-bold text-black">Id da cautela</p>
-          <p className="text-sm text-gray-700 break-all">{cautela.id}</p>
-        </div>
-        <div className="mb-3">
-          <p className="text-sm font-bold text-black">Setor</p>
-          <p className="text-sm text-gray-700">{cautela.setorId || "-"}</p>
-        </div>
-        <div className="mb-3">
-          <p className="text-sm font-bold text-black">
-            Data e hora da solicitação
-          </p>
-          <p className="text-sm text-gray-700">{cautela.data || "-"}</p>
-        </div>
-        <div className="mb-3">
-          <p className="text-sm font-bold text-black">Proprietário</p>
-          <p className="text-sm text-gray-700">{cautela.visitante || "-"}</p>
-        </div>
-        <div className="mb-3">
-          <p className="text-sm font-bold text-black">Documento</p>
-          <p className="text-sm text-gray-700">{cautela.documento || "-"}</p>
-        </div>
-        <div className="mb-3">
-          <p className="text-sm font-bold text-black">Empresa</p>
-          <p className="text-sm text-gray-700">{cautela.empresa || "-"}</p>
-        </div>
-        {cautela.proprietarioEmail && (
-          <div className="mb-3">
-            <p className="text-sm font-bold text-black">
-              E-mail do proprietário
-            </p>
-            <p className="text-sm text-gray-700">{cautela.proprietarioEmail}</p>
-          </div>
-        )}
-        {cautela.gestor && (
-          <div className="mb-3">
-            <p className="text-sm font-bold text-black">
-              {statusFinalizadoLabel} por:
-            </p>
-            <p className="text-sm text-gray-700">{cautela.gestor}</p>
-          </div>
-        )}
-        {statusFinalizadoEm && (
-          <div className="mb-3">
-            <p className="text-sm font-bold text-black">
-              {statusFinalizadoLabel} em:
-            </p>
-            <p className="text-sm text-gray-700">{statusFinalizadoEm}</p>
-          </div>
-        )}
-        {cautela.validade && (
-          <div className="mb-3">
-            <p className="text-sm font-bold text-black">Válido até:</p>
-            <p className="text-sm text-gray-700">{cautela.validade}</p>
-          </div>
-        )}
-        {cautela.status === "Encerrada" && cautela.encerradaEm && (
-          <div className="mb-3">
-            <p className="text-sm font-bold text-black">
-              Data e hora de saída:
-            </p>
-            <p className="text-sm text-gray-700">{cautela.encerradaEm}</p>
-          </div>
-        )}
-        <div className="mb-3">
-          <p className="text-sm font-bold text-black mb-2">Cautelados:</p>
-          <TabelaCautelados equipamentos={cautela.equipamentos ?? []} />
-        </div>
-      </div>
-
-      <div className="px-6 pb-6 pt-2 flex flex-col gap-2">
-        {cautela.status === "Aprovado" && onAprovarEntrada && (
-          <button
-            onClick={onAprovarEntrada}
-            className="w-full py-2.5 rounded-lg bg-[#3BB14A] text-white text-sm font-semibold hover:bg-[#22592A] transition-colors"
-          >
-            Aprovar entrada
-          </button>
-        )}
-        {cautela.status === "Saída Autorizada" && onAprovarSaida && (
-          <button
-            onClick={onAprovarSaida}
-            className="w-full py-2.5 rounded-lg bg-[#3BB14A] text-white text-sm font-semibold hover:bg-[#22592A] transition-colors"
-          >
-            Aprovar saída
-          </button>
-        )}
-        <button
-          onClick={() => window.print()}
-          className="w-full py-2.5 rounded-lg border border-gray-300 bg-white text-black text-sm font-semibold hover:bg-gray-100 transition-colors"
-        >
-          Imprimir
-        </button>
-      </div>
-    </div>
-  );
 }
 
 // ─── Portaria ─────────────────────────────────────────────────────────────────

@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { getCautelas } from "../lib/api";
 import type { Cautela } from "../data/cautelaTypes";
+import menuIcon from "../assets/menu.svg";
 
 function statusLabel(status: string): { label: string; color: string } {
   switch (status) {
@@ -84,30 +85,6 @@ export default function Navbar() {
     );
   }
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const val = e.target.value;
-    setTermo(val);
-    emitSearch(val);
-    setDropdownAberto(val.trim().length > 0);
-  }
-
-  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter") {
-      emitSearch(e.currentTarget.value);
-      setDropdownAberto(false);
-    }
-    if (e.key === "Escape") setDropdownAberto(false);
-    if (e.key === "Backspace" && e.currentTarget.value.length <= 1) {
-      emitSearch("");
-      setDropdownAberto(false);
-    }
-  }
-
-  function handlePesquisar() {
-    emitSearch(inputRef.current?.value ?? "");
-    setDropdownAberto(false);
-  }
-
   function handleSelecionarCautela(cautela: Cautela) {
     setDropdownAberto(false);
     setTermo("");
@@ -167,7 +144,7 @@ export default function Navbar() {
     <>
       {/* DESKTOP */}
       <header
-        className="hidden md:flex fixed top-0 left-[70px] right-0 z-10 items-center px-4 border-b-[6px]"
+        className="hidden md:flex fixed top-0 left-[60px] right-0 z-10 items-center px-4 border-b-[6px]"
         style={{
           height: "60px",
           backgroundColor: "#FFFFFF",
@@ -176,20 +153,9 @@ export default function Navbar() {
         }}
       >
         <div className="ml-2 flex items-center gap-5 flex-shrink-0">
-          <svg
-            width="20"
-            height="11"
-            viewBox="0 0 15 11"
-            fill="none"
-            className="text-black"
-          >
-            <path
-              d="M0.5 5.5H13.8333M0.5 0.5H13.8333M0.5 10.5H13.8333"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          <div className="inline-flex h-10 w-10 items-center justify-center rounded-md text-[#27272A] transition-colors hover:bg-muted">
+            <img src={menuIcon} alt="Menu" className="h-40 w-40" />
+          </div>
           <span className="text-black font-bold text-xl tracking-wide whitespace-nowrap">
             Controle de Cautelas
           </span>
@@ -220,7 +186,7 @@ export default function Navbar() {
         }}
       >
         <div className="flex items-center justify-center h-[50px] relative">
-          <span className="font-bold text-[20px] leading-[26px] tracking-[-0.25px]">
+          <span className="font-bold text-[24px] leading-[26px] tracking-[-0.25px] font-['Montserrat']">
             Controle de Cautelas
           </span>
           <button
@@ -232,31 +198,6 @@ export default function Navbar() {
         </div>
         <div className="flex items-center gap-2 px-3 pb-2">
           <div className="relative flex-1">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"
-                />
-              </svg>
-            </span>
-            <input
-              ref={inputRef}
-              type="text"
-              value={termo}
-              placeholder="Pesquisar..."
-              className="w-full pl-9 pr-3 py-1.5 text-[12px] border border-[#D1D5DB] rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-[#2B8E37]"
-              onChange={handleChange}
-              onKeyDown={handleKeyDown}
-              onFocus={() => termo.trim() && setDropdownAberto(true)}
-            />
             {mostrarDropdown && (
               <div
                 ref={dropdownRef}
@@ -305,12 +246,6 @@ export default function Navbar() {
               </div>
             )}
           </div>
-          <button
-            onClick={handlePesquisar}
-            className="px-3 py-1.5 rounded-md bg-[#2B8E37] text-white text-[12px] font-semibold flex-shrink-0"
-          >
-            Pesquisar
-          </button>
         </div>
       </header>
     </>
