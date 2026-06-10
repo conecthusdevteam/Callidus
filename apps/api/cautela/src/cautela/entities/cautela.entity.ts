@@ -1,4 +1,6 @@
+import { randomBytes } from 'crypto';
 import {
+  BeforeInsert,
   Column,
   CreateDateColumn,
   Entity,
@@ -6,7 +8,7 @@ import {
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
-  UpdateDateColumn,
+  UpdateDateColumn
 } from 'typeorm';
 import { CautelaFlowStep } from '../../common/enums/cautela-flow-step.enum';
 import { CautelaPermissionType } from '../../common/enums/cautela-permission-type.enum';
@@ -17,10 +19,21 @@ import { User } from '../../user/entities/user.entity';
 import { CautelaEvent } from './cautela-event.entity';
 import { CautelaItem } from './cautela-item.entity';
 
+const SectorEnum = {
+  '101': 'MNP',
+  '202': 'TCI',
+  '303': 'ALM',
+} as const;
+
+type SectorEnum = typeof SectorEnum[keyof typeof SectorEnum];
+
 @Entity({ name: 'cautelas' })
 export class Cautela {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  @Column({ unique: true, length: 50 })
+  customId: string;
 
   @Column({
     enum: CautelaType,
@@ -144,9 +157,13 @@ export class Cautela {
   @JoinColumn({ name: 'encerradoPorId' })
   encerradoPor: User | null;
 
-  @ManyToOne(() => Sector, (sector) => sector.cautelas, { eager: false })
+  @ManyToOne(() => Sector, (sector) => sector.cautelas, { eager: true })
   @JoinColumn({ name: 'setorId' })
   setor: Sector;
+
+  get numeroSetor(): string {
+    return this.setor?.numeroSetor?.toString() || '000';
+  }
 
   @OneToMany(() => CautelaItem, (item) => item.cautela, {
     cascade: true,
@@ -157,4 +174,23 @@ export class Cautela {
     cascade: true,
   })
   eventos: CautelaEvent[];
+
+  private generateRandomId(length: number = 4): string {
+    return randomBytes(length)
+      .toString('base64')
+      .replace(/[+/=]/g, '')
+      .slice(0, length)
+      .toUpperCase();
+  }
+
+  @BeforeInsert()
+  generateId() {
+    const numeroSetor = this.numeroSetor;
+    const nomeSetor = SectorEnum[numeroSetor] || 'SEM';
+    const idPart = this.generateRandomId(4);
+
+    if (!this.customId) {
+      this.customId = `${nomeSetor}-${numeroSetor}-${idPart}`;
+    }
+  }
 }
