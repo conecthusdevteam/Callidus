@@ -188,6 +188,7 @@ async function bootstrap() {
     let cautelasAtualizadas = 0;
 
     if (existingSeedCautela) {
+      existingSeedCautela.setor = almoxarifado;
       existingSeedCautela.gestorId = gestorTeste.id;
       existingSeedCautela.solicitadoPorId = solicitanteTeste.id;
       existingSeedCautela.setorId = almoxarifado.id;
@@ -449,6 +450,7 @@ async function bootstrap() {
       });
 
       const cautelaData = {
+        setor: almoxarifado,
         aprovadoEm: seedData.aprovadoEm,
         atualizadoEm: seedData.atualizadoEm,
         criadoEm: seedData.criadoEm,
@@ -493,6 +495,7 @@ async function bootstrap() {
       const savedCautela = await cautelasRepository.save(
         cautelasRepository.create({
           ...cautelaData,
+          setor: almoxarifado,
           itens: [
             itemsRepository.create({
               atualizadoEm: seedData.criadoEm,
