@@ -18,51 +18,19 @@ import {
   ModalRecusado,
 } from "../components/ModalGestor";
 import { matchesSearch } from "../lib/cautelaUtils";
+import { Tabela, type CautelaComDecisao } from "../components/Tabela";
+import { ModalConfirmarAcesso, ModalAcessoSucesso } from "../components/Modais";
+import { MenuInferior } from "../components/MenuInferior";
+import { MenuHistorico } from "../components/MenuHistorico";
+import { MenuLista } from "../components/MenuLista";
 
 type Tab = "recebidas" | "historico";
 type MobileView =
   | "lista"
   | "detalhe"
+  | "historico"
   | "confirmacao-aprovado"
   | "confirmacao-recusado";
-
-interface CautelaComDecisao extends Cautela {
-  decisaoLocal?: "aprovado" | "reprovado";
-  livreAcesso?: "livre" | "entrada";
-}
-
-function formatarData(valor: string): { data: string; hora: string } {
-  if (!valor) return { data: "", hora: "--:--" };
-  if (valor.includes(", ")) {
-    const [data, hora] = valor.split(", ");
-    return { data, hora };
-  }
-  try {
-    const d = new Date(valor);
-    if (isNaN(d.getTime())) return { data: valor, hora: "--:--" };
-    return {
-      data: d.toLocaleDateString("pt-BR"),
-      hora: d.toLocaleTimeString("pt-BR", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    };
-  } catch {
-    return { data: valor, hora: "--:--" };
-  }
-}
-
-function ultimaAcaoData(cautela: Cautela): string {
-  if (cautela.status === "Encerrada" && cautela.encerradaEm)
-    return cautela.encerradaEm;
-  if (cautela.status === "Saída Autorizada" && cautela.entradaValidadaEm)
-    return cautela.entradaValidadaEm;
-  if (cautela.status === "Reprovado" && cautela.reprovadoEm)
-    return cautela.reprovadoEm;
-  if (cautela.status === "Aprovado" && cautela.aprovadoEm)
-    return cautela.aprovadoEm;
-  return cautela.data;
-}
 
 function ContadorRecebidas({
   total,
@@ -85,75 +53,6 @@ function ContadorRecebidas({
       )}
     </div>
   );
-}
-
-function BadgeHistorico({
-  status,
-  etapaFluxo,
-}: {
-  status: StatusCautela;
-  etapaFluxo?: string;
-}) {
-  if (status === "Aprovado" && etapaFluxo === "APROVADA_PELO_GESTOR") {
-    return (
-      <span className="inline-flex items-center gap-1 w-fit px-2 py-1 rounded-full text-[12px] font-semibold border border-[#31C48D] bg-[#BCF0DA] text-[#065F46]">
-        <span className="w-2 h-2 rounded-full bg-[#0E9F6E]" />
-        Em Validação
-      </span>
-    );
-  }
-  if (status === "Aprovado") {
-    return (
-      <span className="inline-flex items-center gap-1 w-fit px-2 py-1 rounded-full text-[12px] font-semibold border border-[#31C48D] bg-[#BCF0DA] text-[#065F46]">
-        <span className="w-2 h-2 rounded-full bg-[#0E9F6E]" />
-        Ativa
-      </span>
-    );
-  }
-  if (status === "Saída Autorizada") {
-    return (
-      <span className="inline-flex items-center gap-1 w-fit px-2 py-1 rounded-full text-[12px] font-semibold border border-amber-400 bg-amber-100 text-amber-800">
-        <span className="w-2 h-2 rounded-full bg-amber-400" />
-        Saída Autorizada
-      </span>
-    );
-  }
-  if (status === "Reprovado") {
-    return (
-      <span className="inline-flex items-center gap-1 w-fit px-2 py-1 rounded-full text-[12px] font-semibold border border-[#F05252] bg-[#FEF2F2] text-[#9B1C1C]">
-        <span className="w-2 h-2 rounded-full bg-[#F05252]" />
-        Reprovado
-      </span>
-    );
-  }
-  if (status === "Encerrada") {
-    return (
-      <span className="inline-flex items-center gap-1 w-fit px-2 py-1 rounded-full text-[12px] font-semibold border border-[#A3A3A3] bg-[#F4F4F4] text-[#525252]">
-        <span className="w-2 h-2 rounded-full bg-[#A3A3A3]" />
-        Encerrada
-      </span>
-    );
-  }
-  return null;
-}
-
-function paginasVisiveis(paginaAtual: number, totalPaginas: number) {
-  const paginas: Array<number | "..."> = [];
-
-  for (let pagina = 1; pagina <= totalPaginas; pagina += 1) {
-    const deveExibir =
-      pagina === 1 ||
-      pagina === totalPaginas ||
-      Math.abs(pagina - paginaAtual) <= 1;
-
-    if (deveExibir) {
-      paginas.push(pagina);
-    } else if (paginas[paginas.length - 1] !== "...") {
-      paginas.push("...");
-    }
-  }
-
-  return paginas;
 }
 
 // ─── Gestor ───────────────────────────────────────────────────────────────────
@@ -186,6 +85,9 @@ export default function Gestor() {
   const [abaAtivaMobile, setAbaAtivaMobile] = useState<
     "solicitadas" | "emSaida"
   >("solicitadas");
+  const [menuAtivo, setMenuAtivo] = useState<
+    "home" | "historico" | "configuracoes"
+  >("home");
 
   const carregarCautelas = useCallback(async () => {
     try {
@@ -223,6 +125,15 @@ export default function Gestor() {
       c.status === "Encerrada";
     return searchTerm.trim() ? ok && matchesSearch(c, searchTerm) : ok;
   });
+
+  const totalPaginasGestor = Math.max(
+    1,
+    Math.ceil(historico.length / ITENS_POR_PAGINA),
+  );
+  const itensPaginaGestor = historico.slice(
+    (paginaHistorico - 1) * ITENS_POR_PAGINA,
+    paginaHistorico * ITENS_POR_PAGINA,
+  );
 
   useEffect(() => {
     function onSelecionar(e: Event) {
@@ -383,7 +294,7 @@ export default function Gestor() {
   return (
     <>
       {/* ══ MOBILE ══ */}
-      <div className="lg:hidden flex flex-col h-[calc(100vh-60px)] overflow-hidden bg-[#F5F7F6]">
+      <div className="lg:hidden flex flex-col h-dvh overflow-hidden bg-[#F5F7F6]">
         {actionError && (
           <div className="mx-4 mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
             {actionError}
@@ -391,153 +302,32 @@ export default function Gestor() {
         )}
 
         {mobileView === "lista" && (
-          <>
-            <div className="relative mx-3 mt-20 h-[56px] flex-shrink-0">
-              <button
-                onClick={() => setAbaAtivaMobile("emSaida")}
-                className={`w-full h-[56px] text-[16px] rounded-t-lg transition-all relative ${
-                  abaAtivaMobile === "emSaida"
-                    ? "bg-[#22592A] text-white font-bold"
-                    : "bg-[#C4EEC9] text-[#2B8E37]"
-                }`}
-              >
-                <div
-                  className="w-full h-full flex items-center justify-center gap-2"
-                  style={{ paddingLeft: "50%" }}
-                >
-                  <span
-                    style={{
-                      fontWeight: abaAtivaMobile === "emSaida" ? 600 : 400,
-                    }}
-                  >
-                    Em saída
-                  </span>
-                  <div className="relative">
-                    <div className="min-w-[26px] h-[26px] px-1 rounded-full bg-[#0E9F6E] flex items-center justify-center text-white text-[13px] font-bold">
-                      {historico.filter((c) => c.status === "Saída Autorizada")
-                        .length > 9
-                        ? "9+"
-                        : historico.filter(
-                            (c) => c.status === "Saída Autorizada",
-                          ).length}
-                    </div>
-                    {historico.some((c) => c.status === "Saída Autorizada") && (
-                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500 border-2 border-white" />
-                    )}
-                  </div>
-                </div>
-              </button>
-
-              {/* Aba Solicitadas */}
-              <button
-                onClick={() => setAbaAtivaMobile("solicitadas")}
-                className={`absolute top-0 left-0 w-[50%] h-[56px] text-[16px] rounded-t-lg transition-all flex items-center justify-center gap-2 ${
-                  abaAtivaMobile === "solicitadas"
-                    ? "bg-[#22592A] text-white"
-                    : "bg-[#C4EEC9] text-[#22592A]"
-                }`}
-              >
-                <span
-                  style={{
-                    fontWeight: abaAtivaMobile === "solicitadas" ? 600 : 400,
-                  }}
-                >
-                  Solicitadas
-                </span>
-
-                <div className="relative">
-                  <div className="min-w-[26px] h-[26px] px-1 gap-4 rounded-full bg-[#0E9F6E] flex items-center justify-center text-white text-[13px] font-bold">
-                    {recebidas.length > 9 ? "9+" : recebidas.length}
-                  </div>
-
-                  {mostrarBolinhaGestor && (
-                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500 border-2 border-white" />
-                  )}
-                </div>
-              </button>
-            </div>
-
-            {/* Conteúdo */}
-            <div className="flex-1 overflow-y-auto">
-              <div className="mx-3 bg-[#E5E7EB] rounded-b-lg border border-[#E5E7EB]">
-                {abaAtivaMobile === "solicitadas" && (
-                  <div className="py-2 px-3">
-                    {recebidas.length === 0 ? (
-                      <p className="text-[13px] text-[#6B7280] text-center mt-6 py-4">
-                        Nenhuma cautela pendente.
-                      </p>
-                    ) : (
-                      recebidas.map((c, i) => (
-                        <CardCautelaRecebida
-                          key={c.id}
-                          cautela={c}
-                          index={i}
-                          isNaoLida={
-                            c.badgeGestor === "NOVA_CAUTELA_SOLICITADA"
-                          }
-                          isMobile={true}
-                          livreAcesso={livreAcesso}
-                          onLivreAcessoChange={setLivreAcesso}
-                          onClick={() => {
-                            abrirDetalhe(c, "recebidas");
-                            setMobileView("detalhe");
-                          }}
-                          onAprovar={aprovar}
-                          onDescartar={abrirDescartar}
-                        />
-                      ))
-                    )}
-                  </div>
-                )}
-
-                {abaAtivaMobile === "emSaida" && (
-                  <div className="py-2 px-3">
-                    {historico.length === 0 ? (
-                      <p className="text-[13px] text-[#6B7280] text-center mt-6 py-4">
-                        Nenhuma cautela.
-                      </p>
-                    ) : (
-                      historico.map((c, i) => {
-                        const partes = c.data?.split(", ") ?? [];
-                        const data = partes[0] ?? "";
-                        const hora = partes[1] ?? "--:--";
-                        return (
-                          <div
-                            key={c.id}
-                            onClick={() => {
-                              abrirDetalhe(c, "historico");
-                              setMobileView("detalhe");
-                            }}
-                            className={`px-4 py-3 cursor-pointer border-b border-[#F3F4F6] last:border-0 rounded-sm mb-1 ${
-                              i % 2 === 1 ? "bg-[#F9FAFB]" : "bg-white"
-                            }`}
-                          >
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-[13px] font-medium text-[#111827] truncate">
-                                {c.visitante || "—"}
-                              </span>
-                              <BadgeHistorico status={statusHistorico(c)} />
-                            </div>
-                            <div className="flex gap-3 text-[12px] text-[#6B7280]">
-                              <span>
-                                {data} {hora}
-                              </span>
-                              <span className="truncate font-mono">{c.id}</span>
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </>
+          <MenuLista
+            cautelas={cautelas}
+            recebidas={recebidas}
+            historico={historico}
+            abaAtivaMobile={abaAtivaMobile}
+            onAbaChange={setAbaAtivaMobile}
+            livreAcesso={livreAcesso}
+            onLivreAcessoChange={setLivreAcesso}
+            onClickCard={(c, origem) => {
+              abrirDetalhe(c, origem);
+              setMobileView("detalhe");
+            }}
+            onClickHistorico={(c) => {
+              abrirDetalhe(c, "historico");
+              setMobileView("detalhe");
+            }}
+            onAprovar={aprovar}
+            onDescartar={abrirDescartar}
+            statusHistorico={statusHistorico}
+            mostrarBolinhaGestor={mostrarBolinhaGestor}
+          />
         )}
 
         {mobileView === "detalhe" && cautelaSelecionada && (
           <div className="flex flex-col flex-1 overflow-hidden">
-            <div className="relative flex items-center justify-center px-4 py-3 mt-2">
+            <div className="relative flex items-center justify-center px-4 py-3 mt-16">
               <button
                 onClick={() => setMobileView("lista")}
                 className="absolute left-4 text-gray-600"
@@ -585,6 +375,23 @@ export default function Gestor() {
           </div>
         )}
 
+        {mobileView === "historico" && (
+          <MenuHistorico
+            historico={historico}
+            searchTerm={searchTerm}
+            onSearchTermChange={setSearchTerm}
+            onVoltar={() => {
+              setMenuAtivo("home");
+              setMobileView("lista");
+            }}
+            onClickLinha={(c) => {
+              abrirDetalhe(c, "historico");
+              setMobileView("detalhe");
+            }}
+            statusHistorico={statusHistorico}
+          />
+        )}
+
         {mobileView === "confirmacao-aprovado" && (
           <div className="flex-1 flex flex-col items-center justify-center gap-6 px-6">
             <div className="bg-white rounded-2xl shadow p-10 flex flex-col items-center gap-4 w-full">
@@ -620,6 +427,15 @@ export default function Gestor() {
             </button>
           </div>
         )}
+
+        <MenuInferior
+          ativo={menuAtivo}
+          onChange={(item) => {
+            setMenuAtivo(item);
+            if (item === "home") setMobileView("lista");
+            if (item === "historico") setMobileView("historico");
+          }}
+        />
       </div>
 
       {/* ══ DESKTOP ══ */}
@@ -772,268 +588,65 @@ export default function Gestor() {
             </div>
           )}
 
-          {/* Barra de pesquisa */}
-          <div className="flex items-center gap-3 mb-[39px] mt-[120px] w-full max-w-[607px]">
-            <div className="relative flex-1">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"
-                  />
-                </svg>
-              </span>
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Pesquise por nome, do solicitante, Id de cautela ou status"
-                className="w-full pl-9 pr-3 py-2 text-[13px] border border-[#D1D5DB] rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#2B8E37] focus:border-transparent"
-              />
-            </div>
-            <button className="px-4 py-2 rounded-lg bg-[#3BB14A] text-white text-[13px] font-semibold hover:bg-[#22592A] transition-colors whitespace-nowrap">
-              Pesquisar
-            </button>
-          </div>
-
-          {/* Tabela */}
-          <div className="w-full max-w-[1126px] bg-white rounded-lg border border-[#E5E7EB] shadow-sm relative z-0 overflow-x-auto ml-[-15px]">
-            <div className="grid grid-cols-[1.8fr_0.9fr_0.75fr_1.8fr_1.25fr_1.35fr_52px] bg-[#2B8E37] text-white text-[15px] font-bold px-4 py-2 min-w-[800px]">
-              <span>Solicitante</span>
-              <span>Data</span>
-              <span>Hora</span>
-              <span className="flex justify-center">Id da cautela</span>
-              <span className="flex justify-center">Status</span>
-              <span className="flex justify-center">Tipo</span>
-            </div>
-
-            {historico.length === 0 ? (
-              <div className="flex items-center justify-center py-16 text-[#6B7280] text-sm">
-                Nenhum histórico.
-              </div>
-            ) : (
-              historico
-                .slice(
-                  (paginaHistorico - 1) * ITENS_POR_PAGINA,
-                  paginaHistorico * ITENS_POR_PAGINA,
-                )
-                .map((cautela, i) => {
-                  const { data, hora } = formatarData(ultimaAcaoData(cautela));
-                  const selecionada = cautelaSelecionada?.id === cautela.id;
-                  return (
-                    <div
-                      key={cautela.id}
-                      onClick={() => abrirDetalhe(cautela, "historico")}
-                      className={`grid grid-cols-[1.8fr_0.9fr_0.75fr_1.8fr_1.25fr_1.35fr_52px] px-4 py-3 text-[14px] text-[#0A0A0A] items-center border-b min-w-[800px] border-[#F3F4F6] last:border-0 transition-colors ${
-                        selecionada
-                          ? "bg-[#E8F5EA] border-l-4 border-l-[#2B8E37]"
-                          : i % 2 === 1
-                            ? "bg-[#F9FAFB]"
-                            : "bg-white"
-                      }`}
-                    >
-                      <span className="text-[18px] truncate">
-                        {cautela.visitante || "—"}
-                      </span>
-                      <span className="text-[18px] text-[#0A0A0A]">{data}</span>
-                      <span className="text-[18px] text-[#0A0A0A]">{hora}</span>
-                      <span className="text-[18px] text-[#0A0A0A]">
-                        {cautela.id}
-                      </span>
-                      <span className="flex justify-center">
-                        <BadgeHistorico
-                          status={statusHistorico(cautela)}
-                          etapaFluxo={cautela.etapaFluxo}
-                        />
-                      </span>
-                      <span className="flex justify-center">
-                        {cautela.status === "Reprovado" ||
-                        cautela.status === "Encerrada" ||
-                        cautela.etapaFluxo === "APROVADA_PELO_GESTOR" ? (
-                          <span className="text-[14px] text-[#6B7280]">
-                            {cautela.status === "Reprovado"
-                              ? "Sem acesso"
-                              : cautela.livreAcesso === "livre"
-                                ? "Livre trânsito"
-                                : "Entrada única"}
-                          </span>
-                        ) : (
-                          <select
-                            value={cautela.livreAcesso ?? "entrada"}
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={(e) => {
-                              e.stopPropagation();
-                              setCautelaEdicao(cautela);
-                              setLivreAcesso(
-                                e.target.value as "livre" | "entrada",
-                              );
-                              setModalConfirmarAcesso(true);
-                            }}
-                            className="text-[13px] border border-[#D1D5DB] rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-[#2B8E37] cursor-pointer"
-                          >
-                            <option value="entrada">Entrada única</option>
-                            <option value="livre">Livre trânsito</option>
-                          </select>
-                        )}
-                      </span>
-                    </div>
-                  );
-                })
-            )}
-
-            {/* Paginação */}
-            {historico.length > ITENS_POR_PAGINA && (
-              <div className="flex items-center justify-center gap-1 py-3 border-t border-[#E5E7EB]">
-                <button
-                  onClick={() => setPaginaHistorico((p) => Math.max(1, p - 1))}
-                  disabled={paginaHistorico === 1}
-                  className="px-3 py-1.5 text-[13px] text-[#6B7280] hover:text-[#2B8E37] disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  Anterior
-                </button>
-                {paginasVisiveis(
-                  paginaHistorico,
-                  Math.ceil(historico.length / ITENS_POR_PAGINA),
-                ).map((p, index) =>
-                  p === "..." ? (
-                    <span
-                      key={`ellipsis-${index}`}
-                      className="px-2 text-[13px] text-[#9CA3AF]"
-                    >
-                      ...
-                    </span>
-                  ) : (
-                    <button
-                      key={p}
-                      onClick={() => setPaginaHistorico(p)}
-                      className={`w-8 h-8 rounded-lg text-[13px] font-medium transition-colors ${
-                        paginaHistorico === p
-                          ? "bg-[#2B8E37] text-white"
-                          : "text-[#6B7280] hover:bg-[#F3F4F6]"
-                      }`}
-                    >
-                      {p}
-                    </button>
-                  ),
-                )}
-                <button
-                  onClick={() =>
-                    setPaginaHistorico((p) =>
-                      Math.min(
-                        Math.ceil(historico.length / ITENS_POR_PAGINA),
-                        p + 1,
-                      ),
-                    )
-                  }
-                  disabled={
-                    paginaHistorico ===
-                    Math.ceil(historico.length / ITENS_POR_PAGINA)
-                  }
-                  className="px-3 py-1.5 text-[13px] text-[#6B7280] hover:text-[#2B8E37] disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  Próxima
-                </button>
-              </div>
-            )}
-          </div>
+          {/* Barra de pesquisa + Tabela */}
+          <Tabela
+            variant="gestor"
+            itens={itensPaginaGestor}
+            totalItens={historico.length}
+            cautelaSelecionadaId={cautelaSelecionada?.id}
+            onClickLinha={(cautela: CautelaComDecisao) =>
+              abrirDetalhe(cautela, "historico")
+            }
+            searchTerm={searchTerm}
+            onSearchTermChange={setSearchTerm}
+            onPesquisar={() => {}}
+            paginaAtual={paginaHistorico}
+            totalPaginas={totalPaginasGestor}
+            onPaginaAnterior={() =>
+              setPaginaHistorico((p) => Math.max(1, p - 1))
+            }
+            onProximaPagina={() =>
+              setPaginaHistorico((p) => Math.min(totalPaginasGestor, p + 1))
+            }
+            onIrParaPagina={setPaginaHistorico}
+            itensPorPagina={ITENS_POR_PAGINA}
+            onTipoAcessoChange={(
+              cautela: CautelaComDecisao,
+              valor: "livre" | "entrada",
+            ) => {
+              setCautelaEdicao(cautela);
+              setLivreAcesso(valor);
+              setModalConfirmarAcesso(true);
+            }}
+          />
         </div>
       </div>
 
       {/* Modais */}
       {modalConfirmarAcesso && cautelaEdicao && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl shadow-xl px-10 py-8 flex flex-col items-center gap-4 min-w-[320px]">
-            <div className="w-14 h-14 rounded-full flex items-center justify-center bg-amber-100">
-              <svg
-                className="w-6 h-6 text-amber-500"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
-                />
-              </svg>
-            </div>
-            <p className="text-base font-bold text-black text-center">
-              Deseja alterar o tipo de acesso?
-            </p>
-            <div className="flex gap-3 mt-2">
-              <button
-                onClick={() => {
-                  setModalConfirmarAcesso(false);
-                  setCautelaEdicao(null);
-                  void carregarCautelas(); // reseta o select
-                }}
-                className="px-6 py-2 rounded-lg bg-[#F5F5F5] text-[#171717] text-sm font-medium hover:bg-gray-200"
-              >
-                Não
-              </button>
-              <button
-                onClick={async () => {
-                  setModalConfirmarAcesso(false);
-                  const atualizada = await updatePermissionType(
-                    cautelaEdicao.id,
-                    livreAcesso === "livre"
-                      ? "LIVRE_TRANSITO"
-                      : "ENTRADA_UNICA",
-                  );
-                  setCautelas((prev) =>
-                    prev.map((c) =>
-                      c.id === cautelaEdicao.id ? atualizada : c,
-                    ),
-                  );
-                  setCautelaEdicao(null);
-                  setModalAcessoSucesso(true);
-                }}
-                className="px-6 py-2 rounded-lg bg-[#3BB14A] text-white text-sm font-medium hover:bg-[#22592A]"
-              >
-                Sim
-              </button>
-            </div>
-          </div>
-        </div>
+        <ModalConfirmarAcesso
+          onCancelar={() => {
+            setModalConfirmarAcesso(false);
+            setCautelaEdicao(null);
+            void carregarCautelas();
+          }}
+          onConfirmar={async () => {
+            setModalConfirmarAcesso(false);
+            const atualizada = await updatePermissionType(
+              cautelaEdicao.id,
+              livreAcesso === "livre" ? "LIVRE_TRANSITO" : "ENTRADA_UNICA",
+            );
+            setCautelas((prev) =>
+              prev.map((c) => (c.id === cautelaEdicao.id ? atualizada : c)),
+            );
+            setCautelaEdicao(null);
+            setModalAcessoSucesso(true);
+          }}
+        />
       )}
 
       {modalAcessoSucesso && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl shadow-xl px-10 py-8 flex flex-col items-center gap-4 min-w-[320px]">
-            <button
-              onClick={() => setModalAcessoSucesso(false)}
-              className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
-            >
-              ✕
-            </button>
-            <div className="w-14 h-14 rounded-full flex items-center justify-center bg-[#D1FAE5]">
-              <svg
-                className="w-6 h-6 text-[#0E9F6E]"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2.5}
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            </div>
-            <p className="text-base font-bold text-black text-center">
-              Alteração de acesso realizada com sucesso!
-            </p>
-          </div>
-        </div>
+        <ModalAcessoSucesso onClose={() => setModalAcessoSucesso(false)} />
       )}
 
       {modalDescartar && (
@@ -1042,12 +655,15 @@ export default function Gestor() {
           onCancelar={() => setModalDescartar(false)}
         />
       )}
+
       {modalAprovado && (
         <ModalAprovado onClose={() => setModalAprovado(false)} />
       )}
+
       {modalRecusado && (
         <ModalRecusado onClose={() => setModalRecusado(false)} />
       )}
+
       {modalAutorizarSaida && (
         <ModalAutorizarSaida onClose={() => setModalAutorizarSaida(false)} />
       )}

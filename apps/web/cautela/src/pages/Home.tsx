@@ -9,6 +9,11 @@ import { createCautela, getCautelas, markCautelaAsRead } from "../lib/api";
 import { matchesSearch, validarDocumento } from "../lib/cautelaUtils";
 import { CardCautelaSolicitante } from "../components/CardCautelaSolicitante";
 import { DetalhesCautelaSolicitante } from "../components/DetalhesCautelaSolicitante";
+import {
+  ModalSolicitacaoEnviada,
+  ModalConfirmarExclusao,
+  ModalItemExcluido,
+} from "../components/Modais";
 
 const STATUS_RECEBIDOS: StatusCautela[] = [
   "Aprovado",
@@ -19,19 +24,6 @@ const STATUS_RECEBIDOS: StatusCautela[] = [
 
 type Tab = "enviados" | "recebidos";
 type MobileView = "lista" | "detalhe";
-
-// ─── Modal wrapper ────────────────────────────────────────────────────────────
-
-function ModalOverlay({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      className="fixed inset-0 md:left-[70px] flex items-center justify-center bg-black/20 backdrop-blur-sm z-30"
-      style={{ top: "60px" }}
-    >
-      {children}
-    </div>
-  );
-}
 
 function ContadorNaoLidas({
   total,
@@ -55,8 +47,6 @@ function ContadorNaoLidas({
     </div>
   );
 }
-
-// ─── Home ─────────────────────────────────────────────────────────────────────
 
 export default function Home() {
   const { user } = useAuth();
@@ -86,7 +76,6 @@ export default function Home() {
   const cautelaSelecionadaRef = useRef<Cautela | null>(null);
   const [actionError, setActionError] = useState("");
 
-  // Formulário
   const [documento, setDocumento] = useState("");
   const [empresa, setEmpresa] = useState("");
   const [descricao, setDescricao] = useState("");
@@ -101,7 +90,6 @@ export default function Home() {
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Modais
   const [showModal, setShowModal] = useState(false);
   const [itemParaExcluir, setItemParaExcluir] = useState<number | null>(null);
   const [showItemDeletedModal, setShowItemDeletedModal] = useState(false);
@@ -176,7 +164,7 @@ export default function Home() {
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (window.innerWidth < 768) return; // ignora no mobile
+      if (window.innerWidth < 768) return;
       if (
         cautelaSelecionada &&
         painelDetalhesRef.current &&
@@ -280,7 +268,6 @@ export default function Home() {
     }
   };
 
-  // ── Filtros ──
   const cautelasPorAba = cautelas.filter((c) =>
     activeTab === "enviados"
       ? c.status === "Em análise"
@@ -296,7 +283,6 @@ export default function Home() {
   ).length;
   const mostrarBolinha = totalNaoLidas > 0;
 
-  // ── Props formulário ──
   const formularioProps = {
     canCreateCautela,
     setorId,
@@ -324,7 +310,6 @@ export default function Home() {
     onCancel: handleCancel,
   };
 
-  // ── Sub-elementos ──
   const listaCards = (
     <div className="py-2 px-3">
       {loadingCautelas && cautelas.length === 0 && (
@@ -527,112 +512,16 @@ export default function Home() {
       </div>
 
       {/* ══ MODAIS ══ */}
-      {showModal && (
-        <ModalOverlay>
-          <div className="bg-white rounded-2xl shadow-xl px-12 py-10 flex flex-col items-center gap-4 min-w-[320px]">
-            <div
-              className="w-20 h-20 rounded-3xl flex items-center justify-center"
-              style={{ backgroundColor: "#EEF5EE" }}
-            >
-              <div className="w-9 h-9 rounded-full border-2 border-[#2B8E37] flex items-center justify-center">
-                <svg
-                  className="w-7 h-7 text-[#2B8E37]"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2.5}
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-              </div>
-            </div>
-            <p className="text-base font-bold text-black text-center">
-              Sua solicitação foi enviada ao gestor
-            </p>
-          </div>
-        </ModalOverlay>
-      )}
+      {showModal && <ModalSolicitacaoEnviada />}
 
       {itemParaExcluir !== null && (
-        <ModalOverlay>
-          <div className="bg-white rounded-2xl shadow-xl px-14 py-10 flex flex-col items-center gap-4 min-w-[320px]">
-            <div
-              className="w-14 h-14 rounded-2xl flex items-center justify-center"
-              style={{ backgroundColor: "#FEE2E2" }}
-            >
-              <svg
-                className="w-5 h-5 text-red-500"
-                viewBox="0 0 24 24"
-                fill="none"
-              >
-                <path
-                  d="M3 6h18M9 6V4h6v2M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6M10 11v6M14 11v6"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </div>
-            <p className="text-base font-bold text-black text-center">
-              Você deseja excluir este item?
-            </p>
-            <p className="text-xs text-[#404040] text-center">
-              Os dados serão removidos permanentemente.
-            </p>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setItemParaExcluir(null)}
-                className="px-4 py-2 rounded-lg bg-[#F5F5F5] text-[#171717] text-sm font-medium hover:bg-gray-300"
-              >
-                Não
-              </button>
-              <button
-                type="button"
-                onClick={confirmarExclusaoItem}
-                className="px-4 py-2 rounded-lg bg-[#3BB14A] text-white text-sm font-medium hover:bg-[#2B8E37]"
-              >
-                Sim
-              </button>
-            </div>
-          </div>
-        </ModalOverlay>
+        <ModalConfirmarExclusao
+          onConfirmar={confirmarExclusaoItem}
+          onCancelar={() => setItemParaExcluir(null)}
+        />
       )}
 
-      {showItemDeletedModal && (
-        <ModalOverlay>
-          <div className="bg-white rounded-2xl shadow-xl px-12 py-10 flex flex-col items-center gap-4 min-w-[320px]">
-            <div
-              className="w-16 h-16 rounded-2xl flex items-center justify-center"
-              style={{ backgroundColor: "#EEF5EE" }}
-            >
-              <div className="w-9 h-9 rounded-full border-2 border-[#2B8E37] flex items-center justify-center">
-                <svg
-                  className="w-6 h-6 text-[#2B8E37]"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2.5}
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-              </div>
-            </div>
-            <p className="text-base font-bold text-black text-center">
-              O item foi EXCLUÍDO com sucesso.
-            </p>
-          </div>
-        </ModalOverlay>
-      )}
+      {showItemDeletedModal && <ModalItemExcluido />}
     </div>
   );
 }

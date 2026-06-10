@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import DetalhesCautela from "../components/DetalhesCautela";
-import { ModalEncerrada } from "../components/ModalGestor";
 import type { Cautela, StatusCautela } from "../data/cautelaTypes";
 import {
   closeCautela,
@@ -14,6 +13,8 @@ import { BadgeTabela } from "../components/BadgeTabelaPortaria";
 import { CautelaPrint } from "../components/CautelaPrint";
 import { CardCautelaPortaria } from "../components/CardCautelaPortaria";
 import { DetalhesCautelaPortaria } from "../components/DetalhesCautelaPortaria";
+import { Tabela } from "../components/Tabela";
+import { ModalEncerrada, ModalAprovadoPortaria } from "../components/Modais";
 
 const STATUS_HISTORICO: StatusCautela[] = [
   "Encerrada",
@@ -53,27 +54,6 @@ function formatarData(valor: string): { data: string; hora: string } {
   }
 }
 
-function paginasVisiveis(
-  pagina: number,
-  totalPaginas: number,
-): (number | "...")[] {
-  if (totalPaginas <= 7)
-    return Array.from({ length: totalPaginas }, (_, i) => i + 1);
-  const pages: (number | "...")[] = [];
-  pages.push(1);
-  if (pagina > 3) pages.push("...");
-  for (
-    let p = Math.max(2, pagina - 1);
-    p <= Math.min(totalPaginas - 1, pagina + 1);
-    p++
-  ) {
-    pages.push(p);
-  }
-  if (pagina < totalPaginas - 2) pages.push("...");
-  pages.push(totalPaginas);
-  return pages;
-}
-
 export function BannerCard({ status }: { status: StatusCautela }) {
   if (status === "Saída Autorizada") {
     return (
@@ -104,8 +84,6 @@ function ultimaAcaoData(cautela: Cautela): string {
   return cautela.data;
 }
 
-// ─── Portaria ─────────────────────────────────────────────────────────────────
-
 export default function Portaria() {
   const location = useLocation();
 
@@ -128,6 +106,7 @@ export default function Portaria() {
   const [searchTerm, setSearchTerm] = useState("");
   const [actionError, setActionError] = useState("");
   const [paginaHistorico, setPaginaHistorico] = useState(1);
+  const [modalAprovado, setModalAprovado] = useState(false);
   const cautelaSelecionadaRef = useRef<Cautela | null>(null);
 
   useEffect(() => {
@@ -224,7 +203,6 @@ export default function Portaria() {
     Boolean(c.badgePortaria),
   ).length;
 
-  // ── Ações ──
   async function handleAprovarEntrada(id: string) {
     try {
       setActionError("");
@@ -238,6 +216,7 @@ export default function Portaria() {
           : "Não foi possível aprovar a entrada.",
       );
     }
+    setModalAprovado(true);
   }
 
   async function handleAprovarSaida(id: string) {
@@ -253,9 +232,9 @@ export default function Portaria() {
       return;
     }
     setModalEncerrada(true);
+    setModalAprovado(true);
   }
 
-  // ── Lista de cards ativos ──
   const listaCards = (
     <div className="py-2 px-3">
       {cautelasFiltradas.length === 0 && (
@@ -387,157 +366,30 @@ export default function Portaria() {
             </>
           )}
 
-          {/* Barra de pesquisa */}
-          <div className="flex items-center gap-3 mb-8 mt-10 w-full max-w-[780px]">
-            <div className="relative flex-1">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"
-                  />
-                </svg>
-              </span>
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setPaginaHistorico(1);
-                }}
-                placeholder="Pesquise por nome, do solicitante, Id de cautela ou status"
-                className="w-full pl-9 pr-3 py-2 text-[13px] border border-[#D1D5DB] rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#2B8E37] focus:border-transparent"
-              />
-            </div>
-            <button
-              onClick={() => setPaginaHistorico(1)}
-              className="px-4 py-2 rounded-lg bg-[#3BB14A] text-white text-[13px] font-semibold hover:bg-[#22592A] transition-colors whitespace-nowrap"
-            >
-              Pesquisar
-            </button>
-          </div>
-
-          {/* Tabela */}
-          <div className="w-full max-w-[1200px] bg-white rounded-lg border border-[#E5E7EB] shadow-sm relative z-0 overflow-x-auto">
-            {/* Cabeçalho */}
-            <div className="grid grid-cols-[1.8fr_0.9fr_0.75fr_1.8fr_1.25fr_1.25fr_1.35fr] bg-[#2B8E37] text-white text-[15px] font-bold px-4 py-1.5 min-w-[800px]">
-              <span>Solicitante</span>
-              <span>Data</span>
-              <span>Hora</span>
-              <span>Id da cautela</span>
-              <span className="flex justify-center">Status</span>
-              <span className="flex justify-center">Tipo</span>
-              <span className="flex justify-center">Aprovador</span>
-            </div>
-
-            {/* Linhas */}
-            <div
-              className="overflow-y-auto"
-              style={{ maxHeight: "calc(100vh - 320px)" }}
-            >
-              {historicoFiltrado.length === 0 ? (
-                <div className="flex items-center justify-center py-16 text-[#6B7280] text-sm">
-                  {searchTerm
-                    ? `Nenhum resultado para "${searchTerm}".`
-                    : "Nenhum histórico."}
-                </div>
-              ) : (
-                itensPaginaHistorico.map((cautela, i) => {
-                  const { data, hora } = formatarData(cautela.data);
-                  const selecionada = cautelaSelecionada?.id === cautela.id;
-                  return (
-                    <div
-                      key={cautela.id}
-                      onClick={() => abrirDetalhe(cautela, "historico")}
-                      className={`grid grid-cols-[1.8fr_0.9fr_0.75fr_1.8fr_1.25fr_1.25fr_1.35fr] px-4 py-3 text-[14px] min-w-[800px] text-[#111827] items-center cursor-pointer transition-colors border-b border-[#F3F4F6] last:border-0 ${
-                        selecionada
-                          ? "bg-[#E8F5EA] border-l-4 border-l-[#2B8E37]"
-                          : i % 2 === 1
-                            ? "bg-[#F9FAFB] hover:bg-[#F0FDF4]"
-                            : "bg-white hover:bg-[#F0FDF4]"
-                      }`}
-                    >
-                      <span className="truncate">
-                        {cautela.visitante || "—"}
-                      </span>
-                      <span className="text-[#0A0A0A]">{data}</span>
-                      <span className="text-[#0A0A0A]">{hora}</span>
-                      <span className="text-[18px] text-[#0A0A0A]">
-                        {cautela.id}
-                      </span>
-                      <span className="flex justify-center">
-                        <BadgeTabela status={cautela.status as StatusCautela} />
-                      </span>
-                      <span className="flex justify-center truncate">
-                        {cautela.status === "Reprovado"
-                          ? "Sem Acesso"
-                          : cautela.livreAcesso === "livre"
-                            ? "Livre trânsito"
-                            : "Entrada única"}
-                      </span>
-                      <span className="flex justify-center truncate">
-                        {cautela.gestor || "—"}
-                      </span>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-
-            {/* Paginação dentro da tabela */}
-            {historicoFiltrado.length > ITENS_POR_PAGINA && (
-              <div className="flex items-center justify-center gap-1 py-3 border-t border-[#E5E7EB]">
-                <button
-                  onClick={() => setPaginaHistorico((p) => Math.max(1, p - 1))}
-                  disabled={paginaHistorico === 1}
-                  className="px-3 py-1.5 text-[13px] text-[#6B7280] hover:text-[#2B8E37] disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  Anterior
-                </button>
-                {paginasVisiveis(paginaHistorico, totalPaginasHistorico).map(
-                  (p, i) =>
-                    p === "..." ? (
-                      <span
-                        key={`e-${i}`}
-                        className="px-2 py-1.5 text-[13px] text-[#9CA3AF]"
-                      >
-                        ...
-                      </span>
-                    ) : (
-                      <button
-                        key={p}
-                        onClick={() => setPaginaHistorico(p as number)}
-                        className={`w-8 h-8 rounded-lg text-[13px] font-medium transition-colors ${
-                          paginaHistorico === p
-                            ? "bg-[#2B8E37] text-white"
-                            : "text-[#6B7280] hover:bg-[#F3F4F6]"
-                        }`}
-                      >
-                        {p}
-                      </button>
-                    ),
-                )}
-                <button
-                  onClick={() =>
-                    setPaginaHistorico((p) =>
-                      Math.min(totalPaginasHistorico, p + 1),
-                    )
-                  }
-                  disabled={paginaHistorico === totalPaginasHistorico}
-                  className="px-3 py-1.5 text-[13px] text-[#6B7280] hover:text-[#2B8E37] disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  Próxima
-                </button>
-              </div>
-            )}
-          </div>
+          {/* Barra de pesquisa + Tabela*/}
+          <Tabela
+            variant="portaria"
+            itens={itensPaginaHistorico}
+            totalItens={historicoFiltrado.length}
+            cautelaSelecionadaId={cautelaSelecionada?.id}
+            onClickLinha={(cautela) => abrirDetalhe(cautela, "historico")}
+            searchTerm={searchTerm}
+            onSearchTermChange={(v) => {
+              setSearchTerm(v);
+              setPaginaHistorico(1);
+            }}
+            onPesquisar={() => setPaginaHistorico(1)}
+            paginaAtual={paginaHistorico}
+            totalPaginas={totalPaginasHistorico}
+            onPaginaAnterior={() =>
+              setPaginaHistorico((p) => Math.max(1, p - 1))
+            }
+            onProximaPagina={() =>
+              setPaginaHistorico((p) => Math.min(totalPaginasHistorico, p + 1))
+            }
+            onIrParaPagina={setPaginaHistorico}
+            itensPorPagina={ITENS_POR_PAGINA}
+          />
         </div>
       </div>
 
@@ -662,6 +514,9 @@ export default function Portaria() {
 
       {modalEncerrada && (
         <ModalEncerrada onClose={() => setModalEncerrada(false)} />
+      )}
+      {modalAprovado && (
+        <ModalAprovadoPortaria onClose={() => setModalAprovado(false)} />
       )}
     </div>
   );

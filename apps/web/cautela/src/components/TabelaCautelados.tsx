@@ -1,8 +1,5 @@
 import type { Equipamento } from "../data/cautelaTypes";
 
-// ─── TabelaCautelados ─────────────────────────────────────────────────────────
-// Tabela verde de equipamentos, usada nos painéis de detalhes da Portaria e do Gestor.
-
 export function TabelaCautelados({
   equipamentos,
 }: {
@@ -35,9 +32,6 @@ export function TabelaCautelados({
     </table>
   );
 }
-
-// ─── ListaCautelados ──────────────────────────────────────────────────────────
-// Lista de equipamentos usada nos cards (versão compacta com bullet points).
 
 export function ListaCautelados({
   equipamentos,

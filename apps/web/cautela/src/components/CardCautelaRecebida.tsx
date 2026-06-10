@@ -224,46 +224,50 @@ export function CardCautelaRecebida({
           </ul>
         </div>
 
-        {/* Livre acesso + botões */}
-        {!isAtencao && (
-          <div className="px-4 pb-4" onClick={(e) => e.stopPropagation()}>
-            <p className="text-[13px] text-[#404040] mb-2">
-              Esta cautela tem livre acesso?
-            </p>
-            <div className="flex gap-8 mb-4">
-              <label className="flex items-center gap-8 text-[14px] text-[#404040] cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={livreAcesso === "livre"}
-                  onChange={() => onLivreAcessoChange?.("livre")}
-                  className="w-4 h-4 rounded accent-black"
-                />
-                Sim
-              </label>
-              <label className="flex items-center gap-8 text-[14px] text-[#404040] cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={livreAcesso === "entrada"}
-                  onChange={() => onLivreAcessoChange?.("entrada")}
-                  className="w-4 h-4 rounded accent-black"
-                />
-                Não
-              </label>
-            </div>
-            <button
-              onClick={() => onAprovar(cautela.id)}
-              className="w-full py-3 rounded-lg bg-[#111827] text-white text-[14px] font-semibold mb-2"
-            >
-              Aprovar entrada
-            </button>
-            <button
-              onClick={() => onDescartar(cautela.id)}
-              className="w-full py-2 text-[#737373] bg-[#F5F5F5] text-[14px] font-medium"
-            >
-              Reprovar
-            </button>
+        {/* Livre acesso */}
+        <div className="px-4 pb-4" onClick={(e) => e.stopPropagation()}>
+          <p className="text-[13px] text-[#404040] mb-2">
+            Esta cautela tem livre acesso?
+          </p>
+          <div className="flex gap-8 mb-4">
+            <label className="flex items-center gap-8 text-[14px] text-[#404040] cursor-pointer">
+              <input
+                type="checkbox"
+                checked={livreAcesso === "livre"}
+                onChange={() => onLivreAcessoChange?.("livre")}
+                className="w-4 h-4 rounded accent-black"
+              />
+              Sim
+            </label>
+            <label className="flex items-center gap-8 text-[14px] text-[#404040] cursor-pointer">
+              <input
+                type="checkbox"
+                checked={livreAcesso === "entrada"}
+                onChange={() => onLivreAcessoChange?.("entrada")}
+                className="w-4 h-4 rounded accent-black"
+              />
+              Não
+            </label>
           </div>
-        )}
+
+          {/* Botões só aparecem quando NÃO é saída autorizada */}
+          {!isAtencao && (
+            <>
+              <button
+                onClick={() => onAprovar(cautela.id)}
+                className="w-full py-3 rounded-lg bg-[#111827] text-white text-[14px] font-semibold mb-2"
+              >
+                Aprovar entrada
+              </button>
+              <button
+                onClick={() => onDescartar(cautela.id)}
+                className="w-full py-2 text-[#737373] bg-[#F5F5F5] text-[14px] font-medium"
+              >
+                Reprovar
+              </button>
+            </>
+          )}
+        </div>
       </div>
     );
   }
