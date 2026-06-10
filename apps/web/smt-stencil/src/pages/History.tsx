@@ -17,6 +17,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+  Tooltip as UiTooltip,
+} from "@/components/ui/tooltip";
 import type {
   ApiPlate,
   ApiStencil,
@@ -29,13 +35,23 @@ import type {
 } from "@/lib/api";
 import { historyApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { ArrowUpDown, Download, Search } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import {
+  AlertTriangle,
+  ArrowUpDown,
+  CalendarDays,
+  CircleAlert,
+  Download,
+  EqualApproximately,
+  MoreHorizontal,
+  X,
+} from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bar,
   BarChart,
   CartesianGrid,
   Cell,
+  ReferenceArea,
   ResponsiveContainer,
   Scatter,
   ScatterChart,
@@ -47,20 +63,25 @@ import { StatusPill } from "../components/dashboard/StatusPill";
 
 type AssetType = "stencil" | "placa";
 type SortDirection = "asc" | "desc";
-type AnalyticsDays = 30;
-type ExportFormat = "pdf" | "png" | "jpg";
+type AnalyticsDays = 7 | 15 | 30 | 60 | 90;
+type ExportFormat = "pdf" | "png" | "jpeg";
 
 const PAGE_SIZE = 9;
-const ANALYTICS_DAY_OPTIONS: AnalyticsDays[] = [30];
+const ANALYTICS_DAY_OPTIONS: AnalyticsDays[] = [7, 15, 30, 60, 90];
 const ANOMALOUS_ROW_COLOR = "#DB0101";
 const MULTIPLE_ROW_COLOR = "#9061F9";
 
 const emptyStencilFilters: HistoryStencilFilters = {
   codigo: "",
+  enderecamento: "",
   idFabricante: "",
   pais: "",
+  operador: "",
+  ocorrencia: "",
   status: "",
   linha: "",
+  dataDe: "",
+  dataAte: "",
 };
 
 const emptyPlateFilters: HistoryPlateFilters = {
@@ -117,6 +138,8 @@ function getStencilWashCategory(
   row: ApiStencil,
   countsByStencilDay: Map<string, number>,
 ) {
+  if (row.occurrence) return row.occurrence;
+
   const dayKey = getManausDayKey(row.created_at);
   const count = countsByStencilDay.get(`${row.stencil_id}:${dayKey}`) ?? 0;
   if (count > 1) return "multiple";
@@ -147,24 +170,58 @@ function DetailMetric({
   );
 }
 
+function ModalMetric({
+  label,
+  value,
+  className,
+  valueClassName,
+}: {
+  label: string;
+  value: string | number;
+  className?: string;
+  valueClassName?: string;
+}) {
+  return (
+    <div className={cn("min-w-0", className)}>
+      <p className="text-[16px] leading-[1.25] text-[#71717A]">{label}</p>
+      <p
+        className={cn(
+          "mt-2 break-words text-[25px] font-bold leading-[1.08] text-[#111318]",
+          valueClassName,
+        )}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
 const WASH_CATEGORY_META: Record<
   WashAnalyticsCategory,
-  { label: string; color: string; soft: string }
+  {
+    label: string;
+    color: string;
+    soft: string;
+    shape: "circle" | "square" | "triangle";
+  }
 > = {
   planned: {
     label: "Planejada",
     color: "#10B981",
     soft: "bg-emerald-50 text-emerald-700",
+    shape: "circle",
   },
   anomalous: {
     label: "Anômala",
     color: "#EF4444",
     soft: "bg-red-50 text-red-700",
+    shape: "square",
   },
   multiple: {
     label: "Múltipla",
     color: "#8B5CF6",
     soft: "bg-violet-50 text-violet-700",
+    shape: "triangle",
   },
 };
 
@@ -194,25 +251,27 @@ function formatInterval(minutes: number | null) {
   return `${hours}h${String(remainingMinutes).padStart(2, "0")}`;
 }
 
+type IntervalStatus = "compliant" | "under" | "over";
+
+const INTERVAL_STATUS_META: Record<
+  IntervalStatus,
+  { label: string; color: string }
+> = {
+  compliant: { label: "Conforme", color: "#10A672" },
+  under: { label: "Intervalo <24h", color: "#E5252A" },
+  over: { label: "Intervalo >24h", color: "#F6C515" },
+};
+
+function getIntervalStatus(minutes: number | null): IntervalStatus {
+  if (minutes == null || minutes === 24 * 60) return "compliant";
+  return minutes < 24 * 60 ? "under" : "over";
+}
+
 function getReportFileName(detail: ApiStencil, format: ExportFormat) {
   const date = new Intl.DateTimeFormat("pt-BR")
     .format(new Date())
     .replace(/\//g, "-");
   return `relatorio-stencil-${detail.stencil_code}-${date}.${format}`;
-}
-
-function getDocumentStyles() {
-  return Array.from(document.styleSheets)
-    .map((sheet) => {
-      try {
-        return Array.from(sheet.cssRules)
-          .map((rule) => rule.cssText)
-          .join("\n");
-      } catch {
-        return "";
-      }
-    })
-    .join("\n");
 }
 
 function downloadBlob(blob: Blob, fileName: string) {
@@ -229,48 +288,36 @@ function downloadBlob(blob: Blob, fileName: string) {
 async function exportElementAsImage(
   element: HTMLElement,
   fileName: string,
-  format: "png" | "jpg",
+  format: "png" | "jpeg",
 ) {
-  const rect = element.getBoundingClientRect();
-  const width = Math.ceil(rect.width);
-  const height = Math.ceil(rect.height);
-  const clone = element.cloneNode(true) as HTMLElement;
-  clone.style.width = `${width}px`;
-  clone.style.minHeight = `${height}px`;
-  clone.style.background = "#ffffff";
+  const { default: html2canvas } = await import("html2canvas");
+  const canvas = await html2canvas(element, {
+    backgroundColor: "#ffffff",
+    logging: false,
+    scale: 1.5,
+    useCORS: true,
+    windowWidth: 1630,
+    onclone: (documentClone) => {
+      const clonedModal = documentClone.getElementById(element.id);
+      if (!clonedModal) return;
 
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
-      <foreignObject width="100%" height="100%">
-        <div xmlns="http://www.w3.org/1999/xhtml">
-          <style>${getDocumentStyles()}</style>
-          ${clone.outerHTML}
-        </div>
-      </foreignObject>
-    </svg>
-  `;
-  const svgBlob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
-  const url = URL.createObjectURL(svgBlob);
-  const image = new Image();
+      clonedModal.style.position = "static";
+      clonedModal.style.transform = "none";
+      clonedModal.style.width = "1630px";
+      clonedModal.style.maxWidth = "none";
+      clonedModal.style.height = "auto";
+      clonedModal.style.maxHeight = "none";
+      clonedModal.style.overflow = "visible";
 
-  await new Promise<void>((resolve, reject) => {
-    image.onload = () => resolve();
-    image.onerror = reject;
-    image.src = url;
+      clonedModal
+        .querySelectorAll<HTMLElement>("[data-export-scroll]")
+        .forEach((scrollContainer) => {
+          scrollContainer.style.height = "auto";
+          scrollContainer.style.maxHeight = "none";
+          scrollContainer.style.overflow = "visible";
+        });
+    },
   });
-
-  const canvas = document.createElement("canvas");
-  const scale = 2;
-  canvas.width = width * scale;
-  canvas.height = height * scale;
-  const context = canvas.getContext("2d");
-  if (!context) throw new Error("Canvas indisponível para exportação.");
-
-  context.fillStyle = "#ffffff";
-  context.fillRect(0, 0, canvas.width, canvas.height);
-  context.scale(scale, scale);
-  context.drawImage(image, 0, 0);
-  URL.revokeObjectURL(url);
 
   const mimeType = format === "png" ? "image/png" : "image/jpeg";
   const blob = await new Promise<Blob | null>((resolve) =>
@@ -281,40 +328,78 @@ async function exportElementAsImage(
   downloadBlob(blob, fileName);
 }
 
-function exportElementAsPdf(element: HTMLElement, detail: ApiStencil) {
-  const printWindow = window.open("", "_blank", "width=1120,height=820");
-  if (!printWindow) return;
+async function exportElementAsPdf(
+  element: HTMLElement,
+  detail: ApiStencil,
+) {
+  const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+    import("html2canvas"),
+    import("jspdf"),
+  ]);
+  const canvas = await html2canvas(element, {
+    backgroundColor: "#ffffff",
+    logging: false,
+    scale: 2,
+    useCORS: true,
+  });
+  const pdf = new jsPDF({
+    orientation: "portrait",
+    unit: "mm",
+    format: "a4",
+    compress: true,
+  });
+  const margin = 8;
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const contentWidth = pageWidth - margin * 2;
+  const renderedHeight = (canvas.height * contentWidth) / canvas.width;
+  const pageContentHeight = pageHeight - margin * 2;
+  const image = canvas.toDataURL("image/png");
+  const pageCount = Math.max(1, Math.ceil(renderedHeight / pageContentHeight));
 
-  printWindow.document.write(`
-    <!doctype html>
-    <html>
-      <head>
-        <title>Relatório ${detail.stencil_code}</title>
-        <style>${getDocumentStyles()}</style>
-        <style>
-          body { margin: 0; background: #fff; }
-          @page { size: A4 landscape; margin: 10mm; }
-        </style>
-      </head>
-      <body>${element.outerHTML}</body>
-    </html>
-  `);
-  printWindow.document.close();
-  printWindow.focus();
-  window.setTimeout(() => {
-    printWindow.print();
-  }, 350);
+  for (let page = 0; page < pageCount; page += 1) {
+    if (page > 0) pdf.addPage();
+    pdf.addImage(
+      image,
+      "PNG",
+      margin,
+      margin - page * pageContentHeight,
+      contentWidth,
+      renderedHeight,
+      undefined,
+      "FAST",
+    );
+  }
+
+  pdf.save(getReportFileName(detail, "pdf"));
 }
 
-function AnalyticsLegend() {
+function AnalyticsLegend({ large = false }: { large?: boolean }) {
   return (
-    <div className="flex flex-wrap items-center gap-4 text-[11px] text-muted-foreground">
+    <div
+      className={cn(
+        "flex-wrap items-center text-muted-foreground",
+        large
+          ? "inline-flex gap-5 rounded-md bg-[#F4F4F5] px-2.5 py-2 text-[16px]"
+          : "flex gap-4 text-[11px]",
+      )}
+    >
       {(["planned", "anomalous", "multiple"] as WashAnalyticsCategory[]).map(
         (category) => (
           <span key={category} className="inline-flex items-center gap-1.5">
             <span
-              className="h-2.5 w-2.5 rounded-full"
-              style={{ backgroundColor: WASH_CATEGORY_META[category].color }}
+              className={cn(
+                large ? "h-4 w-4" : "h-2.5 w-2.5",
+                WASH_CATEGORY_META[category].shape === "circle" &&
+                  "rounded-full",
+              )}
+              style={{
+                backgroundColor: WASH_CATEGORY_META[category].color,
+                clipPath:
+                  WASH_CATEGORY_META[category].shape === "triangle"
+                    ? "polygon(50% 0, 100% 100%, 0 100%)"
+                    : undefined,
+              }}
             />
             {WASH_CATEGORY_META[category].label}
           </span>
@@ -327,9 +412,11 @@ function AnalyticsLegend() {
 function AnalyticsCounters({
   analytics,
   compact = false,
+  large = false,
 }: {
   analytics: StencilWashAnalytics;
   compact?: boolean;
+  large?: boolean;
 }) {
   const rows = [
     {
@@ -352,7 +439,8 @@ function AnalyticsCounters({
   return (
     <div
       className={cn(
-        "grid gap-3",
+        "grid",
+        large ? "content-center gap-5" : "gap-3",
         compact ? "grid-cols-3" : "min-w-[150px] content-center",
       )}
     >
@@ -360,16 +448,25 @@ function AnalyticsCounters({
         <div
           key={row.category}
           className={cn(
-            "border-l-2 pl-3",
+            "border-l-2",
+            large ? "min-h-[92px] pl-5" : "pl-3",
             compact && "min-w-0 border-l-0 border-t-2 pl-0 pt-2",
           )}
           style={{ borderColor: WASH_CATEGORY_META[row.category].color }}
         >
-          <p className="text-[10px] leading-tight text-muted-foreground">
+          <p
+            className={cn(
+              "leading-tight text-muted-foreground",
+              large ? "text-[16px]" : "text-[10px]",
+            )}
+          >
             {row.label}
           </p>
           <p
-            className="mt-1 text-[24px] font-bold leading-none"
+            className={cn(
+              "font-bold leading-none",
+              large ? "mt-3 text-[34px]" : "mt-1 text-[24px]",
+            )}
             style={{ color: WASH_CATEGORY_META[row.category].color }}
           >
             {row.value}
@@ -410,40 +507,104 @@ function WashIntervalTooltip({
 }) {
   if (!active || !payload?.length) return null;
   const bar = payload[0].payload;
+  const status = getIntervalStatus(bar.interval_minutes);
 
   return (
     <div className="rounded bg-[#202124] px-2 py-1.5 text-[10px] font-medium text-white shadow">
       <p>{bar.day_label}</p>
       <p>Intervalo: {formatInterval(bar.interval_minutes)}</p>
-      <p>{WASH_CATEGORY_META[bar.category].label}</p>
+      <p>{INTERVAL_STATUS_META[status].label}</p>
     </div>
   );
 }
 
-function WashTimeChart({ analytics }: { analytics: StencilWashAnalytics }) {
+function WashTimeChart({
+  analytics,
+  selectedDays,
+  onDaysChange,
+  framed = true,
+  large = false,
+}: {
+  analytics: StencilWashAnalytics;
+  selectedDays?: AnalyticsDays;
+  onDaysChange?: (days: AnalyticsDays) => void;
+  framed?: boolean;
+  large?: boolean;
+}) {
   const ticks = getPeriodTicks(analytics.period.days);
   const lastDayIndex = analytics.period.days - 1;
 
   return (
-    <div className="rounded-md border bg-white p-4">
-      <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+    <div className={cn(framed && "rounded-md border bg-white p-4")}>
+      <div
+        className={cn(
+          "flex flex-wrap items-start justify-between gap-3",
+          large ? "mb-5" : "mb-3",
+        )}
+      >
         <div>
-          <h3 className="text-[14px] font-bold leading-tight">
+          <h3
+            className={cn(
+              "font-bold leading-tight text-[#111318]",
+              large ? "text-[25px]" : "text-[14px]",
+            )}
+          >
             Horário de lavagens por dia
           </h3>
-          <div className="mt-2">
-            <AnalyticsLegend />
+          <div className={large ? "mt-3" : "mt-2"}>
+            <AnalyticsLegend large={large} />
           </div>
         </div>
-        <span className="rounded border px-2 py-1 text-[10px] text-muted-foreground">
-          Últimos {analytics.period.days} dias
-        </span>
+        <div className="flex items-center gap-2">
+          {selectedDays && onDaysChange && (
+            <Select
+              value={String(selectedDays)}
+              onValueChange={(value) =>
+                onDaysChange(Number(value) as AnalyticsDays)
+              }
+            >
+              <SelectTrigger
+                className={cn(
+                  "rounded-md",
+                  large
+                    ? "h-10 w-[166px] text-[14px]"
+                    : "h-8 w-[138px] text-[11px]",
+                )}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ANALYTICS_DAY_OPTIONS.map((days) => (
+                  <SelectItem key={days} value={String(days)}>
+                    Últimos {days} dias
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <span
+            className={cn(
+              "inline-flex items-center gap-2 rounded-md border text-[#52525B]",
+              large ? "h-10 px-3 text-[14px]" : "px-2 py-1.5 text-[10px]",
+            )}
+          >
+            <CalendarDays className="h-4 w-4" />
+            {formatPeriodRange(analytics.period.start, analytics.period.end)}
+          </span>
+        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-[1fr_150px]">
-        <div className="h-[230px] min-w-0">
+      <div
+        className={cn(
+          "grid",
+          large
+            ? "gap-7 md:grid-cols-[minmax(0,1fr)_225px]"
+            : "gap-4 md:grid-cols-[1fr_150px]",
+        )}
+      >
+        <div className={cn("min-w-0", large ? "h-[405px]" : "h-[230px]")}>
           <ResponsiveContainer width="100%" height="100%">
-            <ScatterChart margin={{ top: 8, right: 12, bottom: 2, left: -14 }}>
+            <ScatterChart margin={{ top: 8, right: 14, bottom: 4, left: 2 }}>
               <CartesianGrid stroke="#ECEFF3" vertical={false} />
               <XAxis
                 type="number"
@@ -453,7 +614,7 @@ function WashTimeChart({ analytics }: { analytics: StencilWashAnalytics }) {
                 tickFormatter={(value) =>
                   formatDayFromPeriod(analytics.period.start, Number(value))
                 }
-                tick={{ fontSize: 10, fill: "#6B7280" }}
+                tick={{ fontSize: large ? 14 : 10, fill: "#71717A" }}
                 axisLine={{ stroke: "#E5E7EB" }}
                 tickLine={false}
               />
@@ -465,29 +626,54 @@ function WashTimeChart({ analytics }: { analytics: StencilWashAnalytics }) {
                 tickFormatter={(value) =>
                   `${String(value).padStart(2, "0")}:00`
                 }
-                tick={{ fontSize: 10, fill: "#6B7280" }}
+                tick={{ fontSize: large ? 14 : 10, fill: "#71717A" }}
                 axisLine={false}
                 tickLine={false}
               />
+              <ReferenceArea
+                y1={11}
+                y2={12}
+                fill="#D7F2E8"
+                fillOpacity={0.9}
+                strokeOpacity={0}
+              />
+              <ReferenceArea
+                y1={16}
+                y2={17}
+                fill="#D7F2E8"
+                fillOpacity={0.9}
+                strokeOpacity={0}
+              />
               <Tooltip content={<WashTimeTooltip />} cursor={false} />
-              <Scatter data={analytics.time_points} isAnimationActive={false}>
-                {analytics.time_points.map((point) => (
-                  <Cell
-                    key={point.id}
-                    fill={WASH_CATEGORY_META[point.category].color}
-                  />
-                ))}
-              </Scatter>
+              {(
+                ["planned", "anomalous", "multiple"] as WashAnalyticsCategory[]
+              ).map((category) => (
+                <Scatter
+                  key={category}
+                  data={analytics.time_points.filter(
+                    (point) => point.category === category,
+                  )}
+                  fill={WASH_CATEGORY_META[category].color}
+                  shape={WASH_CATEGORY_META[category].shape}
+                  isAnimationActive={false}
+                />
+              ))}
             </ScatterChart>
           </ResponsiveContainer>
         </div>
-        <AnalyticsCounters analytics={analytics} />
+        <AnalyticsCounters analytics={analytics} large={large} />
       </div>
     </div>
   );
 }
 
-function WashIntervalChart({ analytics }: { analytics: StencilWashAnalytics }) {
+function WashIntervalChart({
+  analytics,
+  large = false,
+}: {
+  analytics: StencilWashAnalytics;
+  large?: boolean;
+}) {
   const ticks = getPeriodTicks(analytics.period.days);
   const lastDayIndex = analytics.period.days - 1;
   const bars = analytics.interval_bars.map((bar) => ({
@@ -499,27 +685,66 @@ function WashIntervalChart({ analytics }: { analytics: StencilWashAnalytics }) {
   }));
 
   return (
-    <div className="rounded-md border bg-white p-4">
-      <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+    <div>
+      <div
+        className={cn(
+          "flex flex-wrap items-start justify-between gap-3",
+          large ? "mb-5" : "mb-3",
+        )}
+      >
         <div>
-          <h3 className="text-[14px] font-bold leading-tight">
+          <h3
+            className={cn(
+              "font-bold leading-tight text-[#111318]",
+              large ? "text-[25px]" : "text-[14px]",
+            )}
+          >
             Intervalo entre lavagens
           </h3>
-          <div className="mt-2">
-            <AnalyticsLegend />
+          <div
+            className={cn(
+              "flex flex-wrap items-center text-[#71717A]",
+              large ? "mt-3 gap-5 text-[14px]" : "mt-2 gap-4 text-[11px]",
+            )}
+          >
+            {(Object.keys(INTERVAL_STATUS_META) as IntervalStatus[]).map(
+              (status) => (
+                <span key={status} className="inline-flex items-center gap-1.5">
+                  <span
+                    className="h-2.5 w-2.5"
+                    style={{
+                      backgroundColor: INTERVAL_STATUS_META[status].color,
+                    }}
+                  />
+                  {INTERVAL_STATUS_META[status].label}
+                </span>
+              ),
+            )}
           </div>
         </div>
-        <span className="rounded border px-2 py-1 text-[10px] text-muted-foreground">
+        <span
+          className={cn(
+            "rounded-md border text-[#71717A]",
+            large ? "px-3 py-2 text-[14px]" : "px-2 py-1 text-[10px]",
+          )}
+        >
           Últimos {analytics.period.days} dias
         </span>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-[1fr_150px]">
-        <div className="h-[210px] min-w-0">
+      <div
+        className={cn(
+          "grid",
+          large
+            ? "gap-7 md:grid-cols-[minmax(0,1fr)_225px]"
+            : "gap-4 md:grid-cols-[1fr_150px]",
+        )}
+      >
+        <div className={cn("min-w-0", large ? "h-[360px]" : "h-[210px]")}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={bars}
-              margin={{ top: 8, right: 12, bottom: 2, left: -14 }}
+              margin={{ top: 8, right: 14, bottom: 4, left: 2 }}
             >
               <CartesianGrid stroke="#ECEFF3" vertical={false} />
               <XAxis
@@ -530,13 +755,13 @@ function WashIntervalChart({ analytics }: { analytics: StencilWashAnalytics }) {
                 tickFormatter={(value) =>
                   formatDayFromPeriod(analytics.period.start, Number(value))
                 }
-                tick={{ fontSize: 10, fill: "#6B7280" }}
+                tick={{ fontSize: large ? 14 : 10, fill: "#71717A" }}
                 axisLine={{ stroke: "#E5E7EB" }}
                 tickLine={false}
               />
               <YAxis
                 tickFormatter={(value) => `${value}h`}
-                tick={{ fontSize: 10, fill: "#6B7280" }}
+                tick={{ fontSize: large ? 14 : 10, fill: "#71717A" }}
                 axisLine={false}
                 tickLine={false}
               />
@@ -548,7 +773,11 @@ function WashIntervalChart({ analytics }: { analytics: StencilWashAnalytics }) {
                 {bars.map((bar) => (
                   <Cell
                     key={bar.date_key}
-                    fill={WASH_CATEGORY_META[bar.category].color}
+                    fill={
+                      INTERVAL_STATUS_META[
+                        getIntervalStatus(bar.interval_minutes)
+                      ].color
+                    }
                   />
                 ))}
               </Bar>
@@ -558,18 +787,23 @@ function WashIntervalChart({ analytics }: { analytics: StencilWashAnalytics }) {
         <div className="grid content-center gap-4">
           <IntervalMetric
             label="Intervalo médio entre lavagens"
-            value={formatInterval(analytics.stencil.mid_range)}
+            value={formatInterval(
+              analytics.interval_summary.average_interval_minutes,
+            )}
             color="#10B981"
-          />
-          <IntervalMetric
-            label="Data menor intervalo"
-            value={analytics.interval_summary.shortest_interval_date ?? "-"}
-            color="#3B82F6"
+            large={large}
           />
           <IntervalMetric
             label="Data maior intervalo"
             value={analytics.interval_summary.longest_interval_date ?? "-"}
+            color="#3B82F6"
+            large={large}
+          />
+          <IntervalMetric
+            label="Data menor intervalo"
+            value={analytics.interval_summary.shortest_interval_date ?? "-"}
             color="#F97316"
+            large={large}
           />
         </div>
       </div>
@@ -581,15 +815,33 @@ function IntervalMetric({
   label,
   value,
   color,
+  large = false,
 }: {
   label: string;
   value: string;
   color: string;
+  large?: boolean;
 }) {
   return (
-    <div className="border-l-2 pl-3" style={{ borderColor: color }}>
-      <p className="text-[10px] leading-tight text-muted-foreground">{label}</p>
-      <p className="mt-1 text-[20px] font-bold leading-none" style={{ color }}>
+    <div
+      className={cn("border-l-2", large ? "min-h-[92px] pl-5" : "pl-3")}
+      style={{ borderColor: color }}
+    >
+      <p
+        className={cn(
+          "leading-tight text-muted-foreground",
+          large ? "text-[16px]" : "text-[10px]",
+        )}
+      >
+        {label}
+      </p>
+      <p
+        className={cn(
+          "font-bold leading-none",
+          large ? "mt-3 text-[34px]" : "mt-1 text-[20px]",
+        )}
+        style={{ color }}
+      >
         {value}
       </p>
     </div>
@@ -610,21 +862,6 @@ function Field({
       </Label>
       {children}
     </div>
-  );
-}
-
-function ConsultButton({ onClick }: { onClick: () => void }) {
-  return (
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      onClick={onClick}
-      className="h-7 gap-1 rounded-md border-[#cfd6dd] px-3 text-[12px] font-medium"
-    >
-      <Search className="h-3.5 w-3.5" />
-      Consultar
-    </Button>
   );
 }
 
@@ -657,20 +894,29 @@ function StencilFiltersForm({
   filters,
   lines,
   onChange,
-  onSearch,
+  onClear,
 }: {
   filters: HistoryStencilFilters;
   lines: string[];
   onChange: (filters: HistoryStencilFilters) => void;
-  onSearch: () => void;
+  onClear: () => void;
 }) {
   return (
-    <div className="grid items-end gap-4 lg:grid-cols-[1.45fr_1fr_1fr_1fr_1fr_auto]">
+    <div className="grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-5">
       <Field label="Código">
         <Input
           value={filters.codigo}
           onChange={(event) =>
             onChange({ ...filters, codigo: event.target.value })
+          }
+          className="h-10 rounded-md bg-white text-[13px]"
+        />
+      </Field>
+      <Field label="Endereçamento">
+        <Input
+          value={filters.enderecamento}
+          onChange={(event) =>
+            onChange({ ...filters, enderecamento: event.target.value })
           }
           className="h-10 rounded-md bg-white text-[13px]"
         />
@@ -683,6 +929,39 @@ function StencilFiltersForm({
           }
           className="h-10 rounded-md bg-white text-[13px]"
         />
+      </Field>
+      <Field label="Operador de lavagem">
+        <Input
+          value={filters.operador}
+          onChange={(event) =>
+            onChange({ ...filters, operador: event.target.value })
+          }
+          className="h-10 rounded-md bg-white text-[13px]"
+        />
+      </Field>
+      <Field label="Tipo de ocorrência">
+        <Select
+          value={filters.ocorrencia || "all"}
+          onValueChange={(value) =>
+            onChange({
+              ...filters,
+              ocorrencia:
+                value === "all"
+                  ? ""
+                  : (value as HistoryStencilFilters["ocorrencia"]),
+            })
+          }
+        >
+          <SelectTrigger className="h-10 rounded-md bg-white text-[13px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas</SelectItem>
+            <SelectItem value="planned">Planejada</SelectItem>
+            <SelectItem value="anomalous">Anômala</SelectItem>
+            <SelectItem value="multiple">Múltipla</SelectItem>
+          </SelectContent>
+        </Select>
       </Field>
       <Field label="País origem">
         <Input
@@ -730,28 +1009,68 @@ function StencilFiltersForm({
           </SelectContent>
         </Select>
       </Field>
+      <Field label="De">
+        <Input
+          type="date"
+          value={filters.dataDe}
+          onChange={(event) =>
+            onChange({ ...filters, dataDe: event.target.value })
+          }
+          className="h-10 rounded-md bg-white text-[13px]"
+        />
+      </Field>
+      <Field label="Até">
+        <Input
+          type="date"
+          value={filters.dataAte}
+          onChange={(event) =>
+            onChange({ ...filters, dataAte: event.target.value })
+          }
+          className="h-10 rounded-md bg-white text-[13px]"
+        />
+      </Field>
       <Button
         type="button"
-        onClick={onSearch}
-        className="h-10 gap-2 rounded-md bg-[#1d5be3] px-5 text-[13px] font-semibold hover:bg-[#1749b6]"
+        variant="ghost"
+        onClick={onClear}
+        className="h-10 justify-start gap-2 px-2 text-[13px]"
       >
-        <Search className="h-4 w-4" />
-        Buscar
+        <X className="h-4 w-4" />
+        Limpar filtros
       </Button>
     </div>
   );
+}
+
+function formatPeriodRange(startIso: string, endIso: string) {
+  const formatter = new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "short",
+    timeZone: "America/Manaus",
+  });
+  const normalize = (value: string) => {
+    const formatted = formatter
+      .format(new Date(value))
+      .replace(".", "")
+      .replace(" de ", " ");
+    const [day, month = ""] = formatted.split(" ");
+
+    return `${day} ${month.charAt(0).toUpperCase()}${month.slice(1)}`;
+  };
+
+  return `${normalize(startIso)} - ${normalize(endIso)}`;
 }
 
 function PlateFiltersForm({
   filters,
   lines,
   onChange,
-  onSearch,
+  onClear,
 }: {
   filters: HistoryPlateFilters;
   lines: string[];
   onChange: (filters: HistoryPlateFilters) => void;
-  onSearch: () => void;
+  onClear: () => void;
 }) {
   return (
     <div className="grid items-end gap-3 lg:grid-cols-[1.45fr_1fr_1fr_1fr_auto]">
@@ -804,11 +1123,12 @@ function PlateFiltersForm({
       </Field>
       <Button
         type="button"
-        onClick={onSearch}
-        className="h-10 gap-2 rounded-md bg-[#0fa468] px-5 text-[13px] font-semibold hover:bg-[#0c8756]"
+        variant="ghost"
+        onClick={onClear}
+        className="h-10 justify-start gap-2 px-2 text-[13px]"
       >
-        <Search className="h-4 w-4" />
-        Buscar
+        <X className="h-4 w-4" />
+        Limpar filtros
       </Button>
     </div>
   );
@@ -819,13 +1139,13 @@ function StencilTable({
   allRows,
   sort,
   onToggleSort,
-  onConsult,
+  onOpen,
 }: {
   rows: ApiStencil[];
   allRows: ApiStencil[];
   sort: SortDirection;
   onToggleSort: () => void;
-  onConsult: (row: ApiStencil) => void;
+  onOpen: (row: ApiStencil) => void;
 }) {
   const countsByStencilDay = useMemo(() => {
     const counts = new Map<string, number>();
@@ -878,8 +1198,17 @@ function StencilTable({
             return (
               <tr
                 key={row.id}
+                tabIndex={0}
+                role="button"
+                onClick={() => onOpen(row)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onOpen(row);
+                  }
+                }}
                 className={cn(
-                  "transition-colors",
+                  "cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500",
                   index % 2 === 0 ? "bg-white" : "bg-[#E5E5E5]",
                   category === "anomalous" && "bg-red-50",
                   category === "multiple" && "bg-violet-50",
@@ -909,7 +1238,29 @@ function StencilTable({
                   {row.line_name}
                 </td>
                 <td className="px-3 py-2 text-center">
-                  <ConsultButton onClick={() => onConsult(row)} />
+                  {category !== "planned" && (
+                    <TooltipProvider>
+                      <UiTooltip>
+                        <TooltipTrigger asChild>
+                          <span
+                            className="inline-grid h-8 w-8 place-items-center"
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            <AlertTriangle
+                              className="h-5 w-5"
+                              style={{ color }}
+                              aria-label="Lavagem com anomalia"
+                            />
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {category === "multiple"
+                            ? "Múltiplas lavagens registradas no mesmo dia"
+                            : "Lavagem realizada fora do horário planejado"}
+                        </TooltipContent>
+                      </UiTooltip>
+                    </TooltipProvider>
+                  )}
                 </td>
               </tr>
             );
@@ -934,12 +1285,12 @@ function PlateTable({
   rows,
   sort,
   onToggleSort,
-  onConsult,
+  onOpen,
 }: {
   rows: ApiPlate[];
   sort: SortDirection;
   onToggleSort: () => void;
-  onConsult: (row: ApiPlate) => void;
+  onOpen: (row: ApiPlate) => void;
 }) {
   return (
     <div className="min-h-0 overflow-auto rounded-t-md">
@@ -974,7 +1325,19 @@ function PlateTable({
           {rows.map((row, index) => (
             <tr
               key={row.id}
-              className={index % 2 === 0 ? "bg-white" : "bg-[#E5E5E5]"}
+              tabIndex={0}
+              role="button"
+              onClick={() => onOpen(row)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onOpen(row);
+                }
+              }}
+              className={cn(
+                "cursor-pointer transition-colors hover:bg-emerald-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-500",
+                index % 2 === 0 ? "bg-white" : "bg-[#E5E5E5]",
+              )}
             >
               <td className="px-3 py-3 tabular">
                 {formatDate(row.created_at)}
@@ -986,9 +1349,7 @@ function PlateTable({
               <td className="px-3 py-3 tabular">{row.serial}</td>
               <td className="px-3 py-3 tabular">{row.blank_id}</td>
               <td className="px-3 py-3">{row.line}</td>
-              <td className="px-3 py-2 text-center">
-                <ConsultButton onClick={() => onConsult(row)} />
-              </td>
+              <td className="px-3 py-2 text-center" />
             </tr>
           ))}
           {rows.length === 0 && (
@@ -1035,7 +1396,7 @@ function StencilDetailsModal({
   onAnalyticsDaysChange: (days: AnalyticsDays) => void;
   onExportOpenChange: (open: boolean) => void;
   onExportFormatChange: (format: ExportFormat) => void;
-  onExport: () => void;
+  onExport: () => Promise<void>;
   onOpenChange: (open: boolean) => void;
 }) {
   const canExport = Boolean(detail && analytics && !analyticsLoading);
@@ -1045,27 +1406,37 @@ function StencilDetailsModal({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
           id="stencil-report-modal"
-          className="max-h-[88vh] max-w-[1060px] overflow-y-hidden rounded-md p-0"
+          className="block h-[min(892px,calc(100vh-100px))] w-[min(1630px,calc(100vw-100px))] max-w-none gap-0 overflow-hidden rounded-lg border-[#E4E4E7] bg-white p-0 shadow-xl [&>button]:right-6 [&>button]:top-[25px] [&>button]:h-7 [&>button]:w-7 [&>button]:rounded-none [&>button]:opacity-100 [&>button]:outline-none [&>button]:ring-0 [&>button]:ring-offset-0 [&>button]:focus:outline-none [&>button]:focus:ring-0 [&>button]:focus:ring-offset-0 [&>button_svg]:h-5 [&>button_svg]:w-5"
         >
           <DialogHeader className="sr-only">
             <DialogTitle>Informações detalhadas do stencil</DialogTitle>
           </DialogHeader>
-          <div className="p-5">
-            <div className="mb-4 flex items-start justify-between gap-4 pr-8">
-              <h2 className="text-[15px] font-bold">Informações detalhadas</h2>
+          <header className="flex h-[74px] shrink-0 items-center justify-between border-b border-[#F1F1F2] px-8 pr-[70px]">
+            <div className="flex items-center gap-5">
+              <MoreHorizontal className="h-5 w-5 text-[#52525B]" />
+              <h2 className="text-[20px] font-semibold text-[#111318]">
+                Informações detalhadas
+              </h2>
+            </div>
+            <div className="flex items-center gap-4">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 disabled={!canExport}
                 onClick={() => onExportOpenChange(true)}
-                className="h-7 gap-1 rounded-sm px-2 text-[10px]"
+                className="h-10 gap-2 rounded-md border-[#D4D4D8] bg-white px-4 text-[14px] font-medium text-[#18181B] shadow-none"
               >
-                <Download className="h-3 w-3" />
-                Exportar relatório individual
+                <Download className="h-4 w-4" />
+                Exportar
               </Button>
             </div>
+          </header>
 
+          <div
+            data-export-scroll
+            className="h-[calc(100%_-_74px)] overflow-y-auto bg-white px-6 py-5"
+          >
             {loading || !detail ? (
               <div className="py-16 text-center text-sm text-muted-foreground">
                 Carregando histórico...
@@ -1073,33 +1444,45 @@ function StencilDetailsModal({
             ) : (
               <div
                 id="stencil-report-content"
-                className="grid gap-5 bg-white md:grid-cols-[205px_1fr]"
+                className="grid gap-7 bg-white xl:grid-cols-[370px_minmax(0,1fr)]"
               >
-                <aside className="space-y-4 md:sticky md:top-0 md:self-start">
-                  <DetailMetric
-                    label="Dados do Stencil"
-                    value={detail.stencil_code}
-                  />
+                <aside className="space-y-4 xl:sticky xl:top-0 xl:self-start">
+                  <p className="text-[16px] text-[#71717A]">Dados do Stencil</p>
 
-                  <DetailMetric
+                  <div>
+                    <p className="text-[16px] leading-tight text-[#71717A]">
+                      Estimativa de uso
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-3">
+                      <span className="inline-grid h-7 w-7 place-items-center rounded bg-[#FEF3C7] text-[#D8A800]">
+                        <EqualApproximately className="h-5 w-5" />
+                      </span>
+                      <p className="text-[25px] font-bold leading-none text-[#DC2626]">
+                        Não informado
+                      </p>
+                      <CircleAlert className="h-5 w-5 text-[#FB7185]" />
+                    </div>
+                  </div>
+
+                  <ModalMetric
                     label="Total de Lavagens Registradas"
                     value={`${String(detail.asset?.total_washes ?? 0).padStart(3, "0")} lavagens`}
                   />
 
-                  <div className="space-y-3 border-t pt-4">
-                    <p className="text-[11px] font-medium text-muted-foreground">
+                  <div className="space-y-4 border-t border-[#E4E4E7] pt-6">
+                    <p className="text-[17px] text-[#71717A]">
                       Dados cadastrais
                     </p>
-                    <DetailMetric
+                    <ModalMetric
                       label="Código Stencil"
                       value={detail.stencil_code}
                     />
-                    <div className="grid grid-cols-2 gap-3">
-                      <DetailMetric
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-7">
+                      <ModalMetric
                         label="Endereçamento"
                         value={String(detail.addressing ?? "").padStart(3, "0")}
                       />
-                      <DetailMetric
+                      <ModalMetric
                         label="Espessura"
                         value={
                           detail.asset?.thickness != null
@@ -1107,11 +1490,11 @@ function StencilDetailsModal({
                             : "-"
                         }
                       />
-                      <DetailMetric
+                      <ModalMetric
                         label="ID Fabricante"
                         value={detail.asset?.manufacture_id || "-"}
                       />
-                      <DetailMetric
+                      <ModalMetric
                         label="País de Origem"
                         value={detail.asset?.country || "-"}
                       />
@@ -1119,78 +1502,70 @@ function StencilDetailsModal({
                   </div>
                 </aside>
 
-                <div className="min-w-0 space-y-4">
-                  <div className="rounded-sm bg-[#DBEBFB] p-4">
-                    <p className="mb-2 text-[11px] font-medium text-[#2563A8]">
-                      Dados desta lavagem
-                    </p>
-                    <div className="grid gap-3 md:grid-cols-[1fr_0.8fr_0.7fr_1.2fr_0.8fr]">
-                      <DetailMetric label="ID Lavagem" value={detail.id} />
-                      <DetailMetric
-                        label="Data"
-                        value={formatDate(detail.created_at)}
-                      />
-                      <DetailMetric
-                        label="Hora"
-                        value={formatTime(detail.created_at)}
-                      />
-                      <DetailMetric
-                        label="Operador"
-                        value={detail.operator || "-"}
-                      />
-                      <DetailMetric
-                        label="Linha"
-                        value={detail.line_name || "-"}
-                      />
+                <div className="min-w-0 space-y-6">
+                  <section className="overflow-hidden rounded-lg border border-[#E4E4E7] bg-white">
+                    <div className="bg-[#DCEBFA] px-5 py-5">
+                      <p className="mb-4 text-[16px] text-[#2155A3]">
+                        Dados desta lavagem
+                      </p>
+                      <div className="grid gap-5 md:grid-cols-[1.25fr_0.8fr_0.6fr_1.15fr_0.65fr]">
+                        <ModalMetric
+                          label="ID Lavagem"
+                          value={detail.id}
+                          valueClassName="break-all text-[18px] leading-[1.15]"
+                        />
+                        <ModalMetric
+                          label="Data"
+                          value={formatDate(detail.created_at)}
+                        />
+                        <ModalMetric
+                          label="Hora"
+                          value={formatTime(detail.created_at)}
+                        />
+                        <ModalMetric
+                          label="Operador de Lavagem"
+                          value={detail.operator || "-"}
+                        />
+                        <ModalMetric
+                          label="Linha"
+                          value={detail.line_name || "-"}
+                        />
+                      </div>
                     </div>
-                  </div>
-
-                  <div className="rounded-sm border bg-white p-4">
-                    <p className="mb-2 text-[11px] font-medium text-muted-foreground">
-                      Dados da última lavagem
-                    </p>
-                    <div className="grid gap-3 md:grid-cols-[1fr_0.8fr_0.7fr_1.2fr_0.8fr]">
-                      <DetailMetric
-                        label="ID Lavagem"
-                        value={detail.asset?.last_wash_details?.id ?? "-"}
-                      />
-                      <DetailMetric
-                        label="Data"
-                        value={formatDate(detail.asset?.last_wash)}
-                      />
-                      <DetailMetric
-                        label="Hora"
-                        value={formatTime(detail.asset?.last_wash)}
-                      />
-                      <DetailMetric
-                        label="Operador"
-                        value={detail.asset?.last_wash_details?.operator ?? "-"}
-                      />
-                      <DetailMetric
-                        label="Linha"
-                        value={detail.line_name || "-"}
-                      />
+                    <div className="border-t border-[#E4E4E7] px-5 py-7">
+                      <p className="mb-5 text-[16px] text-[#71717A]">
+                        Dados da última lavagem
+                      </p>
+                      <div className="grid gap-5 md:grid-cols-[1.25fr_0.8fr_0.6fr_1.15fr_0.65fr]">
+                        <ModalMetric
+                          label="ID Lavagem"
+                          value={detail.asset?.last_wash_details?.id ?? "-"}
+                          valueClassName="break-all text-[18px] leading-[1.15]"
+                        />
+                        <ModalMetric
+                          label="Data"
+                          value={formatDate(detail.asset?.last_wash)}
+                        />
+                        <ModalMetric
+                          label="Hora"
+                          value={formatTime(detail.asset?.last_wash)}
+                        />
+                        <ModalMetric
+                          label="Operador de Lavagem"
+                          value={
+                            detail.asset?.last_wash_details?.operator ?? "-"
+                          }
+                        />
+                        <ModalMetric
+                          label="Linha"
+                          value={detail.line_name || "-"}
+                        />
+                      </div>
                     </div>
-                  </div>
+                  </section>
 
-                  <div className="flex justify-end">
-                    <Select
-                      value={String(analyticsDays)}
-                      onValueChange={(value) =>
-                        onAnalyticsDaysChange(Number(value) as AnalyticsDays)
-                      }
-                    >
-                      <SelectTrigger className="h-8 w-[142px] rounded-sm text-[11px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ANALYTICS_DAY_OPTIONS.map((days) => (
-                          <SelectItem key={days} value={String(days)}>
-                            Últimos {days} dias
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="inline-flex h-10 items-center rounded-md bg-[#F4F4F5] px-4 text-[16px] font-medium text-[#27272A]">
+                    Gráficos de intervalo
                   </div>
 
                   {analyticsLoading ? (
@@ -1208,12 +1583,19 @@ function StencilDetailsModal({
                       {analytics.period.days} dias.
                     </div>
                   ) : (
-                    <>
-                      <div className="flex-1 overflow-y-auto max-h-[400px] space-y-4 p-5">
-                        <WashTimeChart analytics={analytics} />
-                        <WashIntervalChart analytics={analytics} />
+                    <section className="rounded-lg border border-[#E4E4E7] bg-white px-4 py-5">
+                      <WashTimeChart
+                        analytics={analytics}
+                        selectedDays={analyticsDays}
+                        onDaysChange={onAnalyticsDaysChange}
+                        framed={false}
+                        large
+                      />
+                      <div className="my-7 border-t border-[#E4E4E7]" />
+                      <div className="px-0">
+                        <WashIntervalChart analytics={analytics} large />
                       </div>
-                    </>
+                    </section>
                   )}
                 </div>
               </div>
@@ -1251,136 +1633,48 @@ function ExportReportDialog({
   open: boolean;
   onFormatChange: (format: ExportFormat) => void;
   onOpenChange: (open: boolean) => void;
-  onExport: () => void;
+  onExport: () => Promise<void>;
 }) {
+  const [exporting, setExporting] = useState(false);
   const formats: Array<{ value: ExportFormat; label: string }> = [
     { value: "pdf", label: "PDF" },
     { value: "png", label: "PNG" },
-    { value: "jpg", label: "JPG" },
+    { value: "jpeg", label: "JPEG" },
   ];
+  const handleExport = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      await onExport();
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[860px] rounded-md p-0">
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!exporting) onOpenChange(nextOpen);
+      }}
+    >
+      <DialogContent className="h-[min(868px,calc(100vh-64px))] w-[min(1176px,calc(100vw-64px))] max-w-none overflow-hidden rounded-md p-0">
         <DialogHeader className="sr-only">
-          <DialogTitle>Exportar relatório individual</DialogTitle>
+          <DialogTitle>Exportar</DialogTitle>
         </DialogHeader>
-        <div className="grid min-h-[520px] grid-cols-[1fr_180px] bg-white">
-          <div className="grid place-items-center bg-[#565656] p-6">
-            <div className="w-full max-w-[520px] rounded-sm bg-white p-4 shadow-xl">
-              <div className="mb-3 flex items-center justify-between">
-                <p className="text-[12px] font-bold">Informações detalhadas</p>
-                <p className="text-[10px] text-muted-foreground">
-                  Últimos {analytics.period.days} dias
-                </p>
-              </div>
-              <div className="grid gap-3">
-                <div className="rounded-sm bg-[#DBEBFB] p-3">
-                  <p className="text-[10px] font-medium text-[#2563A8]">
-                    Dados desta lavagem
-                  </p>
-                  <div className="mt-2 space-y-2">
-                    <DetailMetric
-                      label="ID Lavagem"
-                      value={detail.id}
-                      className="[&_p:last-child]:break-all [&_p:last-child]:text-[16px]"
-                    />
-                    <div className="grid grid-cols-3 gap-2">
-                      <DetailMetric
-                        label="Data"
-                        value={formatDate(detail.created_at)}
-                      />
-                      <DetailMetric
-                        label="Hora"
-                        value={formatTime(detail.created_at)}
-                      />
-                      <DetailMetric
-                        label="Linha"
-                        value={detail.line_name || "-"}
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-[1fr_130px] gap-3 rounded-sm border p-3">
-                  <div>
-                    <p className="text-[12px] font-bold">
-                      Horário de lavagens por dia
-                    </p>
-                    <AnalyticsLegend />
-                    <div className="mt-3 h-[120px] rounded-sm bg-[#F8FAFC] p-2">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <ScatterChart
-                          margin={{ top: 4, right: 4, bottom: 0, left: -22 }}
-                        >
-                          <CartesianGrid stroke="#ECEFF3" vertical={false} />
-                          <XAxis dataKey="day_index" type="number" hide />
-                          <YAxis
-                            dataKey="hour_decimal"
-                            type="number"
-                            hide
-                            domain={[7, 17]}
-                          />
-                          <Scatter
-                            data={analytics.time_points}
-                            isAnimationActive={false}
-                          >
-                            {analytics.time_points.map((point) => (
-                              <Cell
-                                key={point.id}
-                                fill={WASH_CATEGORY_META[point.category].color}
-                              />
-                            ))}
-                          </Scatter>
-                        </ScatterChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                  <AnalyticsCounters analytics={analytics} />
-                </div>
-                <div className="rounded-sm border p-3">
-                  <p className="text-[12px] font-bold">
-                    Intervalo entre lavagens
-                  </p>
-                  <div className="mt-2 h-[120px] rounded-sm bg-[#F8FAFC] p-2">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={analytics.interval_bars.map((bar) => ({
-                          ...bar,
-                          interval_hours:
-                            bar.interval_minutes == null
-                              ? 0
-                              : Math.max(bar.interval_minutes / 60, 0.25),
-                        }))}
-                        margin={{ top: 4, right: 4, bottom: 0, left: -22 }}
-                      >
-                        <XAxis dataKey="day_index" type="number" hide />
-                        <YAxis hide />
-                        <Bar
-                          dataKey="interval_hours"
-                          radius={[2, 2, 0, 0]}
-                          barSize={6}
-                        >
-                          {analytics.interval_bars.map((bar) => (
-                            <Cell
-                              key={bar.date_key}
-                              fill={WASH_CATEGORY_META[bar.category].color}
-                            />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </div>
+        <div className="grid h-full min-h-0 grid-cols-[minmax(0,1fr)_230px] bg-white">
+          <div className="min-h-0 overflow-y-auto overflow-x-auto bg-[#565656] p-7">
+            <div className="mx-auto w-[794px] shadow-xl">
+              <StencilPdfReport detail={detail} analytics={analytics} />
             </div>
           </div>
-          <aside className="flex flex-col border-l bg-white p-5">
-            <p className="text-[12px] font-bold text-foreground">Formato</p>
-            <div className="mt-4 space-y-3">
+          <aside className="flex h-full min-h-0 flex-col overflow-hidden border-l bg-white p-6">
+            <p className="text-[16px] font-bold text-foreground">Formato</p>
+            <div className="mt-6 space-y-4">
               {formats.map((item) => (
                 <label
                   key={item.value}
-                  className="flex cursor-pointer items-center gap-2 text-[12px]"
+                  className="flex cursor-pointer items-center gap-3 text-[14px]"
                 >
                   <input
                     type="radio"
@@ -1393,19 +1687,21 @@ function ExportReportDialog({
                 </label>
               ))}
             </div>
-            <div className="mt-auto grid gap-2">
+            <div className="mt-auto grid shrink-0 gap-2 pt-6">
               <Button
                 type="button"
-                className="h-9 rounded-sm bg-[#1D55D8] text-[12px] text-white hover:bg-[#1649BD]"
-                // onClick={onExport}
+                disabled={exporting}
+                className="h-11 rounded-md bg-[#1D55D8] text-[14px] text-white hover:bg-[#1649BD]"
+                onClick={() => void handleExport()}
               >
                 <Download className="mr-1 h-3.5 w-3.5" />
-                Exportar
+                {exporting ? "Gerando..." : "Exportar"}
               </Button>
               <Button
                 type="button"
                 variant="outline"
-                className="h-8 rounded-sm text-[12px]"
+                disabled={exporting}
+                className="h-10 rounded-md text-[13px]"
                 onClick={() => onOpenChange(false)}
               >
                 Cancelar
@@ -1415,6 +1711,209 @@ function ExportReportDialog({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function PdfMetric({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number;
+}) {
+  return (
+    <div className="min-w-0 border-l border-[#A3A3A3] px-3 py-1">
+      <p className="text-[8px] font-bold uppercase leading-tight">{label}</p>
+      <p className="mt-1 break-words text-[12px] font-bold leading-tight">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function StencilPdfReport({
+  detail,
+  analytics,
+}: {
+  detail: ApiStencil;
+  analytics: StencilWashAnalytics;
+}) {
+  const lastWash = detail.asset?.last_wash_details;
+
+  return (
+    <article
+      id="stencil-pdf-report"
+      className="w-[794px] bg-white p-6 text-foreground"
+    >
+      <div className="border-t-[26px] border-[#737373] pt-3">
+        <p className="-mt-[22px] px-2 text-[10px] font-bold text-white">
+          RELATÓRIO DE STENCIL
+        </p>
+        <h1 className="mt-4 text-[24px] font-bold">{detail.stencil_code}</h1>
+      </div>
+
+      <section className="mt-4" data-report-section="Cadastro">
+        <h2 className="border-b border-black pb-1 text-[13px] font-bold uppercase">
+          Cadastro
+        </h2>
+        <div className="mt-2 grid grid-cols-4">
+          <PdfMetric label="Endereçamento" value={detail.addressing} />
+          <PdfMetric
+            label="Espessura"
+            value={
+              detail.asset?.thickness != null
+                ? `${Number(detail.asset.thickness).toFixed(2)} mm`
+                : "-"
+            }
+          />
+          <PdfMetric
+            label="ID fabricante"
+            value={detail.asset?.manufacture_id || "-"}
+          />
+          <PdfMetric
+            label="País de origem"
+            value={detail.asset?.country || "-"}
+          />
+        </div>
+      </section>
+
+      <section className="mt-4" data-report-section="Produção">
+        <h2 className="border-b border-black pb-1 text-[13px] font-bold uppercase">
+          Produção
+        </h2>
+        <div className="mt-2 grid grid-cols-2">
+          <PdfMetric label="Estimativa de uso" value="Não informado" />
+          <PdfMetric
+            label="Total de lavagens registradas"
+            value={`${String(detail.asset?.total_washes ?? 0).padStart(3, "0")} lavagens`}
+          />
+        </div>
+      </section>
+
+      <section className="mt-4" data-report-section="Lavagens">
+        <h2 className="border-b border-black pb-1 text-[13px] font-bold uppercase">
+          Dados de lavagem
+        </h2>
+        <div className="mt-2 border-l-2 border-black py-1 pl-3">
+          <p className="text-[10px] font-bold uppercase">
+            Dados desta lavagem
+          </p>
+          <div className="mt-2 grid grid-cols-5">
+            <PdfMetric label="ID lavagem" value={detail.id} />
+            <PdfMetric label="Data" value={formatDate(detail.created_at)} />
+            <PdfMetric label="Hora" value={formatTime(detail.created_at)} />
+            <PdfMetric label="Operador" value={detail.operator || "-"} />
+            <PdfMetric label="Linha" value={detail.line_name || "-"} />
+          </div>
+        </div>
+        <div className="mt-2 border-l-2 border-[#A3A3A3] py-1 pl-3">
+          <p className="text-[10px] font-bold uppercase">
+            Dados da última lavagem
+          </p>
+          <div className="mt-2 grid grid-cols-5">
+            <PdfMetric label="ID lavagem" value={lastWash?.id ?? "-"} />
+            <PdfMetric
+              label="Data"
+              value={formatDate(detail.asset?.last_wash)}
+            />
+            <PdfMetric
+              label="Hora"
+              value={formatTime(detail.asset?.last_wash)}
+            />
+            <PdfMetric label="Operador" value={lastWash?.operator ?? "-"} />
+            <PdfMetric label="Linha" value={detail.line_name || "-"} />
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-5">
+        <div className="flex items-end justify-between border-b pb-1">
+          <h2 className="text-[13px] font-bold">
+            Análise dos últimos {analytics.period.days} dias
+          </h2>
+          <span className="text-[10px]">
+            {formatPeriodRange(analytics.period.start, analytics.period.end)}
+          </span>
+        </div>
+        <div className="mt-3 space-y-3">
+          <WashTimeChart analytics={analytics} framed={false} />
+          <WashIntervalChart analytics={analytics} />
+        </div>
+      </section>
+
+      <section className="mt-4" data-report-section="Métricas dos gráficos">
+        <h2 className="border-b border-black pb-1 text-[13px] font-bold uppercase">
+          Métricas dos gráficos
+        </h2>
+        <div className="mt-2 grid grid-cols-3">
+          <PdfMetric
+            label="Lavagens planejadas"
+            value={analytics.counts.planned}
+          />
+          <PdfMetric
+            label="Lavagens anômalas"
+            value={analytics.counts.anomalous}
+          />
+          <PdfMetric
+            label="Lavagens múltiplas"
+            value={analytics.counts.multiple}
+          />
+          <PdfMetric
+            label="Intervalo médio"
+            value={formatInterval(
+              analytics.interval_summary.average_interval_minutes,
+            )}
+          />
+          <PdfMetric
+            label="Maior intervalo"
+            value={`${analytics.interval_summary.longest_interval_date ?? "-"} — ${formatInterval(analytics.interval_summary.longest_interval_minutes)}`}
+          />
+          <PdfMetric
+            label="Menor intervalo"
+            value={`${analytics.interval_summary.shortest_interval_date ?? "-"} — ${formatInterval(analytics.interval_summary.shortest_interval_minutes)}`}
+          />
+        </div>
+      </section>
+
+      <section
+        className="mt-4"
+        data-report-section="Lista de lavagens com classificação"
+      >
+        <h2 className="border-b border-black pb-1 text-[13px] font-bold uppercase">
+          Lista de lavagens com classificação
+        </h2>
+        <table className="mt-2 w-full border-collapse text-[10px]">
+          <thead>
+            <tr className="bg-slate-100 text-left">
+              <th className="p-1.5">Data</th>
+              <th className="p-1.5">Hora</th>
+              <th className="p-1.5">Operador</th>
+              <th className="p-1.5">Classificação</th>
+            </tr>
+          </thead>
+          <tbody>
+            {analytics.time_points.map((wash) => (
+              <tr key={wash.id} className="border-b">
+                <td className="p-1.5">{wash.day_label}</td>
+                <td className="p-1.5">{wash.time_label}</td>
+                <td className="p-1.5">{wash.operator}</td>
+                <td className="p-1.5">
+                  {WASH_CATEGORY_META[wash.category].label}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+
+      <footer className="mt-5 flex justify-between border-t pt-2 text-[9px] text-muted-foreground">
+        <span>
+          Relatório gerado em {formatDate(new Date().toISOString())} às{" "}
+          {formatTime(new Date().toISOString())}
+        </span>
+        <span>{detail.stencil_code}</span>
+      </footer>
+    </article>
   );
 }
 
@@ -1506,6 +2005,7 @@ const History = () => {
   const [lines, setLines] = useState<string[]>([]);
   const [sort, setSort] = useState<SortDirection>("desc");
   const [stencilPage, setStencilPage] = useState(1);
+  const [stencilTotalPages, setStencilTotalPages] = useState(1);
   const [platePage, setPlatePage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -1522,6 +2022,9 @@ const History = () => {
   const [exportOpen, setExportOpen] = useState(false);
   const [exportFormat, setExportFormat] = useState<ExportFormat>("pdf");
   const [detailType, setDetailType] = useState<AssetType | null>(null);
+  const rowsRequestId = useRef(0);
+  const analyticsRequestId = useRef(0);
+  const rowsAbortController = useRef<AbortController | null>(null);
 
   const sortedStencils = useMemo(
     () => sortByWashDate(stencils, sort),
@@ -1531,19 +2034,7 @@ const History = () => {
     () => sortByWashDate(plates, sort),
     [plates, sort],
   );
-  const stencilPages = Math.max(
-    1,
-    Math.ceil(sortedStencils.length / PAGE_SIZE),
-  );
   const platePages = Math.max(1, Math.ceil(sortedPlates.length / PAGE_SIZE));
-  const stencilRows = useMemo(
-    () =>
-      sortedStencils.slice(
-        (stencilPage - 1) * PAGE_SIZE,
-        stencilPage * PAGE_SIZE,
-      ),
-    [sortedStencils, stencilPage],
-  );
   const plateRows = useMemo(
     () =>
       sortedPlates.slice((platePage - 1) * PAGE_SIZE, platePage * PAGE_SIZE),
@@ -1551,23 +2042,39 @@ const History = () => {
   );
 
   const loadRows = async () => {
+    const requestId = ++rowsRequestId.current;
+    rowsAbortController.current?.abort();
+    const controller = new AbortController();
+    rowsAbortController.current = controller;
     setLoading(true);
     setError("");
 
     try {
       if (assetType === "stencil") {
-        setStencils(await historyApi.getStencilWashes(stencilFilters));
-        setStencilPage(1);
+        const response = await historyApi.getStencilWashes(
+          stencilFilters,
+          stencilPage,
+          PAGE_SIZE,
+          sort,
+          controller.signal,
+        );
+        if (requestId !== rowsRequestId.current) return;
+        setStencils(response.items);
+        setStencilTotalPages(response.total_pages);
       } else {
-        setPlates(await historyApi.getPlateWashes(plateFilters));
+        const rows = await historyApi.getPlateWashes(plateFilters);
+        if (requestId !== rowsRequestId.current) return;
+        setPlates(rows);
         setPlatePage(1);
       }
     } catch (err) {
+      if (requestId !== rowsRequestId.current) return;
+      if (err instanceof DOMException && err.name === "AbortError") return;
       setError(
         err instanceof Error ? err.message : "Erro ao buscar histórico.",
       );
     } finally {
-      setLoading(false);
+      if (requestId === rowsRequestId.current) setLoading(false);
     }
   };
 
@@ -1579,41 +2086,69 @@ const History = () => {
   }, []);
 
   useEffect(() => {
-    loadRows();
+    const timeout = window.setTimeout(() => {
+      void loadRows();
+    }, 300);
+
+    return () => window.clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [assetType]);
+  }, [assetType, stencilFilters, plateFilters, stencilPage, sort]);
 
   useEffect(() => {
     setStencilPage(1);
     setPlatePage(1);
-  }, [sort]);
+  }, [stencilFilters, plateFilters]);
 
   const loadStencilAnalytics = async (
     stencilId: string,
     days: AnalyticsDays,
   ) => {
+    const requestId = ++analyticsRequestId.current;
     setStencilAnalytics(null);
     setAnalyticsError("");
     setAnalyticsLoading(true);
 
     try {
-      setStencilAnalytics(
-        await historyApi.getStencilWashAnalytics(stencilId, days),
+      const analytics = await historyApi.getStencilWashAnalytics(
+        stencilId,
+        days,
       );
+      if (requestId !== analyticsRequestId.current) return;
+      if (analytics.period.days !== days) {
+        throw new Error(
+          `A API retornou ${analytics.period.days} dias para uma consulta de ${days} dias.`,
+        );
+      }
+      setStencilAnalytics(analytics);
     } catch {
+      if (requestId !== analyticsRequestId.current) return;
       setStencilAnalytics(null);
-      setAnalyticsError("Não foi possível carregar os gráficos deste stencil.");
+      setAnalyticsError(
+        "Não foi possível aplicar o período. Atualize a API do SMT Stencil e tente novamente.",
+      );
     } finally {
-      setAnalyticsLoading(false);
+      if (requestId === analyticsRequestId.current) {
+        setAnalyticsLoading(false);
+      }
     }
   };
 
   const openStencil = async (row: ApiStencil) => {
     setDetailType("stencil");
     setSelectedStencil(row);
-    setDetailsLoading(false);
+    setDetailsLoading(true);
     setExportOpen(false);
-    await loadStencilAnalytics(row.stencil_id, analyticsDays);
+    try {
+      const [detail] = await Promise.all([
+        historyApi.getStencil(row.stencil_id),
+        loadStencilAnalytics(row.stencil_id, analyticsDays),
+      ]);
+      setSelectedStencil({ ...row, asset: detail });
+    } catch {
+      setSelectedStencil(row);
+    } finally {
+      setDetailsLoading(false);
+    }
   };
 
   const changeAnalyticsDays = (days: AnalyticsDays) => {
@@ -1626,12 +2161,14 @@ const History = () => {
   const exportStencilReport = async () => {
     if (!selectedStencil || !stencilAnalytics) return;
 
-    const report = document.getElementById("stencil-report-content");
+    const report = document.getElementById(
+      exportFormat === "pdf" ? "stencil-pdf-report" : "stencil-report-modal",
+    );
     if (!report) return;
 
     try {
       if (exportFormat === "pdf") {
-        exportElementAsPdf(report, selectedStencil);
+        await exportElementAsPdf(report, selectedStencil);
       } else {
         await exportElementAsImage(
           report,
@@ -1680,14 +2217,14 @@ const History = () => {
                   filters={stencilFilters}
                   lines={lines}
                   onChange={setStencilFilters}
-                  onSearch={loadRows}
+                  onClear={() => setStencilFilters({ ...emptyStencilFilters })}
                 />
               ) : (
                 <PlateFiltersForm
                   filters={plateFilters}
                   lines={lines}
                   onChange={setPlateFilters}
-                  onSearch={loadRows}
+                  onClear={() => setPlateFilters({ ...emptyPlateFilters })}
                 />
               )}
             </div>
@@ -1707,13 +2244,13 @@ const History = () => {
                 </div>
               ) : assetType === "stencil" ? (
                 <StencilTable
-                  rows={stencilRows}
+                  rows={sortedStencils}
                   allRows={sortedStencils}
                   sort={sort}
                   onToggleSort={() =>
                     setSort((value) => (value === "asc" ? "desc" : "asc"))
                   }
-                  onConsult={openStencil}
+                  onOpen={openStencil}
                 />
               ) : (
                 <PlateTable
@@ -1722,7 +2259,7 @@ const History = () => {
                   onToggleSort={() =>
                     setSort((value) => (value === "asc" ? "desc" : "asc"))
                   }
-                  onConsult={openPlate}
+                  onOpen={openPlate}
                 />
               )}
             </div>
@@ -1731,7 +2268,7 @@ const History = () => {
               {assetType === "stencil" ? (
                 <Pagination
                   page={stencilPage}
-                  totalPages={stencilPages}
+                  totalPages={stencilTotalPages}
                   onChange={setStencilPage}
                   variant="stencil"
                 />

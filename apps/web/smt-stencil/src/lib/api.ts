@@ -16,9 +16,13 @@ function getSimFail(): SimTarget {
 
 // ── Request base ─────────────────────────────────────────────────────────────
 
-async function apiRequest<T>(endpoint: string): Promise<T> {
+async function apiRequest<T>(
+  endpoint: string,
+  options: { signal?: AbortSignal } = {},
+): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     headers: { "Content-Type": "application/json" },
+    signal: options.signal,
   });
 
   // 404 do NestJS significa lista vazia — não é falha de sistema
@@ -115,48 +119,36 @@ export const historyApi = {
     id: string,
     days = 30,
   ): Promise<StencilWashAnalytics> => {
-    return apiRequest<StencilWashAnalytics>(`/stencils/${id}/wash-analytics?days=${days}`);
+    return apiRequest<StencilWashAnalytics>(
+      `/stencils/${id}/wash-analytics?days=${days}`,
+    );
   },
 
   getStencilWashes: async (
     filters: HistoryStencilFilters = {},
-  ): Promise<ApiStencil[]> => {
-    const [washes, stencils] = await Promise.all([
-      getAllPages<ApiStencil>("/stencils/washes"),
-      apiRequest<HistoryStencilSummary[]>("/stencils"),
-    ]);
-    const stencilsById = new Map(stencils.map((stencil) => [stencil.id, stencil]));
-
-    return washes
-      .map((wash) => ({
-        ...wash,
-        asset: stencilsById.get(wash.stencil_id),
-      }))
-      .filter((wash) => {
-        const asset = wash.asset;
-        if (
-          filters.codigo &&
-          !wash.stencil_code.toLowerCase().includes(filters.codigo.toLowerCase())
-        )
-          return false;
-        if (
-          filters.idFabricante &&
-          !(asset?.manufacture_id ?? "")
-            .toLowerCase()
-            .includes(filters.idFabricante.toLowerCase())
-        )
-          return false;
-        if (
-          filters.pais &&
-          !(asset?.country ?? "")
-            .toLowerCase()
-            .includes(filters.pais.toLowerCase())
-        )
-          return false;
-        if (filters.status && wash.status !== filters.status) return false;
-        if (filters.linha && wash.line_name !== filters.linha) return false;
-        return true;
-      });
+    page = 1,
+    limit = 9,
+    sort: "asc" | "desc" = "desc",
+    signal?: AbortSignal,
+  ): Promise<ApiPaginatedResponse<ApiStencil>> => {
+    const washEndpoint = `/stencils/washes${buildQuery({
+      stencilCode: filters.codigo,
+      addressing: filters.enderecamento,
+      manufactureId: filters.idFabricante,
+      country: filters.pais,
+      operator: filters.operador,
+      occurrence: filters.ocorrencia,
+      status: filters.status,
+      lineName: filters.linha,
+      dateFrom: filters.dataDe,
+      dateTo: filters.dataAte,
+      page: String(page),
+      limit: String(limit),
+      sort,
+    })}`;
+    return apiRequest<ApiPaginatedResponse<ApiStencil>>(washEndpoint, {
+      signal,
+    });
   },
 
   getPlates: async (
@@ -365,16 +357,22 @@ function normalizeTodayPlateWash(wash: ApiTodayPlateWash): ApiPlate {
   };
 }
 
-function withTodayStencilCountsAndAnomalies(washes: ApiStencil[]): ApiStencil[] {
+function withTodayStencilCountsAndAnomalies(
+  washes: ApiStencil[],
+): ApiStencil[] {
   const countByStencilId = new Map<string, number>();
 
   washes.forEach((wash) => {
-    countByStencilId.set(wash.stencil_id, (countByStencilId.get(wash.stencil_id) ?? 0) + 1);
+    countByStencilId.set(
+      wash.stencil_id,
+      (countByStencilId.get(wash.stencil_id) ?? 0) + 1,
+    );
   });
 
   return washes.map((wash) => {
     const count = countByStencilId.get(wash.stencil_id) ?? 0;
-    const nonStandard = count > 1 || isOutsideStencilReservedHours(wash.created_at);
+    const nonStandard =
+      count > 1 || isOutsideStencilReservedHours(wash.created_at);
 
     return {
       ...wash,
@@ -394,7 +392,10 @@ function withTodayPlateCounts(washes: ApiPlate[]): ApiPlate[] {
   const countByPlateId = new Map<string, number>();
 
   washes.forEach((wash) => {
-    countByPlateId.set(wash.plate_id, (countByPlateId.get(wash.plate_id) ?? 0) + 1);
+    countByPlateId.set(
+      wash.plate_id,
+      (countByPlateId.get(wash.plate_id) ?? 0) + 1,
+    );
   });
 
   return washes.map((wash) => ({
@@ -425,6 +426,9 @@ export interface ApiStencil {
   operator: string;
   previous_wash_interval: number | null;
   non_standard: boolean;
+  occurrence?: WashAnalyticsCategory;
+  manufacture_id?: string;
+  country?: string;
   asset?: HistoryStencilSummary;
 }
 
@@ -444,10 +448,15 @@ export interface ApiPlate {
 
 export interface HistoryStencilFilters {
   codigo?: string;
+  enderecamento?: string;
   idFabricante?: string;
   pais?: string;
+  operador?: string;
+  ocorrencia?: WashAnalyticsCategory | "";
   status?: string;
   linha?: string;
+  dataDe?: string;
+  dataAte?: string;
 }
 
 export interface HistoryPlateFilters {
@@ -526,6 +535,7 @@ export interface StencilWashAnalytics {
   time_points: StencilWashAnalyticsPoint[];
   interval_bars: StencilWashIntervalBar[];
   interval_summary: {
+    average_interval_minutes: number | null;
     shortest_interval_minutes: number | null;
     shortest_interval_date: string | null;
     longest_interval_minutes: number | null;
