@@ -64,6 +64,7 @@ interface ApiCautela {
   empresa: string | null;
   gestor: { nome: string } | null;
   id: string;
+  customId?: string | null;
   itens: { descricao?: string; nomeItem: string; quantidade: number }[];
   etapaFluxo?: ApiCautelaFlowStep;
   justificativaRejeicao: string | null;
@@ -304,6 +305,7 @@ function mapCautela(cautela: ApiCautela): Cautela {
     })),
     gestor: cautela.gestor?.nome ?? "Gestor não informado",
     id: cautela.id,
+    customId: cautela.customId ?? "Custom ID não informado",
     motivoNegativa: cautela.justificativaRejeicao ?? undefined,
     documento: cautela.documentoProprietario ?? undefined,
     reprovadoEm:

@@ -13,6 +13,7 @@ export interface Equipamento {
 
 export interface Cautela {
   id: string;
+  customId: string;
   status: StatusCautela;
   empresa: string;
   visitante: string;
