@@ -86,6 +86,7 @@ export class CautelaService {
           saidaAutorizadaEm: null,
           saidaAutorizadaPorId: null,
           setorId: setor.id,
+          setor: setor,
           solicitadoPorId: currentUser.sub,
           status: CautelaStatus.EM_ANALISE,
           tipo: CautelaType.EQUIPAMENTO,
@@ -806,6 +807,7 @@ export class CautelaService {
         : null,
       gestorId: cautela.gestorId,
       id: cautela.id,
+      customId: cautela.customId,
       etapaFluxo: cautela.etapaFluxo,
       itens:
         cautela.itens?.map((item) => ({
