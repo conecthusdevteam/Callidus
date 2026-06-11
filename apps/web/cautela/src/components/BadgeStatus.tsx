@@ -49,7 +49,7 @@ export function BadgeAtencao() {
 
 export function BadgeAprovado() {
   return (
-    <span className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[13px] font-medium bg-[#BCF0DA] text-[#065F46] border border-[#31C48D]">
+    <span className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[13px] font-medium bg-[#FCE96A] text-[#111827] border border-[#FACA15]">
       <svg
         className="w-3.5 h-3.5"
         fill="none"
@@ -161,6 +161,7 @@ export function BadgeStatus({
   status: StatusCautela;
   etapaFluxo?: string;
 }) {
+  if (status === "Em validação") return <BadgeAprovado />;
   if (status === "Encerrada") return <BadgeEncerrada />;
   if (status === "Saída Autorizada") return <BadgeSaidaAutorizada />;
   if (status === "Aprovado" && etapaFluxo === "APROVADA_PELO_GESTOR")

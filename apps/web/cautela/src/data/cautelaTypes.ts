@@ -1,10 +1,10 @@
 export type StatusCautela =
   | "Em análise"
+  | "Em validação"
   | "Aprovado"
   | "Reprovado"
   | "Saída Autorizada"
   | "Encerrada";
-
 export interface Equipamento {
   descricao: string;
   quantidade?: number;

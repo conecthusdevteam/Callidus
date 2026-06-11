@@ -119,6 +119,7 @@ export default function Gestor() {
   const historico = cautelas.filter((c) => {
     const ok =
       !!c.decisaoLocal ||
+      c.status === "Em validação" ||
       c.status === "Aprovado" ||
       c.status === "Reprovado" ||
       c.status === "Saída Autorizada" ||
@@ -191,6 +192,8 @@ export default function Gestor() {
 
   const isSomenteLeitura = (c: CautelaComDecisao) =>
     c.decisaoLocal !== undefined ||
+    c.status === "Em validação" ||
+    (c.status === "Aprovado" && c.etapaFluxo === "APROVADA_PELO_GESTOR") ||
     c.status === "Aprovado" ||
     c.status === "Reprovado" ||
     c.status === "Saída Autorizada" ||
@@ -286,8 +289,9 @@ export default function Gestor() {
   }
 
   function statusHistorico(c: CautelaComDecisao): StatusCautela {
-    if (c.decisaoLocal === "aprovado") return "Aprovado";
     if (c.decisaoLocal === "reprovado") return "Reprovado";
+    if (c.decisaoLocal === "aprovado" && c.status !== "Em validação")
+      return "Aprovado";
     return c.status as StatusCautela;
   }
 
@@ -322,15 +326,21 @@ export default function Gestor() {
             onDescartar={abrirDescartar}
             statusHistorico={statusHistorico}
             mostrarBolinhaGestor={mostrarBolinhaGestor}
+            onTipoAcessoChange={(c, valor) => {
+              setCautelaEdicao(c);
+              setLivreAcesso(valor);
+              setModalConfirmarAcesso(true);
+            }}
           />
         )}
 
         {mobileView === "detalhe" && cautelaSelecionada && (
           <div className="flex flex-col flex-1 overflow-hidden">
-            <div className="relative flex items-center justify-center px-4 py-3 mt-16">
+            {/* Header */}
+            <div className="relative flex items-center px-4 py-3 mt-16">
               <button
                 onClick={() => setMobileView("lista")}
-                className="absolute left-4 text-gray-600"
+                className="text-gray-600 mr-3"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                   <path
@@ -342,36 +352,47 @@ export default function Gestor() {
                   />
                 </svg>
               </button>
-              <span className="font-bold text-[20px] text-center">
-                Visualização de Cautela
+              <span className="text-[14px] text-[#404040]">
+                Home <span className="mx-1">›</span> Visualização de cautela
               </span>
             </div>
-            <div className="flex-1 overflow-y-auto px-4 py-2 flex flex-col gap-3">
-              <div className="bg-white rounded-sm border border-black p-6">
-                <DetalhesConteudo
-                  cautela={cautelaSelecionada}
-                  onAutorizarSaida={() =>
-                    handleAutorizarSaida(cautelaSelecionada.id)
-                  }
-                />
-              </div>
-              {!isSomenteLeitura(cautelaSelecionada) && (
-                <div className="flex flex-col gap-2">
-                  <button
-                    onClick={() => aprovar(cautelaSelecionada.id)}
-                    className="w-full py-2.5 rounded-lg bg-[#3BB14A] text-white text-sm font-semibold hover:bg-[#22592A]"
-                  >
-                    Aprovar
-                  </button>
-                  <button
-                    onClick={() => abrirDescartar(cautelaSelecionada.id)}
-                    className="w-full py-2.5 rounded-lg border border-black bg-white text-black text-sm font-medium hover:bg-gray-100"
-                  >
-                    Descartar
-                  </button>
-                </div>
-              )}
+
+            {/* Conteúdo scrollável com padding bottom para não ficar atrás dos botões fixos */}
+            <div className="flex-1 overflow-y-auto px-4 py-2 pb-28 flex flex-col gap-3">
+              <DetalhesConteudo
+                cautela={cautelaSelecionada}
+                onAutorizarSaida={() =>
+                  handleAutorizarSaida(cautelaSelecionada.id)
+                }
+                livreAcesso={livreAcesso}
+                onLivreAcessoChange={setLivreAcesso}
+                onAprovar={() => aprovar(cautelaSelecionada.id)}
+                onDescartar={() => abrirDescartar(cautelaSelecionada.id)}
+                onTipoAcessoChange={(valor) => {
+                  setCautelaEdicao(cautelaSelecionada);
+                  setLivreAcesso(valor);
+                  setModalConfirmarAcesso(true);
+                }}
+              />
             </div>
+
+            {/* Botões fixos no rodapé */}
+            {!isSomenteLeitura(cautelaSelecionada) && (
+              <div className="fixed bottom-[70px] left-0 right-0 flex flex-col gap-2 px-4 pb-3 pt-3 bg-white border-t border-gray-200">
+                <button
+                  onClick={() => aprovar(cautelaSelecionada.id)}
+                  className="w-full py-3 rounded-lg bg-[#111827] text-white text-sm font-semibold"
+                >
+                  Aprovar entrada
+                </button>
+                <button
+                  onClick={() => abrirDescartar(cautelaSelecionada.id)}
+                  className="w-full py-2 text-[#737373] bg-[#F5F5F5] text-sm font-medium rounded-lg"
+                >
+                  Reprovar
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -482,7 +503,7 @@ export default function Gestor() {
         </div>
 
         {/* Área central — tabela de histórico */}
-        <div className="flex-1 relative flex flex-col items-center pt-[24px] px-6 pb-4 z-20">
+        <div className="flex-1 relative flex flex-col items-start pt-[144px] px-6 pb-4 z-20">
           {/* Overlay */}
           {cautelaSelecionada && (
             <div
@@ -627,8 +648,8 @@ export default function Gestor() {
         <ModalConfirmarAcesso
           onCancelar={() => {
             setModalConfirmarAcesso(false);
+            setLivreAcesso(cautelaEdicao.livreAcesso ?? "entrada");
             setCautelaEdicao(null);
-            void carregarCautelas();
           }}
           onConfirmar={async () => {
             setModalConfirmarAcesso(false);

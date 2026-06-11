@@ -8,22 +8,27 @@ export function TabelaCautelados({
   if (!equipamentos?.length) return null;
 
   return (
-    <table className="w-full overflow-hidden rounded-lg">
+    <table className="w-full overflow-hidden">
       <thead>
         <tr style={{ backgroundColor: "#0E9F6E" }}>
-          <th className="px-4 py-2 text-left text-white text-sm font-bold">
+          <th className="px-4 py-1 text-left text-white text-[14px] font-bold">
             Descrição
           </th>
-          <th className="px-4 py-2 text-center text-white text-sm font-bold">
+          <th className="px-4 py-1 text-center text-white text-[14px]font-bold">
             Quantidade
           </th>
         </tr>
       </thead>
       <tbody>
         {equipamentos.map((eq, i) => (
-          <tr key={i} className="border-b border-gray-100 even:bg-[#F4F4F4]">
-            <td className="px-4 py-2 text-sm text-[#0A0A0A]">{eq.descricao}</td>
-            <td className="px-4 py-2 text-center text-sm text-[#0A0A0A]">
+          <tr
+            key={i}
+            className="border-b border-gray-100 odd:bg-white even:bg-[#F4F4F4]"
+          >
+            <td className="px-4 py-2 text-[14px] text-[#0A0A0A]">
+              {eq.descricao}
+            </td>
+            <td className="px-4 py-2 text-center text-[14px] text-[#0A0A0A]">
               {eq.quantidade ?? "-"}
             </td>
           </tr>

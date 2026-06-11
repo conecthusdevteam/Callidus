@@ -12,6 +12,7 @@ export function MenuLista({
   onAbaChange,
   livreAcesso,
   onLivreAcessoChange,
+  onTipoAcessoChange,
   onClickCard,
   onClickHistorico,
   onAprovar,
@@ -26,6 +27,7 @@ export function MenuLista({
   onAbaChange: (aba: "solicitadas" | "emSaida") => void;
   livreAcesso: "livre" | "entrada";
   onLivreAcessoChange: (v: "livre" | "entrada") => void;
+  onTipoAcessoChange: (c: CautelaComDecisao, v: "livre" | "entrada") => void;
   onClickCard: (
     c: CautelaComDecisao,
     origem: "recebidas" | "historico",
@@ -137,6 +139,7 @@ export function MenuLista({
               livreAcesso={livreAcesso}
               onLivreAcessoChange={onLivreAcessoChange}
               onClickCard={(c) => onClickCard(c, "historico")}
+              onTipoAcessoChange={onTipoAcessoChange}
               onClickHistorico={onClickHistorico}
               onAprovar={onAprovar}
               onDescartar={onDescartar}

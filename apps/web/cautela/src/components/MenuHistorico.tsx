@@ -91,22 +91,27 @@ export function MenuHistorico({
                   className={`px-4 py-3 cursor-pointer border-b border-[#F3F4F6] last:border-0 border-l-8 ${
                     c.status === "Reprovado"
                       ? "bg-[#FBD5D5] border-l-[#F05252]"
-                      : c.status === "Aprovado"
-                        ? "bg-[#BCF0DA] border-l-[#0E9F6E]"
-                        : c.status === "Saída Autorizada"
-                          ? "bg-amber-50 border-l-amber-400"
-                          : c.status === "Encerrada"
-                            ? "bg-[#F4F4F4] border-l-[#A3A3A3]"
-                            : i % 2 === 1
-                              ? "bg-[#F9FAFB] border-l-transparent"
-                              : "bg-white border-l-transparent"
+                      : c.status === "Em validação"
+                        ? "bg-[#FCE96A] border-l-[#FACA15]"
+                        : c.status === "Aprovado"
+                          ? "bg-[#BCF0DA] border-l-[#0E9F6E]"
+                          : c.status === "Saída Autorizada"
+                            ? "bg-amber-200 border-l-amber-400"
+                            : c.status === "Encerrada"
+                              ? "bg-[#F4F4F4] border-l-[#A3A3A3]"
+                              : i % 2 === 1
+                                ? "bg-[#F9FAFB] border-l-transparent"
+                                : "bg-white border-l-transparent"
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-[10px] text-[#0A0A0A] font-mono">
                       {c.id}
                     </span>
-                    <BadgeHistorico status={statusHistorico(c)} />
+                    <BadgeHistorico
+                      status={statusHistorico(c)}
+                      etapaFluxo={c.etapaFluxo}
+                    />
                   </div>
                   <p className="text-[18px] font-bold text-[#111827] mb-1">
                     {c.visitante || "—"}

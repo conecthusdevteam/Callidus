@@ -98,8 +98,8 @@ function BadgeHistoricoGestor({
 }) {
   if (status === "Aprovado" && etapaFluxo === "APROVADA_PELO_GESTOR") {
     return (
-      <span className="inline-flex items-center gap-1 w-fit px-2 py-1 rounded-full text-[12px] font-semibold border border-[#31C48D] bg-[#BCF0DA] text-[#065F46]">
-        <span className="w-2 h-2 rounded-full bg-[#0E9F6E]" />
+      <span className="inline-flex items-center gap-1 w-fit px-2 py-1 rounded-full text-[12px] font-semibold border border-amber-400 bg-amber-100 text-amber-800">
+        <span className="w-2 h-2 rounded-full bg-amber-400" />
         Em Validação
       </span>
     );
@@ -166,8 +166,8 @@ export function Tabela({
     <div className="w-full flex flex-col gap-0">
       {/* Barra de pesquisa */}
       <div
-        className={`flex items-center gap-3 mb-8 w-full ${
-          isPortaria ? "max-w-[780px]" : "max-w-[607px]"
+        className={`flex items-center gap-3 mb-4 w-full ${
+          isPortaria ? "max-w-[780px]" : "max-w-[607px] ml-[335px] mb-[39px]"
         }`}
       >
         <div className="relative flex-1">
@@ -205,7 +205,7 @@ export function Tabela({
       {/* Tabela */}
       <div
         className={`w-full bg-white rounded-lg border border-[#E5E7EB] shadow-sm relative z-0 overflow-x-auto ${
-          !isPortaria ? "max-w-[1126px] ml-[-15px]" : "max-w-[1200px]"
+          !isPortaria ? "max-w-[1126px] ml-[73px]" : "max-w-[1200px]"
         }`}
       >
         {/* Cabeçalho */}

@@ -7,7 +7,7 @@ export function AbaSaida({
   cautelas,
   historico,
   livreAcesso,
-  onLivreAcessoChange,
+  onTipoAcessoChange,
   onClickCard,
   onClickHistorico,
   onAprovar,
@@ -18,6 +18,7 @@ export function AbaSaida({
   historico: CautelaComDecisao[];
   livreAcesso: "livre" | "entrada";
   onLivreAcessoChange: (v: "livre" | "entrada") => void;
+  onTipoAcessoChange: (c: CautelaComDecisao, v: "livre" | "entrada") => void;
   onClickCard: (c: CautelaComDecisao) => void;
   onClickHistorico: (c: CautelaComDecisao) => void;
   onAprovar: (id: string) => void;
@@ -41,7 +42,7 @@ export function AbaSaida({
             isNaoLida={false}
             isMobile={true}
             livreAcesso={livreAcesso}
-            onLivreAcessoChange={onLivreAcessoChange}
+            onLivreAcessoChange={(v) => onTipoAcessoChange(c, v)}
             onClick={() => onClickCard(c)}
             onAprovar={onAprovar}
             onDescartar={onDescartar}

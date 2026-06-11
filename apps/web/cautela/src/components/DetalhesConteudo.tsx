@@ -1,5 +1,4 @@
-import { type Cautela, type StatusCautela } from "../data/cautelaTypes";
-import StatusBadge from "../components/StatusBadge";
+import { type Cautela } from "../data/cautelaTypes";
 import {
   BannerAguardandoSaida,
   JustificativaBox,
@@ -14,177 +13,301 @@ interface CautelaComDecisao extends Cautela {
 export function DetalhesConteudo({
   cautela,
   onAutorizarSaida,
+  livreAcesso,
+  onTipoAcessoChange, // ← novo
 }: {
   cautela: CautelaComDecisao;
   onAutorizarSaida?: () => void;
+  livreAcesso?: "livre" | "entrada";
+  onLivreAcessoChange?: (v: "livre" | "entrada") => void;
+  onAprovar?: () => void;
+  onDescartar?: () => void;
+  onTipoAcessoChange?: (v: "livre" | "entrada") => void; // ← novo
 }) {
-  const tipoPermissaoLabel =
-    cautela.tipoPermissao === "LIVRE_TRANSITO"
-      ? "Livre trânsito"
-      : "Entrada única";
-  const statusExibido =
-    cautela.decisaoLocal === "aprovado"
-      ? "Aprovado"
-      : cautela.decisaoLocal === "reprovado"
-        ? "Reprovado"
-        : cautela.status;
+  const isEmValidacao =
+    cautela.status === "Em validação" ||
+    (cautela.status === "Aprovado" &&
+      cautela.etapaFluxo === "APROVADA_PELO_GESTOR");
 
-  const isSomenteLeitura =
-    cautela.decisaoLocal !== undefined ||
-    cautela.status === "Aprovado" ||
-    cautela.status === "Reprovado" ||
-    cautela.status === "Saída Autorizada" ||
-    cautela.status === "Encerrada";
+  const getCautelaBg = () => {
+    if (isEmValidacao) return "bg-[#FCE96A4D]";
+
+    switch (cautela.status) {
+      case "Aprovado":
+        return "bg-[#BCF0DA4D]";
+
+      case "Reprovado":
+        return "bg-[#FBD5D54D]";
+
+      case "Saída Autorizada":
+        return "bg-amber-100"; // ajuste para a cor do BannerAguardandoSaida
+
+      case "Encerrada":
+        return "bg-[#E5E7EB]";
+
+      case "Em análise":
+        return "bg-[#FCE96A4D]";
+
+      default:
+        return "bg-[#F9FAFB]";
+    }
+  };
+
+  const renderBanner = () => {
+    if (isEmValidacao) {
+      return (
+        <div className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-[#FCE96A] border border-[#FACA15] text-[#111827] text-[18px] font-medium mb-4">
+          <svg
+            className="w-5 h-5 flex-shrink-0"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            viewBox="0 0 24 24"
+          >
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 8v5" strokeLinecap="round" />
+            <circle cx="12" cy="16.5" r="0.5" fill="currentColor" />
+          </svg>
+          Em validação
+        </div>
+      );
+    }
+    if (cautela.status === "Aprovado") {
+      return (
+        <div className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-[#BCF0DA] border border-[#31C48D] text-[#065F46] text-[18px] font-medium mb-4">
+          <svg
+            className="w-5 h-5 flex-shrink-0"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          Ativa
+        </div>
+      );
+    }
+    if (cautela.status === "Reprovado") {
+      return (
+        <div className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-[#FBD5D5] border border-[#F05252] text-[#9B1C1C] text-[18px] font-medium mb-4">
+          <svg
+            className="w-5 h-5 flex-shrink-0"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          Reprovado
+        </div>
+      );
+    }
+    if (cautela.status === "Saída Autorizada") {
+      return (
+        <div className="mb-4">
+          <BannerAguardandoSaida />
+        </div>
+      );
+    }
+    if (cautela.status === "Encerrada") {
+      return (
+        <div className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-[#D1D5DB] border border-[#A3A3A3] text-[#525252] text-[18px] font-medium mb-4">
+          <svg
+            className="w-5 h-5 flex-shrink-0"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+            />
+          </svg>
+          Encerrada
+        </div>
+      );
+    }
+
+    if (cautela.status === "Em análise") {
+      return (
+        <div className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-[#FCE96A] border border-[#FACA15] text-[#111827] text-[18px] font-medium mb-2">
+          <svg
+            className="w-5 h-5 flex-shrink-0"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            viewBox="0 0 24 24"
+          >
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 8v5" strokeLinecap="round" />
+            <circle cx="12" cy="16.5" r="0.5" fill="currentColor" />
+          </svg>
+          Em Aprovação
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <div>
-      {isSomenteLeitura && (
+      {renderBanner()}
+
+      {cautela.motivoNegativa && (
         <div className="mb-4">
-          {cautela.status !== "Saída Autorizada" &&
-            cautela.status !== "Encerrada" &&
-            cautela.status !== "Aprovado" &&
-            cautela.status !== "Reprovado" && (
-              <StatusBadge status={statusExibido as StatusCautela} fullWidth />
-            )}
-          {cautela.status === "Aprovado" && (
-            <div className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-[#BCF0DA] border border-[#31C48D] text-[#065F46] text-[13px] font-medium">
-              <svg
-                className="w-4 h-4 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              Aprovado {cautela.aprovadoEm ? `em ${cautela.aprovadoEm}` : ""}
-            </div>
-          )}
-          {cautela.status === "Saída Autorizada" && (
-            <div className="mt-2">
-              <BannerAguardandoSaida />
-            </div>
-          )}
-          {cautela.status === "Reprovado" && (
-            <div className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-[#FBD5D5] border border-[#F05252] text-[#9B1C1C] text-[13px] font-medium">
-              <svg
-                className="w-4 h-4 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              Reprovado {cautela.reprovadoEm ? `em ${cautela.reprovadoEm}` : ""}
-            </div>
-          )}
-          {cautela.status === "Encerrada" && (
-            <div className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-[#F4F4F4] border border-[#A3A3A3] text-[#525252] text-[13px] font-medium">
-              <svg
-                className="w-4 h-4 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                />
-              </svg>
-              Encerrada {cautela.encerradaEm ? `em ${cautela.encerradaEm}` : ""}
-            </div>
-          )}
-          {(cautela.motivoNegativa || cautela.decisaoLocal === "reprovado") && (
-            <div className="mt-3">
-              <JustificativaBox motivo={cautela.motivoNegativa ?? "—"} />
-            </div>
-          )}
-          {cautela.tipoPermissaoAlteradoEm && (
-            <p className="mt-2 text-center text-sm font-semibold text-[#404040]">
-              {tipoPermissaoLabel}
-            </p>
-          )}
+          <JustificativaBox motivo={cautela.motivoNegativa} />
         </div>
       )}
-      <div className="float-right ml-5 mb-5 w-[160px]">
-        <p className="mb-4 text-[12px] font-bold text-[#404040]">
-          Acompanhe seu pedido de cautela
-        </p>
-        <div></div>
+
+      {/* Id */}
+      <div className={`mb-3 rounded-lg px-4 py-3 ${getCautelaBg()}`}>
+        <p className="text-[12px] text-[#737373]">Id da Cautela:</p>
+        <p className="text-[14px] font-bold text-black">{cautela.id}</p>
+
+        {cautela.tipoPermissao && (
+          <p className="text-[14px] font-bold text-black mt-1">
+            {cautela.tipoPermissao === "LIVRE_TRANSITO"
+              ? "Livre acesso"
+              : "Entrada única"}
+          </p>
+        )}
       </div>
 
-      <div className="mb-4">
-        <p className="text-base font-bold text-black">Id da cautela</p>
-        <p className="text-base text-black">{cautela.id}</p>
-      </div>
+      {/* Proprietário */}
       <div className="mb-3">
-        <p className="text-base font-bold text-black">Setor</p>
-        <p className="text-base text-black">{cautela.setorId || "-"}</p>
-      </div>
-      <div className="mb-4">
-        <p className="text-base font-bold text-black">
-          Data e hora da solicitação
+        <p className="text-[12px] text-[#6B7280]">Proprietário:</p>
+        <p className="text-[24px] font-bold text-black">
+          {cautela.visitante || "-"}
         </p>
-        <p className="text-base text-black">{cautela.data}</p>
       </div>
-      <div className="mb-4">
-        <p className="text-base font-bold text-black">Proprietário</p>
-        <p className="text-base text-black">{cautela.visitante}</p>
+
+      <div className="flex gap-8 mb-3">
+        {/* Documento */}
+        <div className="mb-3">
+          <p className="text-[12px] text-[#6B7280]">Documento/Matrícula</p>
+          <p className="text-[16px] font-bold text-black">
+            {cautela.documento || "-"}
+          </p>
+        </div>
+
+        {/* Setor */}
+        <div className="mb-3">
+          <p className="text-[12px] text-[#6B7280]">Setor</p>
+          <p className="text-[16px] font-bold text-black">
+            {cautela.setorId || "-"}
+          </p>
+        </div>
       </div>
+
+      {/* Email */}
       <div className="mb-3">
-        <p className="text-base font-bold text-black">Documento</p>
-        <p className="text-base text-gray-700">{cautela.documento || "-"}</p>
+        <p className="text-[12px] text-[#6B7280]">Email</p>
+        <p className="text-[18px] font-bold text-black">
+          {cautela.proprietarioEmail || "-"}
+        </p>
       </div>
+
+      {/* Empresa */}
       <div className="mb-3">
-        <p className="text-base font-bold text-black">Empresa</p>
-        <p className="text-base text-gray-700">{cautela.empresa || "-"}</p>
+        <p className="text-[12px] text-[#6B7280]">Empresa</p>
+        <p className="text-[16px] font-bold text-black">
+          {cautela.empresa || "-"}
+        </p>
       </div>
+
+      <div className="border-t border-[#B6B6B6] my-3" />
+
+      {/* Aprovador */}
+      {cautela.gestor && (
+        <div className="mb-3">
+          <p className="text-[12px] text-[#6B7280]">Aprovador:</p>
+          <p className="text-[16px] font-bold text-black">{cautela.gestor}</p>
+        </div>
+      )}
+
+      {/* Data */}
       <div className="mb-4">
-        <p className="text-base font-bold text-black">E-mail do proprietário</p>
-        <p className="text-base text-black">{cautela.proprietarioEmail}</p>
+        <p className="text-[12px] text-[#6B7280]">Data e hora da solicitação</p>
+        <p className="text-[16px] font-bold text-black">
+          {cautela.data || "-"}
+        </p>
       </div>
+
+      {/* Validade */}
       {cautela.validade && (
         <div className="mb-4">
-          <p className="text-base font-bold text-black">Válido até:</p>
-          <p className="text-base text-gray-700">{cautela.validade}</p>
-        </div>
-      )}
-      {cautela.aprovadoEm && (
-        <div className="mb-4">
-          <p className="text-base font-bold text-black">Aprovado em:</p>
-          <p className="text-base text-gray-700">{cautela.aprovadoEm}</p>
-        </div>
-      )}
-      {cautela.status === "Encerrada" && cautela.encerradaEm && (
-        <div className="mb-3">
-          <p className="text-base font-bold text-black">
-            Data e hora de saída:
-          </p>
-          <p className="text-base text-gray-700">{cautela.encerradaEm}</p>
+          <p className="text-[12px] text-[#6B7280]">Válido até:</p>
+          <p className="text-[14px] font-bold text-black">{cautela.validade}</p>
         </div>
       )}
 
-      <div className="mt-16 mb-2">
+      {/* Data de saída */}
+      {cautela.status === "Encerrada" && cautela.encerradaEm && (
+        <div className="mb-3">
+          <p className="text-[12px] text-[#6B7280]">Data e hora de saída:</p>
+          <p className="text-[14px] font-bold text-black">
+            {cautela.encerradaEm}
+          </p>
+        </div>
+      )}
+
+      {/* Tabela */}
+      <div className="mt-4 mb-4">
         <TabelaCautelados equipamentos={cautela.equipamentos} />
       </div>
 
+      {/* Livre acesso + botões — só quando Em análise */}
+      {cautela.status !== "Em análise" &&
+        cautela.status !== "Reprovado" &&
+        cautela.status !== "Encerrada" &&
+        onTipoAcessoChange && (
+          <div className="mt-4">
+            <p className="text-[13px] text-[#404040] mb-2">
+              Esta cautela tem livre acesso?
+            </p>
+            <div className="flex gap-8">
+              <label className="flex items-center gap-2 text-[14px] text-[#404040] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={livreAcesso === "livre"}
+                  onChange={() => onTipoAcessoChange("livre")}
+                  className="w-4 h-4 rounded accent-black"
+                />
+                Sim
+              </label>
+              <label className="flex items-center gap-2 text-[14px] text-[#404040] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={livreAcesso === "entrada"}
+                  onChange={() => onTipoAcessoChange("entrada")}
+                  className="w-4 h-4 rounded accent-black"
+                />
+                Não
+              </label>
+            </div>
+          </div>
+        )}
+
+      {/* Botão autorizar saída */}
       {cautela.status === "Aprovado" &&
+        cautela.etapaFluxo !== "APROVADA_PELO_GESTOR" &&
         cautela.decisaoLocal === undefined &&
         onAutorizarSaida && (
           <button
             onClick={onAutorizarSaida}
-            className="w-full mt-12 py-2.5 rounded-lg bg-[#3BB14A] text-white text-sm font-semibold hover:bg-green-600 transition-colors"
+            className="w-full mt-4 py-2.5 rounded-lg bg-[#0A0A0A] text-white text-sm font-semibold hover:bg-white transition-colors"
           >
             Autorizar saída
           </button>

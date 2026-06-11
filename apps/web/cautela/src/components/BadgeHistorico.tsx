@@ -9,8 +9,8 @@ export function BadgeHistorico({
 }) {
   if (status === "Aprovado" && etapaFluxo === "APROVADA_PELO_GESTOR") {
     return (
-      <span className="inline-flex items-center gap-1 w-fit px-2 py-1 rounded-full text-[12px] font-semibold border border-[#31C48D] bg-[#BCF0DA] text-[#065F46]">
-        <span className="w-2 h-2 rounded-full bg-[#0E9F6E]" />
+      <span className="inline-flex items-center gap-1 w-fit px-2 py-1 rounded-full text-[12px] font-semibold border border-amber-400 bg-amber-200 text-[#0A0A0A]">
+        <span className="w-2 h-2 rounded-full bg-amber-400" />
         Em Validação
       </span>
     );
@@ -25,8 +25,8 @@ export function BadgeHistorico({
   }
   if (status === "Saída Autorizada") {
     return (
-      <span className="inline-flex items-center gap-1 w-fit px-2 py-1 rounded-full text-[12px] font-semibold border border-amber-400 bg-amber-100 text-amber-800">
-        <span className="w-2 h-2 rounded-full bg-amber-400" />
+      <span className="inline-flex items-center gap-1 w-fit px-2 py-1 rounded-full text-[12px] font-semibold border border-amber-400 bg-amber-100 text-[#9B1C1C]">
+        <span className="w-2 h-2 rounded-full bg-amber-800" />
         Saída Autorizada
       </span>
     );
