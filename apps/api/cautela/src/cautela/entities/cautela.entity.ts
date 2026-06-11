@@ -1,4 +1,4 @@
-import { randomBytes } from 'crypto';
+import { randomInt } from 'crypto';
 import {
   BeforeInsert,
   Column,
@@ -175,19 +175,17 @@ export class Cautela {
   })
   eventos: CautelaEvent[];
 
-  private generateRandomId(length: number = 4): string {
-    return randomBytes(length)
-      .toString('base64')
-      .replace(/[+/=]/g, '')
-      .slice(0, length)
-      .toUpperCase();
+  private generateRandomNumericId(length: number = 4): string {
+    const min = Math.pow(10, length - 1);
+    const max = Math.pow(10, length) - 1;
+    return randomInt(min, max).toString();
   }
 
   @BeforeInsert()
   generateId() {
     const numeroSetor = this.numeroSetor;
     const nomeSetor = SectorEnum[numeroSetor] || 'SEM';
-    const idPart = this.generateRandomId(4);
+    const idPart = this.generateRandomNumericId(4);
 
     if (!this.customId) {
       this.customId = `${nomeSetor}-${numeroSetor}-${idPart}`;
