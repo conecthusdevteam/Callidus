@@ -207,13 +207,13 @@ const WASH_CATEGORY_META: Record<
 > = {
   planned: {
     label: "Planejada",
-    color: "#10B981",
+    color: "#0E9F6E",
     soft: "bg-emerald-50 text-emerald-700",
     shape: "circle",
   },
   anomalous: {
     label: "Anômala",
-    color: "#EF4444",
+    color: "#E02424",
     soft: "bg-red-50 text-red-700",
     shape: "square",
   },
@@ -328,10 +328,7 @@ async function exportElementAsImage(
   downloadBlob(blob, fileName);
 }
 
-async function exportElementAsPdf(
-  element: HTMLElement,
-  detail: ApiStencil,
-) {
+async function exportElementAsPdf(element: HTMLElement, detail: ApiStencil) {
   const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
     import("html2canvas"),
     import("jspdf"),
@@ -352,24 +349,27 @@ async function exportElementAsPdf(
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
   const contentWidth = pageWidth - margin * 2;
-  const renderedHeight = (canvas.height * contentWidth) / canvas.width;
   const pageContentHeight = pageHeight - margin * 2;
+  const scale = Math.min(
+    contentWidth / canvas.width,
+    pageContentHeight / canvas.height,
+  );
+  const renderedWidth = canvas.width * scale;
+  const renderedHeight = canvas.height * scale;
   const image = canvas.toDataURL("image/png");
-  const pageCount = Math.max(1, Math.ceil(renderedHeight / pageContentHeight));
+  const imageX = (pageWidth - renderedWidth) / 2;
+  const imageY = (pageHeight - renderedHeight) / 2;
 
-  for (let page = 0; page < pageCount; page += 1) {
-    if (page > 0) pdf.addPage();
-    pdf.addImage(
-      image,
-      "PNG",
-      margin,
-      margin - page * pageContentHeight,
-      contentWidth,
-      renderedHeight,
-      undefined,
-      "FAST",
-    );
-  }
+  pdf.addImage(
+    image,
+    "PNG",
+    imageX,
+    imageY,
+    renderedWidth,
+    renderedHeight,
+    undefined,
+    "FAST",
+  );
 
   pdf.save(getReportFileName(detail, "pdf"));
 }
@@ -477,6 +477,112 @@ function AnalyticsCounters({
   );
 }
 
+function ReportTimeMetrics({ analytics }: { analytics: StencilWashAnalytics }) {
+  const anomalous = analytics.time_points.filter(
+    (wash) => wash.category === "anomalous",
+  );
+  const multiple = analytics.time_points.filter(
+    (wash) => wash.category === "multiple",
+  );
+
+  return (
+    <div
+      data-report-section="Métricas dos gráficos"
+      className="mt-1 grid grid-cols-2 gap-8 border-b border-[#D4D4D8] pb-2"
+    >
+      <ReportWashMetric
+        label="Lavagens anômalas"
+        value={analytics.counts.anomalous}
+        color={WASH_CATEGORY_META.anomalous.color}
+        washes={anomalous}
+      />
+      <ReportWashMetric
+        label="Lavagens múltiplas"
+        value={analytics.counts.multiple}
+        color={WASH_CATEGORY_META.multiple.color}
+        washes={multiple}
+      />
+    </div>
+  );
+}
+
+function ReportWashMetric({
+  label,
+  value,
+  color,
+  washes,
+}: {
+  label: string;
+  value: number;
+  color: string;
+  washes: StencilWashAnalyticsPoint[];
+}) {
+  return (
+    <div
+      className="grid min-h-[42px] grid-cols-[125px_1fr] border-l-2 pl-2"
+      style={{ borderColor: color }}
+    >
+      <div>
+        <p className="text-[8px] font-bold uppercase">{label}</p>
+        <p className="mt-1 text-[12px] font-bold">{value}</p>
+      </div>
+      <div className="space-y-0.5 text-[8px] leading-tight">
+        {washes.slice(0, 3).map((wash) => (
+          <p key={wash.id}>
+            {formatDate(wash.created_at)} às {wash.time_label}
+          </p>
+        ))}
+        {washes.length > 3 && <p>+ {washes.length - 3} ocorrências</p>}
+      </div>
+    </div>
+  );
+}
+
+function ReportIntervalMetrics({
+  analytics,
+}: {
+  analytics: StencilWashAnalytics;
+}) {
+  const summary = analytics.interval_summary;
+
+  return (
+    <div className="mt-1 grid grid-cols-3 gap-4">
+      <ReportSummaryMetric
+        label="Intervalo médio"
+        value={formatInterval(summary.average_interval_minutes)}
+        color="#10A672"
+      />
+      <ReportSummaryMetric
+        label="Maior intervalo"
+        value={`${summary.longest_interval_date ?? "-"} — ${formatInterval(summary.longest_interval_minutes)}`}
+        color="#E5252A"
+      />
+      <ReportSummaryMetric
+        label="Menor intervalo"
+        value={`${summary.shortest_interval_date ?? "-"} — ${formatInterval(summary.shortest_interval_minutes)}`}
+        color="#8B5CF6"
+      />
+    </div>
+  );
+}
+
+function ReportSummaryMetric({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: string;
+  color: string;
+}) {
+  return (
+    <div className="border-l-2 pl-2" style={{ borderColor: color }}>
+      <p className="text-[8px] font-bold uppercase">{label}</p>
+      <p className="mt-1 text-[11px] font-bold">{value}</p>
+    </div>
+  );
+}
+
 function WashTimeTooltip({
   active,
   payload,
@@ -524,12 +630,14 @@ function WashTimeChart({
   onDaysChange,
   framed = true,
   large = false,
+  report = false,
 }: {
   analytics: StencilWashAnalytics;
   selectedDays?: AnalyticsDays;
   onDaysChange?: (days: AnalyticsDays) => void;
   framed?: boolean;
   large?: boolean;
+  report?: boolean;
 }) {
   const ticks = getPeriodTicks(analytics.period.days);
   const lastDayIndex = analytics.period.days - 1;
@@ -539,23 +647,25 @@ function WashTimeChart({
       <div
         className={cn(
           "flex flex-wrap items-start justify-between gap-3",
-          large ? "mb-5" : "mb-3",
+          report ? "mb-1" : large ? "mb-5" : "mb-3",
         )}
       >
-        <div>
+        <div
+          className={cn(report && "flex w-full items-center justify-between")}
+        >
           <h3
             className={cn(
               "font-bold leading-tight text-[#111318]",
-              large ? "text-[25px]" : "text-[14px]",
+              large ? "text-[24px]" : "text-[14px]",
             )}
           >
             Horário de lavagens por dia
           </h3>
-          <div className={large ? "mt-3" : "mt-2"}>
+          <div className={report ? "mt-0" : large ? "mt-3" : "mt-2"}>
             <AnalyticsLegend large={large} />
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className={cn("flex items-center gap-2", report && "hidden")}>
           {selectedDays && onDaysChange && (
             <Select
               value={String(selectedDays)}
@@ -597,12 +707,19 @@ function WashTimeChart({
       <div
         className={cn(
           "grid",
-          large
-            ? "gap-7 md:grid-cols-[minmax(0,1fr)_225px]"
-            : "gap-4 md:grid-cols-[1fr_150px]",
+          report
+            ? "grid-cols-1"
+            : large
+              ? "gap-7 md:grid-cols-[minmax(0,1fr)_225px]"
+              : "gap-4 md:grid-cols-[1fr_150px]",
         )}
       >
-        <div className={cn("min-w-0", large ? "h-[405px]" : "h-[230px]")}>
+        <div
+          className={cn(
+            "min-w-0",
+            report ? "h-[170px]" : large ? "h-[405px]" : "h-[230px]",
+          )}
+        >
           <ResponsiveContainer width="100%" height="100%">
             <ScatterChart margin={{ top: 8, right: 14, bottom: 4, left: 2 }}>
               <CartesianGrid stroke="#ECEFF3" vertical={false} />
@@ -661,8 +778,9 @@ function WashTimeChart({
             </ScatterChart>
           </ResponsiveContainer>
         </div>
-        <AnalyticsCounters analytics={analytics} large={large} />
+        {!report && <AnalyticsCounters analytics={analytics} large={large} />}
       </div>
+      {report && <ReportTimeMetrics analytics={analytics} />}
     </div>
   );
 }
@@ -670,9 +788,11 @@ function WashTimeChart({
 function WashIntervalChart({
   analytics,
   large = false,
+  report = false,
 }: {
   analytics: StencilWashAnalytics;
   large?: boolean;
+  report?: boolean;
 }) {
   const ticks = getPeriodTicks(analytics.period.days);
   const lastDayIndex = analytics.period.days - 1;
@@ -689,10 +809,12 @@ function WashIntervalChart({
       <div
         className={cn(
           "flex flex-wrap items-start justify-between gap-3",
-          large ? "mb-5" : "mb-3",
+          report ? "mb-1" : large ? "mb-5" : "mb-3",
         )}
       >
-        <div>
+        <div
+          className={cn(report && "flex w-full items-center justify-between")}
+        >
           <h3
             className={cn(
               "font-bold leading-tight text-[#111318]",
@@ -704,7 +826,11 @@ function WashIntervalChart({
           <div
             className={cn(
               "flex flex-wrap items-center text-[#71717A]",
-              large ? "mt-3 gap-5 text-[14px]" : "mt-2 gap-4 text-[11px]",
+              report
+                ? "mt-0 gap-4 text-[10px]"
+                : large
+                  ? "mt-3 gap-5 text-[14px]"
+                  : "mt-2 gap-4 text-[11px]",
             )}
           >
             {(Object.keys(INTERVAL_STATUS_META) as IntervalStatus[]).map(
@@ -725,6 +851,7 @@ function WashIntervalChart({
         <span
           className={cn(
             "rounded-md border text-[#71717A]",
+            report && "hidden",
             large ? "px-3 py-2 text-[14px]" : "px-2 py-1 text-[10px]",
           )}
         >
@@ -735,12 +862,19 @@ function WashIntervalChart({
       <div
         className={cn(
           "grid",
-          large
-            ? "gap-7 md:grid-cols-[minmax(0,1fr)_225px]"
-            : "gap-4 md:grid-cols-[1fr_150px]",
+          report
+            ? "grid-cols-1"
+            : large
+              ? "gap-7 md:grid-cols-[minmax(0,1fr)_225px]"
+              : "gap-4 md:grid-cols-[1fr_150px]",
         )}
       >
-        <div className={cn("min-w-0", large ? "h-[360px]" : "h-[210px]")}>
+        <div
+          className={cn(
+            "min-w-0",
+            report ? "h-[145px]" : large ? "h-[360px]" : "h-[210px]",
+          )}
+        >
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={bars}
@@ -784,7 +918,7 @@ function WashIntervalChart({
             </BarChart>
           </ResponsiveContainer>
         </div>
-        <div className="grid content-center gap-4">
+        <div className={cn("grid content-center gap-4", report && "hidden")}>
           <IntervalMetric
             label="Intervalo médio entre lavagens"
             value={formatInterval(
@@ -807,6 +941,7 @@ function WashIntervalChart({
           />
         </div>
       </div>
+      {report && <ReportIntervalMetrics analytics={analytics} />}
     </div>
   );
 }
@@ -1253,10 +1388,18 @@ function StencilTable({
                             />
                           </span>
                         </TooltipTrigger>
-                        <TooltipContent>
-                          {category === "multiple"
-                            ? "Múltiplas lavagens registradas no mesmo dia"
-                            : "Lavagem realizada fora do horário planejado"}
+                        <TooltipContent className="text-left text-[#FFFFFF] text-[14px] bg-[#393939]">
+                          {category === "multiple" ? (
+                            <>
+                              <b>Lavagem múltipla</b>
+                              <p>Ocorreram mais de uma lavagem neste dia</p>
+                            </>
+                          ) : (
+                            <>
+                              <b>Intervalo anormal</b>
+                              <p>A lavagem anterior aconteceu há x horas</p>
+                            </>
+                          )}
                         </TooltipContent>
                       </UiTooltip>
                     </TooltipProvider>
@@ -1406,7 +1549,7 @@ function StencilDetailsModal({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
           id="stencil-report-modal"
-          className="block h-[min(892px,calc(100vh-100px))] w-[min(1630px,calc(100vw-100px))] max-w-none gap-0 overflow-hidden rounded-lg border-[#E4E4E7] bg-white p-0 shadow-xl [&>button]:right-6 [&>button]:top-[25px] [&>button]:h-7 [&>button]:w-7 [&>button]:rounded-none [&>button]:opacity-100 [&>button]:outline-none [&>button]:ring-0 [&>button]:ring-offset-0 [&>button]:focus:outline-none [&>button]:focus:ring-0 [&>button]:focus:ring-offset-0 [&>button_svg]:h-5 [&>button_svg]:w-5"
+          className="block h-[min(892px,calc(100vh-100px))] w-[min(1630px,calc(100vw-100px))] max-w-none gap-0 overflow-hidden rounded-lg border-[##E5E5E5] bg-white p-0 shadow-xl [&>button]:right-6 [&>button]:top-[25px] [&>button]:h-7 [&>button]:w-7 [&>button]:rounded-none [&>button]:opacity-100 [&>button]:outline-none [&>button]:ring-0 [&>button]:ring-offset-0 [&>button]:focus:outline-none [&>button]:focus:ring-0 [&>button]:focus:ring-offset-0 [&>button_svg]:h-5 [&>button_svg]:w-5"
         >
           <DialogHeader className="sr-only">
             <DialogTitle>Informações detalhadas do stencil</DialogTitle>
@@ -1469,7 +1612,7 @@ function StencilDetailsModal({
                     value={`${String(detail.asset?.total_washes ?? 0).padStart(3, "0")} lavagens`}
                   />
 
-                  <div className="space-y-4 border-t border-[#E4E4E7] pt-6">
+                  <div className="space-y-4 border-t border-[##E5E5E5] pt-6">
                     <p className="text-[17px] text-[#71717A]">
                       Dados cadastrais
                     </p>
@@ -1503,8 +1646,8 @@ function StencilDetailsModal({
                 </aside>
 
                 <div className="min-w-0 space-y-6">
-                  <section className="overflow-hidden rounded-lg border border-[#E4E4E7] bg-white">
-                    <div className="bg-[#DCEBFA] px-5 py-5">
+                  <section className="overflow-hidden rounded-lg border border-[##E5E5E5] bg-white">
+                    <div className="bg-[#DCEBFA] px-4 py-4">
                       <p className="mb-4 text-[16px] text-[#2155A3]">
                         Dados desta lavagem
                       </p>
@@ -1515,24 +1658,28 @@ function StencilDetailsModal({
                           valueClassName="break-all text-[18px] leading-[1.15]"
                         />
                         <ModalMetric
+                          valueClassName="text-[24px]"
                           label="Data"
                           value={formatDate(detail.created_at)}
                         />
                         <ModalMetric
+                          valueClassName="text-[24px]"
                           label="Hora"
                           value={formatTime(detail.created_at)}
                         />
                         <ModalMetric
+                          valueClassName="text-[24px]"
                           label="Operador de Lavagem"
                           value={detail.operator || "-"}
                         />
                         <ModalMetric
+                          valueClassName="text-[24px]"
                           label="Linha"
                           value={detail.line_name || "-"}
                         />
                       </div>
                     </div>
-                    <div className="border-t border-[#E4E4E7] px-5 py-7">
+                    <div className="border-t border-[##E5E5E5] px-4 py-4">
                       <p className="mb-5 text-[16px] text-[#71717A]">
                         Dados da última lavagem
                       </p>
@@ -1543,14 +1690,17 @@ function StencilDetailsModal({
                           valueClassName="break-all text-[18px] leading-[1.15]"
                         />
                         <ModalMetric
+                          valueClassName="text-[24px]"
                           label="Data"
                           value={formatDate(detail.asset?.last_wash)}
                         />
                         <ModalMetric
+                          valueClassName="text-[24px]"
                           label="Hora"
                           value={formatTime(detail.asset?.last_wash)}
                         />
                         <ModalMetric
+                          valueClassName="text-[24px]"
                           label="Operador de Lavagem"
                           value={
                             detail.asset?.last_wash_details?.operator ?? "-"
@@ -1583,7 +1733,7 @@ function StencilDetailsModal({
                       {analytics.period.days} dias.
                     </div>
                   ) : (
-                    <section className="rounded-lg border border-[#E4E4E7] bg-white px-4 py-5">
+                    <section className="rounded-lg border border-[##E5E5E5] bg-white px-4 py-4">
                       <WashTimeChart
                         analytics={analytics}
                         selectedDays={analyticsDays}
@@ -1591,7 +1741,7 @@ function StencilDetailsModal({
                         framed={false}
                         large
                       />
-                      <div className="my-7 border-t border-[#E4E4E7]" />
+                      <div className="my-7 border-t border-[##E5E5E5]" />
                       <div className="px-0">
                         <WashIntervalChart analytics={analytics} large />
                       </div>
@@ -1743,16 +1893,16 @@ function StencilPdfReport({
   return (
     <article
       id="stencil-pdf-report"
-      className="w-[794px] bg-white p-6 text-foreground"
+      className="w-[794px] bg-white p-5 text-foreground"
     >
-      <div className="border-t-[26px] border-[#737373] pt-3">
-        <p className="-mt-[22px] px-2 text-[10px] font-bold text-white">
+      <div className="border-t-[26px] border-[#737373] pt-1 -mt-[20px]">
+        <p className="-mt-[27px] px-2 text-[10px] font-bold text-white">
           RELATÓRIO DE STENCIL
         </p>
-        <h1 className="mt-4 text-[24px] font-bold">{detail.stencil_code}</h1>
+        <h1 className="mt-3 text-[24px] font-bold">{detail.stencil_code}</h1>
       </div>
 
-      <section className="mt-4" data-report-section="Cadastro">
+      <section className="mt-3" data-report-section="Cadastro">
         <h2 className="border-b border-black pb-1 text-[13px] font-bold uppercase">
           Cadastro
         </h2>
@@ -1777,10 +1927,7 @@ function StencilPdfReport({
         </div>
       </section>
 
-      <section className="mt-4" data-report-section="Produção">
-        <h2 className="border-b border-black pb-1 text-[13px] font-bold uppercase">
-          Produção
-        </h2>
+      <section className="mt-3" data-report-section="Produção">
         <div className="mt-2 grid grid-cols-2">
           <PdfMetric label="Estimativa de uso" value="Não informado" />
           <PdfMetric
@@ -1790,14 +1937,12 @@ function StencilPdfReport({
         </div>
       </section>
 
-      <section className="mt-4" data-report-section="Lavagens">
+      <section className="mt-3" data-report-section="Lavagens">
         <h2 className="border-b border-black pb-1 text-[13px] font-bold uppercase">
           Dados de lavagem
         </h2>
         <div className="mt-2 border-l-2 border-black py-1 pl-3">
-          <p className="text-[10px] font-bold uppercase">
-            Dados desta lavagem
-          </p>
+          <p className="text-[10px] font-bold uppercase">Dados desta lavagem</p>
           <div className="mt-2 grid grid-cols-5">
             <PdfMetric label="ID lavagem" value={detail.id} />
             <PdfMetric label="Data" value={formatDate(detail.created_at)} />
@@ -1826,7 +1971,7 @@ function StencilPdfReport({
         </div>
       </section>
 
-      <section className="mt-5">
+      <section className="mt-3">
         <div className="flex items-end justify-between border-b pb-1">
           <h2 className="text-[13px] font-bold">
             Análise dos últimos {analytics.period.days} dias
@@ -1835,47 +1980,13 @@ function StencilPdfReport({
             {formatPeriodRange(analytics.period.start, analytics.period.end)}
           </span>
         </div>
-        <div className="mt-3 space-y-3">
-          <WashTimeChart analytics={analytics} framed={false} />
-          <WashIntervalChart analytics={analytics} />
+        <div className="mt-1 space-y-1">
+          <WashTimeChart analytics={analytics} framed={false} report />
+          <WashIntervalChart analytics={analytics} report />
         </div>
       </section>
 
-      <section className="mt-4" data-report-section="Métricas dos gráficos">
-        <h2 className="border-b border-black pb-1 text-[13px] font-bold uppercase">
-          Métricas dos gráficos
-        </h2>
-        <div className="mt-2 grid grid-cols-3">
-          <PdfMetric
-            label="Lavagens planejadas"
-            value={analytics.counts.planned}
-          />
-          <PdfMetric
-            label="Lavagens anômalas"
-            value={analytics.counts.anomalous}
-          />
-          <PdfMetric
-            label="Lavagens múltiplas"
-            value={analytics.counts.multiple}
-          />
-          <PdfMetric
-            label="Intervalo médio"
-            value={formatInterval(
-              analytics.interval_summary.average_interval_minutes,
-            )}
-          />
-          <PdfMetric
-            label="Maior intervalo"
-            value={`${analytics.interval_summary.longest_interval_date ?? "-"} — ${formatInterval(analytics.interval_summary.longest_interval_minutes)}`}
-          />
-          <PdfMetric
-            label="Menor intervalo"
-            value={`${analytics.interval_summary.shortest_interval_date ?? "-"} — ${formatInterval(analytics.interval_summary.shortest_interval_minutes)}`}
-          />
-        </div>
-      </section>
-
-      <section
+      {/* <section
         className="mt-4"
         data-report-section="Lista de lavagens com classificação"
       >
@@ -1904,9 +2015,9 @@ function StencilPdfReport({
             ))}
           </tbody>
         </table>
-      </section>
+      </section> */}
 
-      <footer className="mt-5 flex justify-between border-t pt-2 text-[9px] text-muted-foreground">
+      <footer className="mt-3 flex justify-between border-t pt-2 text-[9px] text-muted-foreground">
         <span>
           Relatório gerado em {formatDate(new Date().toISOString())} às{" "}
           {formatTime(new Date().toISOString())}
