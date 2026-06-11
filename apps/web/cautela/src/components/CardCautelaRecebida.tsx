@@ -32,15 +32,141 @@ export function CardCautelaRecebida({
   const status = cautela.status as StatusCautela;
 
   if (isMobile) {
+    if (isAtencao) {
+      return (
+        <div
+          onClick={onClick}
+          className={`rounded-[8px] border cursor-pointer mb-3 overflow-hidden ${
+            isNaoLida
+              ? "border-[#E5C97E] bg-[#FFFDE7]"
+              : "border-[#E5C97E] bg-white"
+          }`}
+        >
+          <div className="px-4 pt-4 pb-2">
+            <div className="flex justify-between text-[11px] text-[#000000] mb-3">
+              <span>Saída autorizada</span>
+              <span>Validação de saída</span>
+            </div>
+            <div className="relative h-[4px] bg-[#D1D5DB] rounded-full mx-2">
+              <div className="absolute left-0 top-0 h-full bg-[#2B8E37] rounded-full w-[8%]" />
+              <div
+                className="absolute -top-[10px] w-6 h-6 rounded-full bg-[#2B8E37] shadow-sm"
+                style={{ left: "0%", transform: "translateX(-50%)" }}
+              />
+              <div
+                className="absolute -top-[10px] w-6 h-6 rounded-full bg-[#D1D5DB] shadow-sm"
+                style={{ left: "100%", transform: "translateX(-50%)" }}
+              />
+            </div>
+            <div className="flex justify-between text-[10px] text-[#0A0A0A] mt-3">
+              <span>{cautela.aprovadoEm || "00/00/0000 às\n00:00h"}</span>
+              <span className="text-right">
+                {cautela.status === "Encerrada" && cautela.entradaValidadaEm
+                  ? cautela.entradaValidadaEm
+                  : "00/00/0000 às\n00:00h"}
+              </span>
+            </div>
+          </div>
+
+          {/* Banner — tipo de acesso */}
+          <div className="px-4 mb-3">
+            <span className="w-full block text-center px-3 py-1.5 rounded-lg text-[13px] font-bold bg-[#FCE96A] text-[#111827]">
+              {cautela.tipoPermissao === "LIVRE_TRANSITO"
+                ? "Livre trânsito"
+                : "Acesso único"}
+            </span>
+          </div>
+
+          {/* Nome + badge */}
+          <div className="px-4 flex items-center gap-2 mb-2">
+            <div className="w-12 h-12 rounded-full bg-[#FCE96A] flex items-center justify-center flex-shrink-0">
+              <img src={vector} alt="Dashboard" className="h-6 w-6" />
+            </div>
+            <p className="text-[14px] font-bold text-[#404040] leading-tight flex-1 min-w-0">
+              {cautela.visitante || "Nome do solicitante"}
+            </p>
+            <div className="flex-shrink-0">
+              <BadgeStatus status="Saída Autorizada" />
+            </div>
+          </div>
+
+          {/* Data e Setor */}
+          <div className="px-4 mb-1">
+            <p className="text-[14px] text-[#404040]">
+              Data: {cautela.data || "00/00/0000"}
+            </p>
+          </div>
+          <div className="px-4 mb-3">
+            <p className="text-[14px] text-[#404040]">
+              Setor:{" "}
+              <span className="font-bold uppercase">
+                {cautela.setorId || "—"}
+              </span>
+            </p>
+          </div>
+
+          <hr className="border-[#000000] mx-4 mb-3" />
+
+          {/* Cautelados */}
+          <div className="px-4 mb-3">
+            <p className="text-[14px] font-medium text-[#404040] mb-1">
+              Cautelados:
+            </p>
+            <ul className="space-y-0.5">
+              {cautela.equipamentos.slice(0, 3).map((eq, i) => (
+                <li
+                  key={i}
+                  className="text-[14px] text-[#404040] flex items-start gap-1"
+                >
+                  <span>•</span>
+                  {eq.descricao} - {eq.quantidade ?? 1}
+                </li>
+              ))}
+              {cautela.equipamentos.length > 3 && (
+                <li className="text-[11px] text-[#9CA3AF]">
+                  +{cautela.equipamentos.length - 3} item(ns)
+                </li>
+              )}
+            </ul>
+          </div>
+
+          {/* Livre acesso */}
+          <div className="px-4 pb-4" onClick={(e) => e.stopPropagation()}>
+            <p className="text-[13px] text-[#404040] mb-2">
+              Esta cautela tem livre acesso?
+            </p>
+            <div className="flex gap-8">
+              <label className="flex items-center gap-2 text-[14px] text-[#404040] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={livreAcesso === "livre"}
+                  onChange={() => onLivreAcessoChange?.("livre")}
+                  className="w-4 h-4 rounded accent-black"
+                />
+                Sim
+              </label>
+              <label className="flex items-center gap-2 text-[14px] text-[#404040] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={livreAcesso === "entrada"}
+                  onChange={() => onLivreAcessoChange?.("entrada")}
+                  className="w-4 h-4 rounded accent-black"
+                />
+                Não
+              </label>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div
         onClick={onClick}
         className={`rounded-[8px] border cursor-pointer mb-3 overflow-hidden ${
-          isAtencao
-            ? "border-red-300 bg-[#FFF5F5]"
-            : isNaoLida
-              ? "border-[#E5C97E] bg-[#FFFDE7]"
-              : "border-[#E5C97E] bg-white"
+          isNaoLida
+            ? "border-[#E5C97E] bg-[#FFFDE7]"
+            : "border-[#E5C97E] bg-white"
         }`}
       >
         {/* Tracker */}

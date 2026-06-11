@@ -237,29 +237,98 @@ export function DetalhesConteudo({
         </div>
       )}
 
-      {/* Data */}
-      <div className="mb-4">
-        <p className="text-[12px] text-[#6B7280]">Data e hora da solicitação</p>
-        <p className="text-[16px] font-bold text-black">
-          {cautela.data || "-"}
-        </p>
+      <div className="flex gap-8 mb-3">
+        {/* Data */}
+        <div className="mb-4">
+          <p className="text-[12px] text-[#6B7280]">
+            Data e hora da solicitação
+          </p>
+          <p className="text-[16px] font-bold text-black">
+            {cautela.data || "-"}
+          </p>
+        </div>
+
+        {cautela.aprovadoEm &&
+          (cautela.status === "Aprovado" ||
+            cautela.status === "Saída Autorizada" ||
+            cautela.status === "Encerrada") && (
+            <div className="mb-4">
+              <p className="text-[12px] text-[#6B7280]">
+                Data e hora da aprovação
+              </p>
+              <p className="text-[16px] font-bold text-black">
+                {cautela.aprovadoEm}
+              </p>
+            </div>
+          )}
+
+        {cautela.reprovadoEm && cautela.status === "Reprovado" && (
+          <div className="mb-4">
+            <p className="text-[12px] text-[#6B7280]">
+              Data e hora da reprovação
+            </p>
+            <p className="text-[16px] font-bold text-black">
+              {cautela.reprovadoEm}
+            </p>
+          </div>
+        )}
       </div>
+
+      {cautela.entradaValidadaEm &&
+        cautela.status === "Aprovado" &&
+        cautela.etapaFluxo !== "APROVADA_PELO_GESTOR" && (
+          <div className="mb-4">
+            <p className="text-[12px] text-[#6B7280]">
+              Data e hora da validação
+            </p>
+            <p className="text-[16px] font-bold text-black">
+              {cautela.entradaValidadaEm}
+            </p>
+          </div>
+        )}
+
+      {(cautela.status === "Saída Autorizada" ||
+        cautela.status === "Encerrada") && (
+        <div className="flex gap-8 mb-4">
+          {cautela.entradaValidadaEm && (
+            <div>
+              <p className="text-[12px] text-[#6B7280]">
+                Data e hora da validação
+              </p>
+              <p className="text-[16px] font-bold text-black">
+                {cautela.entradaValidadaEm}
+              </p>
+            </div>
+          )}
+          {cautela.saidaAutorizadaEm && (
+            <div>
+              <p className="text-[12px] text-[#6B7280]">
+                Data e hora da saída autorizada
+              </p>
+              <p className="text-[16px] font-bold text-black">
+                {cautela.saidaAutorizadaEm}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {cautela.status === "Encerrada" && cautela.encerradaEm && (
+        <div className="mb-4">
+          <p className="text-[12px] text-[#6B7280]">
+            Data e hora do encerramento
+          </p>
+          <p className="text-[16px] font-bold text-black">
+            {cautela.encerradaEm}
+          </p>
+        </div>
+      )}
 
       {/* Validade */}
       {cautela.validade && (
         <div className="mb-4">
           <p className="text-[12px] text-[#6B7280]">Válido até:</p>
           <p className="text-[14px] font-bold text-black">{cautela.validade}</p>
-        </div>
-      )}
-
-      {/* Data de saída */}
-      {cautela.status === "Encerrada" && cautela.encerradaEm && (
-        <div className="mb-3">
-          <p className="text-[12px] text-[#6B7280]">Data e hora de saída:</p>
-          <p className="text-[14px] font-bold text-black">
-            {cautela.encerradaEm}
-          </p>
         </div>
       )}
 

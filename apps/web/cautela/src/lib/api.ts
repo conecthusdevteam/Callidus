@@ -321,6 +321,9 @@ function mapCautela(cautela: ApiCautela): Cautela {
     badgeGestor: cautela.badgeGestor,
     badgePortaria: cautela.badgePortaria,
     badgeSolicitante: cautela.badgeSolicitante ?? null,
+    saidaAutorizadaEm: cautela.saidaAutorizadaEm
+      ? formatDate(cautela.saidaAutorizadaEm)
+      : undefined,
   };
 }
 

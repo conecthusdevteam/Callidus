@@ -82,9 +82,19 @@ export default function Gestor() {
   );
   const [modalConfirmarAcesso, setModalConfirmarAcesso] = useState(false);
   const [modalAcessoSucesso, setModalAcessoSucesso] = useState(false);
-  const [abaAtivaMobile, setAbaAtivaMobile] = useState<
-    "solicitadas" | "emSaida"
-  >("solicitadas");
+  const recebidas = cautelas.filter((c) => {
+    const ok = c.status === "Em análise" && !c.decisaoLocal;
+    return searchTerm.trim() ? ok && matchesSearch(c, searchTerm) : ok;
+  });
+  const temSolicitadas = recebidas.length > 0;
+  const temEmSaida = cautelas.some((c) => c.status === "Saída Autorizada");
+  const [abaAtivaMobileManual, setAbaAtivaMobile] = useState<
+    "solicitadas" | "emSaida" | null
+  >(null);
+
+  const abaAtivaMobile =
+    abaAtivaMobileManual ??
+    (!temSolicitadas && temEmSaida ? "emSaida" : "solicitadas");
   const [menuAtivo, setMenuAtivo] = useState<
     "home" | "historico" | "configuracoes"
   >("home");
@@ -110,11 +120,6 @@ export default function Gestor() {
     const interval = setInterval(() => void carregarCautelas(), 20000);
     return () => clearInterval(interval);
   }, [carregarCautelas]);
-
-  const recebidas = cautelas.filter((c) => {
-    const ok = c.status === "Em análise" && !c.decisaoLocal;
-    return searchTerm.trim() ? ok && matchesSearch(c, searchTerm) : ok;
-  });
 
   const historico = cautelas.filter((c) => {
     const ok =
@@ -260,6 +265,8 @@ export default function Gestor() {
       );
       return;
     }
+    setCautelaSelecionada(null);
+    setMobileView("lista");
     setModalAutorizarSaida(true);
   }
 
@@ -300,7 +307,7 @@ export default function Gestor() {
       {/* ══ MOBILE ══ */}
       <div className="lg:hidden flex flex-col h-dvh overflow-hidden bg-[#F5F7F6]">
         {actionError && (
-          <div className="mx-4 mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+          <div className="fixed top-[72px] left-4 right-4 z-50 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
             {actionError}
           </div>
         )}
@@ -552,7 +559,7 @@ export default function Gestor() {
           {cautelaSelecionada && origemDetalhe === "recebidas" && (
             <div
               className="fixed top-20 w-[540px] z-50 overflow-y-auto"
-              style={{ left: "500px", maxHeight: "calc(100vh - 100px)" }}
+              style={{ left: "550px", maxHeight: "calc(100vh - 100px)" }}
               onClick={(e) => e.stopPropagation()}
             >
               <DetalhesCautela

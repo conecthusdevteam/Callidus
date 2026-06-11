@@ -30,6 +30,7 @@ export interface Cautela {
   encerradaEm?: string;
   validade?: string;
   tipoPermissaoAlteradoEm?: string;
+  saidaAutorizadaEm?: string;
 
   motivoNegativa?: string;
   direcao?: "enviado" | "recebido";
