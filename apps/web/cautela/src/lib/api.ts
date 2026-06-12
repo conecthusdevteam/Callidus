@@ -73,6 +73,7 @@ interface ApiCautela {
   respondidoEm: string | null;
   saidaAutorizada: boolean;
   saidaAutorizadaEm: string | null;
+  atualizadoEm: string | null;
   setor: { nome: string } | null;
   status: ApiCautelaStatus;
   statusVisualGestor?: ApiCautelaStatus;
@@ -321,6 +322,13 @@ function mapCautela(cautela: ApiCautela): Cautela {
     badgeGestor: cautela.badgeGestor,
     badgePortaria: cautela.badgePortaria,
     badgeSolicitante: cautela.badgeSolicitante ?? null,
+    saidaAutorizadaEm: cautela.saidaAutorizadaEm
+      ? formatDate(cautela.saidaAutorizadaEm)
+      : undefined,
+    atualizadoEmRaw: cautela.atualizadoEm ?? undefined,
+    atualizadoEm: cautela.atualizadoEm
+      ? formatDate(cautela.atualizadoEm)
+      : undefined,
   };
 }
 

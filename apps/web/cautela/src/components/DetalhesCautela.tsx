@@ -38,7 +38,8 @@ export default function DetalhesCautela({
   const badgeLabel = () => {
     if (cautela.status === "Encerrada")
       return `Encerrada ${cautela.encerradaEm ? `em ${cautela.encerradaEm}` : ""}`;
-    if (cautela.status === "Saída Autorizada") return "Saída Autorizada";
+    if (cautela.status === "Saída Autorizada")
+      return `Saída Autorizada ${cautela.saidaAutorizadaEm ? `em ${cautela.saidaAutorizadaEm}` : ""}`;
     if (
       cautela.status === "Aprovado" &&
       cautela.etapaFluxo === "APROVADA_PELO_GESTOR"
@@ -94,7 +95,10 @@ export default function DetalhesCautela({
           : cautela.status === "Saída Autorizada"
             ? "Saída Autorizada"
             : "Ativa",
-      data: cautela.entradaValidadaEm,
+      data:
+        cautela.status === "Saída Autorizada" || cautela.status === "Encerrada"
+          ? cautela.saidaAutorizadaEm
+          : cautela.entradaValidadaEm,
       complete:
         (cautela.status === "Aprovado" &&
           cautela.etapaFluxo !== "APROVADA_PELO_GESTOR") ||
@@ -125,17 +129,15 @@ export default function DetalhesCautela({
         </svg>
       </button>
 
-      {!ocultarBanner &&
-        (variant === "recebida" || cautela.status === "Saída Autorizada") &&
-        !titulo && (
-          <div className="px-4 pt-8">
-            <div
-              className={`w-full text-center py-1 text-[13px] font-bold rounded-lg ${bannerClass}`}
-            >
-              {bannerLabel}
-            </div>
+      {!ocultarBanner && variant === "recebida" && !titulo && (
+        <div className="px-4 pt-8">
+          <div
+            className={`w-full text-center py-1 text-[13px] font-bold rounded-lg ${bannerClass}`}
+          >
+            {bannerLabel}
           </div>
-        )}
+        </div>
+      )}
 
       {titulo && (
         <div className="px-5 pt-4 pb-2 text-center">
@@ -149,10 +151,7 @@ export default function DetalhesCautela({
       {!titulo && (
         <div
           className={`px-4 pb-2 ${
-            !ocultarBanner &&
-            (cautela.status === "Saída Autorizada" || variant === "recebida")
-              ? "pt-1"
-              : "pt-8"
+            !ocultarBanner && variant === "recebida" ? "pt-1" : "pt-8"
           }`}
         >
           <div
