@@ -70,6 +70,11 @@ const PAGE_SIZE = 9;
 const ANALYTICS_DAY_OPTIONS: AnalyticsDays[] = [7, 15, 30, 60, 90];
 const ANOMALOUS_ROW_COLOR = "#DB0101";
 const MULTIPLE_ROW_COLOR = "#9061F9";
+const CHART_MARKER_COLORS: Record<WashAnalyticsCategory, string> = {
+  planned: "#0E9F6E",
+  anomalous: "#E02424",
+  multiple: "#9061F9",
+};
 
 const emptyStencilFilters: HistoryStencilFilters = {
   codigo: "",
@@ -641,6 +646,7 @@ function WashTimeChart({
 }) {
   const ticks = getPeriodTicks(analytics.period.days);
   const lastDayIndex = analytics.period.days - 1;
+  const compactMarkers = analytics.period.days === 90;
 
   return (
     <div className={cn(framed && "rounded-md border bg-white p-4")}>
@@ -770,8 +776,14 @@ function WashTimeChart({
                   data={analytics.time_points.filter(
                     (point) => point.category === category,
                   )}
-                  fill={WASH_CATEGORY_META[category].color}
-                  shape={WASH_CATEGORY_META[category].shape}
+                  fill={CHART_MARKER_COLORS[category]}
+                  shape={(props) => (
+                    <WashChartMarker
+                      {...props}
+                      category={category}
+                      compact={compactMarkers}
+                    />
+                  )}
                   isAnimationActive={false}
                 />
               ))}
@@ -782,6 +794,47 @@ function WashTimeChart({
       </div>
       {report && <ReportTimeMetrics analytics={analytics} />}
     </div>
+  );
+}
+
+function WashChartMarker({
+  cx = 0,
+  cy = 0,
+  category,
+  compact,
+}: {
+  cx?: number;
+  cy?: number;
+  category: WashAnalyticsCategory;
+  compact: boolean;
+}) {
+  const color = CHART_MARKER_COLORS[category];
+
+  if (category === "planned") {
+    const size = compact ? 6 : 8;
+    return <circle cx={cx} cy={cy} r={size / 2} fill={color} />;
+  }
+
+  if (category === "anomalous") {
+    const size = compact ? 12 : 16;
+    return (
+      <rect
+        x={cx - size / 2}
+        y={cy - size / 2}
+        width={size}
+        height={size}
+        fill={color}
+      />
+    );
+  }
+
+  const width = compact ? 12 : 16;
+  const height = compact ? 14 : 18;
+  return (
+    <polygon
+      points={`${cx},${cy - height / 2} ${cx + width / 2},${cy + height / 2} ${cx - width / 2},${cy + height / 2}`}
+      fill={color}
+    />
   );
 }
 
@@ -1000,6 +1053,45 @@ function Field({
   );
 }
 
+function DateFilterField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value?: string;
+  onChange: (value: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const openPicker = () => {
+    inputRef.current?.showPicker?.();
+    inputRef.current?.focus();
+  };
+
+  return (
+    <Field label={label}>
+      <div className="relative">
+        <button
+          type="button"
+          onClick={openPicker}
+          className="absolute left-0 top-0 z-10 grid h-10 w-10 place-items-center text-[#52525B]"
+          aria-label={`Abrir calendário de ${label.toLowerCase()}`}
+        >
+          <CalendarDays className="h-5 w-5" />
+        </button>
+        <Input
+          ref={inputRef}
+          type="date"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="h-10 rounded-md bg-white pl-10 pr-3 text-[13px] [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0"
+        />
+      </div>
+    </Field>
+  );
+}
+
 function AssetTypeSelect({
   value,
   onChange,
@@ -1144,35 +1236,29 @@ function StencilFiltersForm({
           </SelectContent>
         </Select>
       </Field>
-      <Field label="De">
-        <Input
-          type="date"
-          value={filters.dataDe}
-          onChange={(event) =>
-            onChange({ ...filters, dataDe: event.target.value })
-          }
-          className="h-10 rounded-md bg-white text-[13px]"
-        />
-      </Field>
-      <Field label="Até">
-        <Input
-          type="date"
-          value={filters.dataAte}
-          onChange={(event) =>
-            onChange({ ...filters, dataAte: event.target.value })
-          }
-          className="h-10 rounded-md bg-white text-[13px]"
-        />
-      </Field>
-      <Button
-        type="button"
-        variant="ghost"
-        onClick={onClear}
-        className="h-10 justify-start gap-2 px-2 text-[13px]"
-      >
-        <X className="h-4 w-4" />
-        Limpar filtros
-      </Button>
+      <DateFilterField
+        label="De"
+        value={filters.dataDe}
+        onChange={(value) => onChange({ ...filters, dataDe: value })}
+      />
+      <div className="flex min-w-0 items-end gap-2">
+        <div className="min-w-0 flex-1">
+          <DateFilterField
+            label="Até"
+            value={filters.dataAte}
+            onChange={(value) => onChange({ ...filters, dataAte: value })}
+          />
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={onClear}
+          className="h-10 shrink-0 justify-start gap-2 px-2 text-[13px]"
+        >
+          <X className="h-4 w-4" />
+          Limpar filtros
+        </Button>
+      </div>
     </div>
   );
 }
