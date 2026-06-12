@@ -28,6 +28,7 @@ type MobileView = "lista" | "detalhe";
 
 function isCautelaAtivaPortaria(cautela: Cautela) {
   return (
+    cautela.status === "Em análise" ||
     cautela.status === "Saída Autorizada" ||
     cautela.etapaFluxo === "APROVADA_PELO_GESTOR"
   );
@@ -66,6 +67,13 @@ export function BannerCard({ status }: { status: StatusCautela }) {
     return (
       <div className="w-full text-center py-1 px-3 rounded mb-3 bg-[#D1FAE5] border border-[#34D399] text-[#065F46] text-[12px] font-bold uppercase tracking-wide">
         Autorizado a entrar
+      </div>
+    );
+  }
+  if (status === "Em análise") {
+    return (
+      <div className="w-full text-center py-1 px-3 rounded mb-3 bg-[#FCE96A] border border-[#FACA15] text-[#111827] text-[12px] font-bold uppercase tracking-wide">
+        Aguardando aprovação
       </div>
     );
   }
@@ -177,7 +185,13 @@ export default function Portaria() {
   }
 
   // ── Listas ──
-  const cautelasAtivas = cautelas.filter(isCautelaAtivaPortaria);
+  const cautelasAtivas = cautelas
+    .filter(isCautelaAtivaPortaria)
+    .sort((a, b) => {
+      const dateA = new Date(a.atualizadoEm ?? a.criadoEm ?? 0).getTime();
+      const dateB = new Date(b.atualizadoEm ?? b.criadoEm ?? 0).getTime();
+      return dateB - dateA;
+    });
   const cautelasHistorico = cautelas.filter(
     (c) =>
       STATUS_HISTORICO.includes(c.status as StatusCautela) &&

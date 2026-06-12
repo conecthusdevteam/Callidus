@@ -338,8 +338,7 @@ export function DetalhesConteudo({
       </div>
 
       {/* Livre acesso + botões — só quando Em análise */}
-      {cautela.status !== "Em análise" &&
-        cautela.status !== "Reprovado" &&
+      {cautela.status !== "Reprovado" &&
         cautela.status !== "Encerrada" &&
         onTipoAcessoChange && (
           <div className="mt-4">
@@ -374,12 +373,14 @@ export function DetalhesConteudo({
         cautela.etapaFluxo !== "APROVADA_PELO_GESTOR" &&
         cautela.decisaoLocal === undefined &&
         onAutorizarSaida && (
-          <button
-            onClick={onAutorizarSaida}
-            className="w-full mt-4 py-2.5 rounded-lg bg-[#0A0A0A] text-white text-sm font-semibold hover:bg-white transition-colors"
-          >
-            Autorizar saída
-          </button>
+          <div className="fixed bottom-[70px] left-0 right-0 flex flex-col gap-2 px-4 pb-3 pt-3 bg-white border-t border-gray-200">
+            <button
+              onClick={onAutorizarSaida}
+              className="w-full mt-4 py-2.5 rounded-lg bg-[#0A0A0A] text-white text-sm font-semibold hover:bg-white transition-colors"
+            >
+              Autorizar saída
+            </button>
+          </div>
         )}
     </div>
   );

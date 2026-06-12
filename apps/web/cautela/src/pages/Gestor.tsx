@@ -346,7 +346,17 @@ export default function Gestor() {
             {/* Header */}
             <div className="relative flex items-center px-4 py-3 mt-16">
               <button
-                onClick={() => setMobileView("lista")}
+                onClick={() => {
+                  if (
+                    origemDetalhe === "historico" &&
+                    menuAtivo === "historico"
+                  ) {
+                    setMobileView("historico");
+                  } else {
+                    setMobileView("lista");
+                    setMenuAtivo("home");
+                  }
+                }}
                 className="text-gray-600 mr-3"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none">

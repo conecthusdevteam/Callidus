@@ -24,11 +24,13 @@ export function CardCautelaPortaria({
     ? "border-2 border-[#22592A] bg-white"
     : isNaoLida
       ? "border-2 border-amber-300 bg-[#FFFAD8]"
-      : status === "Saída Autorizada"
-        ? "border border-amber-300 bg-white"
-        : status === "Aprovado"
-          ? "border border-[#34D399] bg-white"
-          : "border border-[#D1D5DB] bg-white";
+      : status === "Em análise"
+        ? "border border-[#FACA15] bg-[#FFFDE7]"
+        : status === "Saída Autorizada"
+          ? "border border-amber-300 bg-white"
+          : status === "Aprovado"
+            ? "border border-[#34D399] bg-white"
+            : "border border-[#D1D5DB] bg-white";
 
   return (
     <div
@@ -82,6 +84,14 @@ export function CardCautelaPortaria({
         onClick={(e) => e.stopPropagation()}
       >
         <div>
+          {status === "Em análise" && (
+            <button
+              disabled
+              className="px-5 py-2 rounded-lg bg-[#D1D5DB] text-[#9CA3AF] text-sm font-semibold cursor-not-allowed"
+            >
+              Aprovar entrada
+            </button>
+          )}
           {status === "Aprovado" && onAprovarEntrada && (
             <button
               onClick={() => onAprovarEntrada(cautela.id)}

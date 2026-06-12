@@ -23,6 +23,7 @@ export interface Cautela {
   equipamentos: Equipamento[];
   setorId: string;
   criadoEm?: string;
+  atualizadoEm?: string;
 
   aprovadoEm?: string;
   entradaValidadaEm?: string;
@@ -31,6 +32,7 @@ export interface Cautela {
   validade?: string;
   tipoPermissaoAlteradoEm?: string;
   saidaAutorizadaEm?: string;
+  atualizadoEmRaw?: string;
 
   motivoNegativa?: string;
   direcao?: "enviado" | "recebido";

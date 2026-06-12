@@ -57,15 +57,7 @@ function formatarData(valor: string): { data: string; hora: string } {
 }
 
 function ultimaAcaoData(cautela: Cautela): string {
-  if (cautela.status === "Encerrada" && cautela.encerradaEm)
-    return cautela.encerradaEm;
-  if (cautela.status === "Saída Autorizada" && cautela.entradaValidadaEm)
-    return cautela.entradaValidadaEm;
-  if (cautela.status === "Reprovado" && cautela.reprovadoEm)
-    return cautela.reprovadoEm;
-  if (cautela.status === "Aprovado" && cautela.aprovadoEm)
-    return cautela.aprovadoEm;
-  return cautela.data;
+  return cautela.atualizadoEm || cautela.data;
 }
 
 function paginasVisiveis(
@@ -248,8 +240,7 @@ export function Tabela({
               const podeEditarAcesso =
                 !isPortaria &&
                 cautela.status !== "Reprovado" &&
-                cautela.status !== "Encerrada" &&
-                cautela.etapaFluxo !== "APROVADA_PELO_GESTOR";
+                cautela.status !== "Encerrada";
 
               return (
                 <div
