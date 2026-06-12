@@ -132,12 +132,19 @@ export class CautelaService {
       queryBuilder.andWhere(
         new Brackets((qb) => {
           qb.where(
-            'cautela.status = :pendingStatus AND cautela.etapaFluxo = :managerApprovedStep',
+            'cautela.status = :pendingStatus AND cautela.etapaFluxo = :requested',
             {
-              managerApprovedStep: CautelaFlowStep.APROVADA_PELO_GESTOR,
               pendingStatus: CautelaStatus.EM_ANALISE,
+              requested: CautelaFlowStep.SOLICITADA,
             },
           )
+            .orWhere(
+              'cautela.status = :pendingStatus AND cautela.etapaFluxo = :managerApprovedStep',
+              {
+                managerApprovedStep: CautelaFlowStep.APROVADA_PELO_GESTOR,
+                pendingStatus: CautelaStatus.EM_ANALISE,
+              },
+            )
             .orWhere(
               'cautela.status = :approvedStatus AND cautela.etapaFluxo = :exitAuthorizedStep',
               {
