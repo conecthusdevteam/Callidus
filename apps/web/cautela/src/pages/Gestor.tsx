@@ -55,8 +55,6 @@ function ContadorRecebidas({
   );
 }
 
-// ─── Gestor ───────────────────────────────────────────────────────────────────
-
 export default function Gestor() {
   const [, setActiveTab] = useState<Tab>("recebidas");
   const [cautelas, setCautelas] = useState<CautelaComDecisao[]>([]);
@@ -374,7 +372,6 @@ export default function Gestor() {
               </span>
             </div>
 
-            {/* Conteúdo scrollável com padding bottom para não ficar atrás dos botões fixos */}
             <div className="flex-1 overflow-y-auto px-4 py-2 pb-28 flex flex-col gap-3">
               <DetalhesConteudo
                 cautela={cautelaSelecionada}
@@ -393,7 +390,6 @@ export default function Gestor() {
               />
             </div>
 
-            {/* Botões fixos no rodapé */}
             {!isSomenteLeitura(cautelaSelecionada) && (
               <div className="fixed bottom-[70px] left-0 right-0 flex flex-col gap-2 px-4 pb-3 pt-3 bg-white border-t border-gray-200">
                 <button

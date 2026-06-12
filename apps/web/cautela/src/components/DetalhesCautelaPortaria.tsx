@@ -4,7 +4,6 @@ import { TabelaCautelados } from "../components/TabelaCautelados";
 
 export function DetalhesCautelaPortaria({
   cautela,
-  onFechar,
   onAprovarEntrada,
   onAprovarSaida,
 }: {
@@ -19,31 +18,10 @@ export function DetalhesCautelaPortaria({
       : "Entrada única";
   const statusFinalizadoLabel =
     cautela.status === "Reprovado" ? "Reprovado" : "Aprovado";
-  const statusFinalizadoEm =
-    cautela.status === "Reprovado" ? cautela.reprovadoEm : cautela.aprovadoEm;
 
   return (
     <div className="relative flex flex-col h-full">
-      <button
-        onClick={onFechar}
-        className="absolute right-3 top-3 z-10 text-black hover:text-gray-500"
-        aria-label="Fechar detalhes"
-      >
-        <svg
-          className="h-4 w-4"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M6 18L18 6M6 6l12 12"
-          />
-        </svg>
-      </button>
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-6 pb-40">
         <div className="mb-4">
           <BannerStatus cautela={cautela} />
         </div>
@@ -52,86 +30,175 @@ export function DetalhesCautelaPortaria({
             <JustificativaBox motivo={cautela.motivoNegativa} />
           </div>
         )}
-        {cautela.tipoPermissaoAlteradoEm && (
-          <p className="mb-4 text-center text-sm font-semibold text-[#404040]">
-            {tipoPermissaoLabel}
+        <div className="mb-3 bg-gray-200 rounded-sm p-2">
+          <p className="text-[12px] font-normal text-[#737373]">
+            Id da cautela
           </p>
-        )}
-        <div className="mb-3">
-          <p className="text-sm font-bold text-black">Id da cautela</p>
-          <p className="text-sm text-gray-700 break-all">{cautela.id}</p>
-        </div>
-        <div className="mb-3">
-          <p className="text-sm font-bold text-black">Setor</p>
-          <p className="text-sm text-gray-700">{cautela.setorId || "-"}</p>
-        </div>
-        <div className="mb-3">
-          <p className="text-sm font-bold text-black">
-            Data e hora da solicitação
+          <p className="text-[14px] font-bold text-black break-all">
+            {cautela.id}
           </p>
-          <p className="text-sm text-gray-700">{cautela.data || "-"}</p>
+          {cautela.tipoPermissaoAlteradoEm && (
+            <p className="text-sm font-semibold text-[#0A0A0A]">
+              {tipoPermissaoLabel}
+            </p>
+          )}
         </div>
         <div className="mb-3">
-          <p className="text-sm font-bold text-black">Proprietário</p>
-          <p className="text-sm text-gray-700">{cautela.visitante || "-"}</p>
+          <p className="text-[12px] font-normal text-[#737373]">Proprietário</p>
+          <p className="text-[24px] font-bold text-[#0A0A0A]">
+            {cautela.visitante || "-"}
+          </p>
         </div>
-        <div className="mb-3">
-          <p className="text-sm font-bold text-black">Documento</p>
-          <p className="text-sm text-gray-700">{cautela.documento || "-"}</p>
-        </div>
-        <div className="mb-3">
-          <p className="text-sm font-bold text-black">Empresa</p>
-          <p className="text-sm text-gray-700">{cautela.empresa || "-"}</p>
+        <div className="flex gap-8 mb-3">
+          <div className="mb-3">
+            <p className="text-[12px] font-normal text-[#737373]">Documento</p>
+            <p className="text-[16px] font-bold text-black">
+              {cautela.documento || "-"}
+            </p>
+          </div>
+          <div className="mb-3">
+            <p className="text-[12px] font-normal text-[#737373]">Setor</p>
+            <p className="text-[16px] font-bold text-black">
+              {cautela.setorId || "-"}
+            </p>
+          </div>
         </div>
         {cautela.proprietarioEmail && (
           <div className="mb-3">
-            <p className="text-sm font-bold text-black">
+            <p className="text-[12px] font-normal text-[#737373]">
               E-mail do proprietário
             </p>
-            <p className="text-sm text-gray-700">{cautela.proprietarioEmail}</p>
+            <p className="text-[18px] font-bold text-black">
+              {cautela.proprietarioEmail}
+            </p>
           </div>
         )}
+        <div className="mb-3">
+          <p className="text-[12px] font-normal text-[#737373]">Empresa</p>
+          <p className="text-[16px] font-bold text-black">
+            {cautela.empresa || "-"}
+          </p>
+        </div>
+
+        <div className="border-t border-[#B6B6B6] my-3" />
+
         {cautela.gestor && (
           <div className="mb-3">
-            <p className="text-sm font-bold text-black">
+            <p className="text-[12px] font-normal text-[#737373]">
               {statusFinalizadoLabel} por:
             </p>
-            <p className="text-sm text-gray-700">{cautela.gestor}</p>
+            <p className="text-[16px] font-bold text-black">{cautela.gestor}</p>
           </div>
         )}
-        {statusFinalizadoEm && (
+        <div className="flex gap-8 mb-3">
           <div className="mb-3">
-            <p className="text-sm font-bold text-black">
-              {statusFinalizadoLabel} em:
+            <p className="text-[12px] font-normal text-[#737373]">
+              Data e hora da solicitação
             </p>
-            <p className="text-sm text-gray-700">{statusFinalizadoEm}</p>
+            <p className="text-[16px] font-bold text-black">
+              {cautela.data || "-"}
+            </p>
+          </div>
+          {cautela.aprovadoEm &&
+            (cautela.status === "Aprovado" ||
+              cautela.status === "Saída Autorizada" ||
+              cautela.status === "Encerrada") && (
+              <div className="mb-4">
+                <p className="text-[12px] text-[#6B7280]">
+                  Data e hora da aprovação
+                </p>
+                <p className="text-[16px] font-bold text-black">
+                  {cautela.aprovadoEm}
+                </p>
+              </div>
+            )}
+
+          {cautela.reprovadoEm && cautela.status === "Reprovado" && (
+            <div className="mb-4">
+              <p className="text-[12px] text-[#6B7280]">
+                Data e hora da reprovação
+              </p>
+              <p className="text-[16px] font-bold text-black">
+                {cautela.reprovadoEm}
+              </p>
+            </div>
+          )}
+        </div>
+        {cautela.entradaValidadaEm &&
+          cautela.status === "Aprovado" &&
+          cautela.etapaFluxo !== "APROVADA_PELO_GESTOR" && (
+            <div className="mb-4">
+              <p className="text-[12px] text-[#6B7280]">
+                Data e hora da validação
+              </p>
+              <p className="text-[16px] font-bold text-black">
+                {cautela.entradaValidadaEm}
+              </p>
+            </div>
+          )}
+
+        {(cautela.status === "Saída Autorizada" ||
+          cautela.status === "Encerrada") && (
+          <div className="flex gap-8 mb-4">
+            {cautela.entradaValidadaEm && (
+              <div>
+                <p className="text-[12px] text-[#6B7280]">
+                  Data e hora da validação
+                </p>
+                <p className="text-[16px] font-bold text-black">
+                  {cautela.entradaValidadaEm}
+                </p>
+              </div>
+            )}
+            {cautela.saidaAutorizadaEm && (
+              <div>
+                <p className="text-[12px] text-[#6B7280]">
+                  Data e hora da saída autorizada
+                </p>
+                <p className="text-[16px] font-bold text-black">
+                  {cautela.saidaAutorizadaEm}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {cautela.status === "Encerrada" && cautela.encerradaEm && (
+          <div className="mb-4">
+            <p className="text-[12px] text-[#6B7280]">
+              Data e hora do encerramento
+            </p>
+            <p className="text-[16px] font-bold text-black">
+              {cautela.encerradaEm}
+            </p>
           </div>
         )}
         {cautela.validade && (
           <div className="mb-3">
-            <p className="text-sm font-bold text-black">Válido até:</p>
+            <p className="text-[12px] font-normal text-[#737373]">
+              Válido até:
+            </p>
             <p className="text-sm text-gray-700">{cautela.validade}</p>
           </div>
         )}
         {cautela.status === "Encerrada" && cautela.encerradaEm && (
           <div className="mb-3">
-            <p className="text-sm font-bold text-black">
+            <p className="text-[12px] font-normal text-[#737373]">
               Data e hora de saída:
             </p>
             <p className="text-sm text-gray-700">{cautela.encerradaEm}</p>
           </div>
         )}
         <div className="mb-3">
-          <p className="text-sm font-bold text-black mb-2">Cautelados:</p>
           <TabelaCautelados equipamentos={cautela.equipamentos ?? []} />
         </div>
       </div>
 
-      <div className="px-6 pb-6 pt-2 flex flex-col gap-2">
+      <div className="fixed bottom-[70px] left-0 right-0 flex flex-col gap-2 px-4 pb-3 pt-3 bg-white border-t border-gray-200">
         {cautela.status === "Aprovado" && onAprovarEntrada && (
           <button
             onClick={onAprovarEntrada}
-            className="w-full py-2.5 rounded-lg bg-[#3BB14A] text-white text-sm font-semibold hover:bg-[#22592A] transition-colors"
+            className="w-full py-3 rounded-lg bg-[#111827] text-white text-sm font-semibold"
           >
             Aprovar entrada
           </button>
@@ -139,14 +206,14 @@ export function DetalhesCautelaPortaria({
         {cautela.status === "Saída Autorizada" && onAprovarSaida && (
           <button
             onClick={onAprovarSaida}
-            className="w-full py-2.5 rounded-lg bg-[#3BB14A] text-white text-sm font-semibold hover:bg-[#22592A] transition-colors"
+            className="w-full py-3 rounded-lg bg-[#111827] text-white text-sm font-semibold"
           >
             Aprovar saída
           </button>
         )}
         <button
           onClick={() => window.print()}
-          className="w-full py-2.5 rounded-lg border border-gray-300 bg-white text-black text-sm font-semibold hover:bg-gray-100 transition-colors"
+          className="w-full py-2 text-[#737373] bg-[#F5F5F5] text-sm font-medium rounded-lg"
         >
           Imprimir
         </button>

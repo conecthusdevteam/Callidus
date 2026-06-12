@@ -158,8 +158,10 @@ export function Tabela({
     <div className="w-full flex flex-col gap-0">
       {/* Barra de pesquisa */}
       <div
-        className={`flex items-center gap-3 mb-4 w-full ${
-          isPortaria ? "max-w-[780px]" : "max-w-[607px] ml-[335px] mb-[39px]"
+        className={`flex items-center gap-3 mb-4 ${
+          isPortaria
+            ? "w-full max-w-[607px] ml-[335px] mb-[39px]"
+            : "w-full max-w-[607px] ml-[335px] mb-[39px]"
         }`}
       >
         <div className="relative flex-1">
@@ -197,12 +199,12 @@ export function Tabela({
       {/* Tabela */}
       <div
         className={`w-full bg-white rounded-lg border border-[#E5E7EB] shadow-sm relative z-0 overflow-x-auto ${
-          !isPortaria ? "max-w-[1126px] ml-[73px]" : "max-w-[1200px]"
+          !isPortaria ? "max-w-[1126px] ml-[73px]" : "max-w-[1200px] ml-[60px]"
         }`}
       >
         {/* Cabeçalho */}
         <div
-          className={`grid ${gridCols} bg-[#2B8E37] text-white text-[15px] font-bold px-4 py-${isPortaria ? "1.5" : "2"} min-w-[800px]`}
+          className={`grid ${gridCols} bg-[#2B8E37] text-white text-[18px] font-bold px-4 py-${isPortaria ? "2" : "2"} min-w-[800px]`}
         >
           <span>Solicitante</span>
           <span>Data</span>
@@ -246,7 +248,7 @@ export function Tabela({
                 <div
                   key={cautela.id}
                   onClick={() => onClickLinha(cautela)}
-                  className={`grid ${gridCols} px-4 py-3 text-[14px] min-w-[800px] text-[#111827] items-center cursor-pointer transition-colors border-b border-[#F3F4F6] last:border-0 ${
+                  className={`grid ${gridCols} px-4 py-3 text-[18px] min-w-[800px] text-[#111827] items-center cursor-pointer transition-colors border-b border-[#F3F4F6] last:border-0 ${
                     selecionada
                       ? "bg-[#E8F5EA] border-l-4 border-l-[#2B8E37]"
                       : i % 2 === 1

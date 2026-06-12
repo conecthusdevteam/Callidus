@@ -14,7 +14,7 @@ export function DetalhesConteudo({
   cautela,
   onAutorizarSaida,
   livreAcesso,
-  onTipoAcessoChange, // ← novo
+  onTipoAcessoChange,
 }: {
   cautela: CautelaComDecisao;
   onAutorizarSaida?: () => void;
@@ -40,7 +40,7 @@ export function DetalhesConteudo({
         return "bg-[#FBD5D54D]";
 
       case "Saída Autorizada":
-        return "bg-amber-100"; // ajuste para a cor do BannerAguardandoSaida
+        return "bg-amber-100";
 
       case "Encerrada":
         return "bg-[#E5E7EB]";
@@ -337,7 +337,7 @@ export function DetalhesConteudo({
         <TabelaCautelados equipamentos={cautela.equipamentos} />
       </div>
 
-      {/* Livre acesso + botões — só quando Em análise */}
+      {/* Livre acesso + botões */}
       {cautela.status !== "Reprovado" &&
         cautela.status !== "Encerrada" &&
         onTipoAcessoChange && (

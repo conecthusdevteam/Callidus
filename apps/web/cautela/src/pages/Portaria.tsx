@@ -9,12 +9,14 @@ import {
   validateEntry,
 } from "../lib/api";
 import { matchesSearch } from "../lib/cautelaUtils";
-import { BadgeTabela } from "../components/BadgeTabelaPortaria";
 import { CautelaPrint } from "../components/CautelaPrint";
 import { CardCautelaPortaria } from "../components/CardCautelaPortaria";
 import { DetalhesCautelaPortaria } from "../components/DetalhesCautelaPortaria";
-import { Tabela } from "../components/Tabela";
+import { Tabela, type CautelaComDecisao } from "../components/Tabela";
 import { ModalEncerrada, ModalAprovadoPortaria } from "../components/Modais";
+import { MenuInferior } from "../components/MenuInferior";
+import { HistoricoLista } from "../components/HistoricoLista";
+import { MenuHistorico } from "../components/MenuHistorico";
 
 const STATUS_HISTORICO: StatusCautela[] = [
   "Encerrada",
@@ -24,7 +26,7 @@ const STATUS_HISTORICO: StatusCautela[] = [
 ];
 const ITENS_POR_PAGINA = 6;
 
-type MobileView = "lista" | "detalhe";
+type MobileView = "lista" | "detalhe" | "historico";
 
 function isCautelaAtivaPortaria(cautela: Cautela) {
   return (
@@ -32,27 +34,6 @@ function isCautelaAtivaPortaria(cautela: Cautela) {
     cautela.status === "Saída Autorizada" ||
     cautela.etapaFluxo === "APROVADA_PELO_GESTOR"
   );
-}
-
-function formatarData(valor: string): { data: string; hora: string } {
-  if (!valor) return { data: "", hora: "--:--" };
-  if (valor.includes(", ")) {
-    const [data, hora] = valor.split(", ");
-    return { data, hora };
-  }
-  try {
-    const d = new Date(valor);
-    if (isNaN(d.getTime())) return { data: valor, hora: "--:--" };
-    return {
-      data: d.toLocaleDateString("pt-BR"),
-      hora: d.toLocaleTimeString("pt-BR", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    };
-  } catch {
-    return { data: valor, hora: "--:--" };
-  }
 }
 
 export function BannerCard({ status }: { status: StatusCautela }) {
@@ -80,16 +61,11 @@ export function BannerCard({ status }: { status: StatusCautela }) {
   return null;
 }
 
-function ultimaAcaoData(cautela: Cautela): string {
-  if (cautela.status === "Encerrada" && cautela.encerradaEm)
-    return cautela.encerradaEm;
-  if (cautela.status === "Saída Autorizada" && cautela.entradaValidadaEm)
-    return cautela.entradaValidadaEm;
-  if (cautela.status === "Reprovado" && cautela.reprovadoEm)
-    return cautela.reprovadoEm;
-  if (cautela.status === "Aprovado" && cautela.aprovadoEm)
-    return cautela.aprovadoEm;
-  return cautela.data;
+function statusHistorico(c: CautelaComDecisao): StatusCautela {
+  if (c.decisaoLocal === "reprovado") return "Reprovado";
+  if (c.decisaoLocal === "aprovado" && c.status !== "Em validação")
+    return "Aprovado";
+  return c.status as StatusCautela;
 }
 
 export default function Portaria() {
@@ -116,6 +92,9 @@ export default function Portaria() {
   const [paginaHistorico, setPaginaHistorico] = useState(1);
   const [modalAprovado, setModalAprovado] = useState(false);
   const cautelaSelecionadaRef = useRef<Cautela | null>(null);
+  const [menuAtivo, setMenuAtivo] = useState<
+    "home" | "historico" | "configuracoes"
+  >("home");
 
   useEffect(() => {
     cautelaSelecionadaRef.current = cautelaSelecionada;
@@ -184,7 +163,6 @@ export default function Portaria() {
     setMobileView("detalhe");
   }
 
-  // ── Listas ──
   const cautelasAtivas = cautelas
     .filter(isCautelaAtivaPortaria)
     .sort((a, b) => {
@@ -281,10 +259,10 @@ export default function Portaria() {
   );
 
   return (
-    <div className="min-h-screen lg:h-screen pt-[60px] pl-[70px] lg:pl-[70px] bg-[#F5F7F6] relative overflow-x-hidden lg:overflow-hidden">
+    <div className="min-h-screen lg:h-screen lg:pt-[60px] lg:pl-[70px] bg-[#F5F7F6] relative overflow-x-hidden lg:overflow-hidden">
       <CautelaPrint cautela={cautelaSelecionada} />
       {actionError && (
-        <div className="fixed left-[90px] right-5 top-[76px] z-40 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+        <div className="fixed left-4 right-4 lg:left-[90px] lg:right-5 top-[72px] lg:top-[76px] z-40 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
           {actionError}
         </div>
       )}
@@ -293,7 +271,7 @@ export default function Portaria() {
       <div className="hidden lg:flex h-[calc(100vh-60px)]">
         {/* Coluna esquerda — Cautelas autorizadas */}
         <div
-          className={`w-[440px] flex-shrink-0 px-6 pt-6 pb-4 flex flex-col h-full relative ${
+          className={`w-[432px] h-[calc(100vh-60px)] pt-12 ml-[41px] flex-shrink-0 flex flex-col relative z-0 ${
             cautelaSelecionada && origemDetalhe === "ativas" ? "z-10" : "z-0"
           }`}
         >
@@ -301,7 +279,10 @@ export default function Portaria() {
             className="flex flex-col h-full bg-white rounded-xl border border-[#E5E7EB] overflow-hidden"
             style={{ boxShadow: "4px 0 8px rgba(0,0,0,0.25)" }}
           >
-            <div className="bg-[#22592A] px-5 py-4 flex-shrink-0 rounded-t-xl flex items-center justify-between">
+            <div
+              className="bg-[#22592A] px-5 py-4 flex-shrink-0 rounded-t-[5px] flex items-center justify-between"
+              style={{ boxShadow: "4px 0 8px rgba(0,0,0,0.25)" }}
+            >
               <h2 className="text-white font-bold text-base">
                 Cautelas autorizadas
               </h2>
@@ -318,7 +299,7 @@ export default function Portaria() {
         </div>
 
         {/* Área central */}
-        <div className="flex-1 relative flex flex-col items-center py-8 px-6">
+        <div className="flex-1 relative flex flex-col items-start pt-[144px] px-6 pb-4">
           {cautelaSelecionada && (
             <>
               <div
@@ -408,11 +389,17 @@ export default function Portaria() {
       </div>
 
       {/* ══ MOBILE ══ */}
-      <div className="lg:hidden flex flex-col h-[calc(100vh-60px)] pt-[40px] overflow-hidden">
+      <div className="lg:hidden flex flex-col h-dvh overflow-hidden bg-[#F5F7F6]">
+        {actionError && (
+          <div className="fixed left-4 right-4 lg:left-[90px] lg:right-5 top-[72px] lg:top-[76px] z-40 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+            {actionError}
+          </div>
+        )}
+
         {mobileView === "lista" && (
-          <div className="flex-1 overflow-y-auto">
-            {/* Ativas */}
-            <div className="mx-3 mt-3">
+          <div className="flex-1 overflow-y-auto pb-20">
+            {/* Ativas — fica na tela principal */}
+            <div className="mx-3 mt-20">
               <div className="bg-[#22592A] rounded-t-lg px-4 py-3 flex items-center justify-between">
                 <h2 className="text-white font-bold text-base">
                   Cautelas autorizadas
@@ -428,58 +415,36 @@ export default function Portaria() {
               </div>
             </div>
 
-            {/* Histórico mobile — cards simples */}
-            <div className="mx-3 mt-4 mb-4">
-              <div className="bg-[#22592A] rounded-t-lg px-4 py-3">
-                <h2 className="text-white font-bold text-base">Histórico</h2>
-              </div>
-              <div className="bg-white rounded-b-lg border border-gray-200 overflow-hidden">
-                {historicoFiltrado.length === 0 && (
-                  <p className="text-[13px] text-[#6B7280] text-center py-6">
-                    Nenhum histórico.
-                  </p>
-                )}
-                {historicoFiltrado
-                  .slice(0, ITENS_POR_PAGINA)
-                  .map((cautela, i) => {
-                    const { data, hora } = formatarData(
-                      ultimaAcaoData(cautela),
-                    );
-                    return (
-                      <div
-                        key={cautela.id}
-                        onClick={() => abrirDetalhe(cautela, "historico")}
-                        className={`px-4 py-3 cursor-pointer border-b border-[#F3F4F6] last:border-0 ${
-                          i % 2 === 1 ? "bg-[#F9FAFB]" : "bg-white"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-[13px] font-medium text-[#111827] truncate">
-                            {cautela.visitante || "—"}
-                          </span>
-                          <BadgeTabela
-                            status={cautela.status as StatusCautela}
-                          />
-                        </div>
-                        <div className="flex gap-3 text-[12px] text-[#6B7280]">
-                          <span>
-                            {data} {hora}
-                          </span>
-                          <span className="truncate font-mono">
-                            {cautela.id}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
+            <div className="mx-3">
+              <HistoricoLista
+                historico={historicoFiltrado.slice(0, ITENS_POR_PAGINA)}
+                statusHistorico={statusHistorico}
+                onClickLinha={(c) => abrirDetalhe(c, "historico")}
+              />
             </div>
           </div>
         )}
 
+        {mobileView === "historico" && (
+          <MenuHistorico
+            historico={historicoFiltrado}
+            searchTerm={searchTerm}
+            onSearchTermChange={setSearchTerm}
+            onVoltar={() => {
+              setMenuAtivo("home");
+              setMobileView("lista");
+            }}
+            onClickLinha={(c) => {
+              abrirDetalhe(c, "historico");
+              setMobileView("detalhe");
+            }}
+            statusHistorico={statusHistorico}
+          />
+        )}
+
         {mobileView === "detalhe" && cautelaSelecionada && (
           <div className="flex flex-col flex-1 overflow-hidden">
-            <div className="relative flex items-center justify-center px-4 py-3 mt-2 flex-shrink-0">
+            <div className="relative flex items-center justify-center px-4 py-3 mt-16 flex-shrink-0">
               <button
                 onClick={() => {
                   setMobileView("lista");
@@ -501,8 +466,8 @@ export default function Portaria() {
                 Visualização de Cautela
               </span>
             </div>
-            <div className="flex-1 overflow-y-auto px-4 py-2">
-              <div className="bg-white rounded-sm border border-black p-6">
+            <div className="flex-1 overflow-y-auto px-4 py-2 pb-20">
+              <div className="bg-white rounded-sm border border-black">
                 <DetalhesCautelaPortaria
                   cautela={cautelaSelecionada}
                   onFechar={() => {
@@ -524,6 +489,15 @@ export default function Portaria() {
             </div>
           </div>
         )}
+
+        <MenuInferior
+          ativo={menuAtivo}
+          onChange={(item) => {
+            setMenuAtivo(item);
+            if (item === "home") setMobileView("lista");
+            if (item === "historico") setMobileView("historico");
+          }}
+        />
       </div>
 
       {modalEncerrada && (
