@@ -1430,7 +1430,7 @@ function StencilTable({
                 }}
                 className={cn(
                   "cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500",
-                  index % 2 === 0 ? "bg-white" : "bg-[#E5E5E5]",
+                  index % 2 === 0 ? "bg-white" : "bg-white",
                   category === "anomalous" && "bg-red-50",
                   category === "multiple" && "bg-violet-50",
                 )}
@@ -1483,7 +1483,11 @@ function StencilTable({
                           ) : (
                             <>
                               <b>Intervalo anormal</b>
-                              <p>A lavagem anterior aconteceu há x horas</p>
+                              <p>
+                                {row.previous_wash_interval == null
+                                  ? "Não há lavagem anterior registrada"
+                                  : `A lavagem anterior aconteceu há ${formatInterval(row.previous_wash_interval)}`}
+                              </p>
                             </>
                           )}
                         </TooltipContent>
