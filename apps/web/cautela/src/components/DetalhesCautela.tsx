@@ -195,7 +195,7 @@ export default function DetalhesCautela({
       <div className="px-5 pb-4">
         {/* Id */}
         <p className="text-[12px] text-[#6B7280] mb-0.5 pt-2">Id da Cautela:</p>
-        <p className="text-[14px] font-bold text-black mb-3">{cautela.id}</p>
+        <p className="text-[14px] font-bold text-black mb-3">{cautela.customId}</p>
 
         {/* Data e Hora */}
         <div className="flex gap-8 mb-3">

@@ -174,7 +174,7 @@ export function DetalhesConteudo({
       {/* Id */}
       <div className={`mb-3 rounded-lg px-4 py-3 ${getCautelaBg()}`}>
         <p className="text-[12px] text-[#737373]">Id da Cautela:</p>
-        <p className="text-[14px] font-bold text-black">{cautela.id}</p>
+        <p className="text-[14px] font-bold text-black">{cautela.customId}</p>
 
         {cautela.tipoPermissao && (
           <p className="text-[14px] font-bold text-black mt-1">

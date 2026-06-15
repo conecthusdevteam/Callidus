@@ -178,7 +178,6 @@ export default function Gestor() {
     }
     window.addEventListener("cautela-search", onSearch);
     return () => window.removeEventListener("cautela-search", onSearch);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cautelas]);
 
   useEffect(() => {

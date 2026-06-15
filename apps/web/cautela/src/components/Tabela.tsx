@@ -281,7 +281,7 @@ export function Tabela({
                   <span
                     className={`${isPortaria ? "text-[18px]" : "text-[18px] flex justify-center"} text-[#0A0A0A]`}
                   >
-                    {cautela.id}
+                    {cautela.customId}
                   </span>
 
                   {/* Status */}

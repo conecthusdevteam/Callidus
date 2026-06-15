@@ -220,7 +220,7 @@ export default function Navbar() {
                           <div className="min-w-0">
                             <p className="text-[12px] text-[#6B7280]">
                               Id:{" "}
-                              <span className="font-mono">{cautela.id}</span>
+                              <span className="font-mono">{cautela.customId}</span>
                             </p>
                             <p className="text-[13px] text-[#111827] mt-0.5">
                               {cautela.visitante}

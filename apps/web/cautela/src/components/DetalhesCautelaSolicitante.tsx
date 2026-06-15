@@ -122,7 +122,7 @@ export function DetalhesCautelaSolicitante({
         </div>
         <div className="mb-3">
           <p className="text-sm font-bold text-black">Id da cautela</p>
-          <p className="text-sm text-gray-700 break-all">{cautela.id}</p>
+          <p className="text-sm text-gray-700 break-all">{cautela.customId}</p>
         </div>
         <div className="mb-3">
           <p className="text-sm font-bold text-black">Setor</p>
