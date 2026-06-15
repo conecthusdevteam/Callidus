@@ -1,4 +1,5 @@
 import { Header } from "@/components/dashboard/Header";
+import { PageTabs } from "@/components/dashboard/PageTabs";
 import { Pagination } from "@/components/dashboard/Pagination";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Button } from "@/components/ui/button";
@@ -452,10 +453,7 @@ function AnalyticsLegend({
         </span>
         <span className="flex items-center gap-1.5">
           <span
-            className={cn(
-              "block shrink-0",
-              large ? "h-4 w-4" : "h-2.5 w-2.5",
-            )}
+            className={cn("block shrink-0", large ? "h-4 w-4" : "h-2.5 w-2.5")}
             style={{ background: "#E02424" }}
           />
           <span style={{ color: "#71717A" }}>Anômala</span>
@@ -1935,8 +1933,8 @@ function StencilDetailsView({
                 </div>
               ) : analytics.counts.total === 0 ? (
                 <div className="grid h-[245px] place-items-center rounded-md border bg-white text-sm text-muted-foreground">
-                  Nenhuma lavagem encontrada nos últimos{" "}
-                  {analytics.period.days} dias.
+                  Nenhuma lavagem encontrada nos últimos {analytics.period.days}{" "}
+                  dias.
                 </div>
               ) : (
                 <section className="rounded-lg border border-[##E5E5E5] bg-white px-4 py-4">
@@ -2596,10 +2594,11 @@ const History = () => {
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Header />
+        <PageTabs />
 
         <main className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-3 overflow-hidden px-4 pr-[310px] py-3">
           <section className="shrink-0">
-            <h1 className="text-[24px] mt-5 font-bold leading-tight">
+            <h1 className="text-[24px] font-bold leading-tight">
               Histórico de Lavagens
             </h1>
             <p className="mt-1 text-[18px] text-muted-foreground">

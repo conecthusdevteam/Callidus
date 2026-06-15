@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Header } from "@/components/dashboard/Header";
+import { PageTabs } from "@/components/dashboard/PageTabs";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { KpiCard } from "@/components/dashboard/KpiCard";
 import { SupplyStatusKpi } from "@/components/dashboard/SupplyStatusKpi";
@@ -198,6 +199,7 @@ const Index = () => {
 
       <div className="flex flex-1 flex-col overflow-hidden min-w-0">
         <Header />
+        <PageTabs />
 
         <main className="flex flex-1 flex-col overflow-hidden min-w-0 w-full px-4 py-3 gap-3">
           {/* ── KPIs ── */}
