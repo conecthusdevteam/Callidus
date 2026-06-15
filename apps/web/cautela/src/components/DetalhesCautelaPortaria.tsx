@@ -35,7 +35,7 @@ export function DetalhesCautelaPortaria({
             Id da cautela
           </p>
           <p className="text-[14px] font-bold text-black break-all">
-            {cautela.id}
+            {cautela.customId}
           </p>
           {cautela.tipoPermissaoAlteradoEm && (
             <p className="text-sm font-semibold text-[#0A0A0A]">

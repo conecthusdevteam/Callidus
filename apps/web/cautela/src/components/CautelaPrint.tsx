@@ -17,7 +17,7 @@ export function CautelaPrint({ cautela }: { cautela: Cautela | null }) {
       <div className="cautela-print-card">
         <h1>{titulo}</h1>
         <p className="print-label">Id da Cautela:</p>
-        <p className="print-value">{cautela.id}</p>
+        <p className="print-value">{cautela.customId}</p>
 
         <div className="print-grid">
           <div>
