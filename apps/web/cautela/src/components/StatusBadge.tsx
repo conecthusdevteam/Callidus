@@ -209,6 +209,10 @@ const config: Record<StatusCautela, { label: string; className: string }> = {
     label: "Encerrada",
     className: "bg-[#F4F4F4] text-[#525252] border border-[#A3A3A3]",
   },
+  "Em validação": {
+    label: "Em Validação",
+    className: "bg-amber-50 text-[#171717] border border-amber-200",
+  },
 };
 
 export default function StatusBadge({ status, fullWidth = false }: Props) {
@@ -258,6 +262,11 @@ export default function StatusBadge({ status, fullWidth = false }: Props) {
       {status === "Encerrada" && (
         <span className="flex items-center justify-center w-4 h-4">
           <IconEncerrada />
+        </span>
+      )}
+      {status === "Em validação" && (
+        <span className="flex items-center justify-center w-4 h-4">
+          <IconAnalise />
         </span>
       )}
 
