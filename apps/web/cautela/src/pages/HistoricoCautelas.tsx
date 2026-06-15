@@ -288,7 +288,7 @@ export default function HistoricoCautelas({
                       <span className="text-[#6B7280]">{data}</span>
                       <span className="text-[#6B7280]">{hora}</span>
                       <span className="truncate font-mono text-[12px] text-[#6B7280]">
-                        {cautela.id}
+                        {cautela.customId}
                       </span>
                       <BadgeStatus status={cautela.status} />
                       <span className="truncate">{cautela.gestor || "—"}</span>

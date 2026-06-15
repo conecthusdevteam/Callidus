@@ -1,10 +1,10 @@
 export type StatusCautela =
   | "Em análise"
+  | "Em validação"
   | "Aprovado"
   | "Reprovado"
   | "Saída Autorizada"
   | "Encerrada";
-
 export interface Equipamento {
   descricao: string;
   quantidade?: number;
@@ -13,6 +13,7 @@ export interface Equipamento {
 
 export interface Cautela {
   id: string;
+  customId: string;
   status: StatusCautela;
   empresa: string;
   visitante: string;
@@ -23,6 +24,7 @@ export interface Cautela {
   equipamentos: Equipamento[];
   setorId: string;
   criadoEm?: string;
+  atualizadoEm?: string;
 
   aprovadoEm?: string;
   entradaValidadaEm?: string;
@@ -30,6 +32,8 @@ export interface Cautela {
   encerradaEm?: string;
   validade?: string;
   tipoPermissaoAlteradoEm?: string;
+  saidaAutorizadaEm?: string;
+  atualizadoEmRaw?: string;
 
   motivoNegativa?: string;
   direcao?: "enviado" | "recebido";

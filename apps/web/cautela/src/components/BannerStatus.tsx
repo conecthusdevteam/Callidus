@@ -96,6 +96,14 @@ export function BannerStatus({ cautela }: { cautela: Cautela }) {
     );
   }
 
+  if (status === "Em validação") {
+    return (
+      <div className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-[#FCE96A] border border-[#FACA15] text-[#111827] text-[13px] font-medium">
+        Em Validação {cautela.aprovadoEm ? `desde ${cautela.aprovadoEm}` : ""}
+      </div>
+    );
+  }
+
   return (
     <div className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-[#FCE96A] border border-[#FACA15] text-[#111827] text-[13px] font-medium">
       Em Aprovação
@@ -105,9 +113,9 @@ export function BannerStatus({ cautela }: { cautela: Cautela }) {
 
 export function BannerAguardandoSaida() {
   return (
-    <div className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-amber-100 border border-amber-400 text-amber-800 text-[13px] font-medium">
+    <div className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-amber-100 border border-amber-400 text-amber-800 text-[18px] font-medium">
       <svg
-        className="w-4 h-4 flex-shrink-0"
+        className="w-5 h-5 flex-shrink-0"
         fill="none"
         stroke="currentColor"
         strokeWidth={2}
@@ -128,7 +136,7 @@ export function BannerAguardandoSaida() {
 
 export function JustificativaBox({ motivo }: { motivo: string }) {
   return (
-    <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+    <div className="mt-3 p-3 bg-red-100 border border-red-200 rounded-lg">
       <p className="text-sm font-semibold text-red-700 mb-1">Justificativa:</p>
       <p className="text-sm text-red-700">{motivo}</p>
     </div>

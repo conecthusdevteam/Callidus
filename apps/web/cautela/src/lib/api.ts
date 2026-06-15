@@ -64,6 +64,7 @@ interface ApiCautela {
   empresa: string | null;
   gestor: { nome: string } | null;
   id: string;
+  customId?: string | null;
   itens: { descricao?: string; nomeItem: string; quantidade: number }[];
   etapaFluxo?: ApiCautelaFlowStep;
   justificativaRejeicao: string | null;
@@ -73,6 +74,7 @@ interface ApiCautela {
   respondidoEm: string | null;
   saidaAutorizada: boolean;
   saidaAutorizadaEm: string | null;
+  atualizadoEm: string | null;
   setor: { nome: string } | null;
   status: ApiCautelaStatus;
   statusVisualGestor?: ApiCautelaStatus;
@@ -303,6 +305,7 @@ function mapCautela(cautela: ApiCautela): Cautela {
     })),
     gestor: cautela.gestor?.nome ?? "Gestor não informado",
     id: cautela.id,
+    customId: cautela.customId ?? "Custom ID não informado",
     motivoNegativa: cautela.justificativaRejeicao ?? undefined,
     documento: cautela.documentoProprietario ?? undefined,
     reprovadoEm:
@@ -321,6 +324,13 @@ function mapCautela(cautela: ApiCautela): Cautela {
     badgeGestor: cautela.badgeGestor,
     badgePortaria: cautela.badgePortaria,
     badgeSolicitante: cautela.badgeSolicitante ?? null,
+    saidaAutorizadaEm: cautela.saidaAutorizadaEm
+      ? formatDate(cautela.saidaAutorizadaEm)
+      : undefined,
+    atualizadoEmRaw: cautela.atualizadoEm ?? undefined,
+    atualizadoEm: cautela.atualizadoEm
+      ? formatDate(cautela.atualizadoEm)
+      : undefined,
   };
 }
 
