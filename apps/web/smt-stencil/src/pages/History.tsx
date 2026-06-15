@@ -39,6 +39,7 @@ import {
   AlertTriangle,
   ArrowUpDown,
   CalendarDays,
+  ChevronDown,
   CircleAlert,
   Download,
   EqualApproximately,
@@ -180,11 +181,13 @@ function ModalMetric({
   value,
   className,
   valueClassName,
+  compactValue = false,
 }: {
   label: string;
   value: string | number;
   className?: string;
   valueClassName?: string;
+  compactValue?: boolean;
 }) {
   return (
     <div className={cn("min-w-0", className)}>
@@ -192,8 +195,20 @@ function ModalMetric({
       <p
         className={cn(
           "mt-2 break-words text-[25px] font-bold leading-[1.08] text-[#111318]",
+          compactValue && "whitespace-nowrap tracking-normal",
           valueClassName,
         )}
+        style={
+          compactValue
+            ? {
+                fontFeatureSettings: "normal",
+                fontKerning: "none",
+                fontVariantNumeric: "normal",
+                letterSpacing: "0px",
+                wordSpacing: "0px",
+              }
+            : undefined
+        }
       >
         {value}
       </p>
@@ -295,8 +310,19 @@ async function exportElementAsImage(
   fileName: string,
   format: "png" | "jpeg",
 ) {
+  const canvas = await captureElementAsImage(element);
+  const mimeType = format === "png" ? "image/png" : "image/jpeg";
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, mimeType, 0.92),
+  );
+
+  if (!blob) throw new Error("Não foi possível gerar o arquivo.");
+  downloadBlob(blob, fileName);
+}
+
+async function captureElementAsImage(element: HTMLElement) {
   const { default: html2canvas } = await import("html2canvas");
-  const canvas = await html2canvas(element, {
+  return html2canvas(element, {
     backgroundColor: "#ffffff",
     logging: false,
     scale: 1.5,
@@ -321,16 +347,33 @@ async function exportElementAsImage(
           scrollContainer.style.maxHeight = "none";
           scrollContainer.style.overflow = "visible";
         });
+
+      clonedModal
+        .querySelectorAll<HTMLElement>("[data-export-legend]")
+        .forEach((legend) => {
+          legend.style.opacity = "1";
+          legend.style.color = "#71717A";
+
+          legend
+            .querySelectorAll<HTMLElement>("[data-export-legend-item]")
+            .forEach((item) => {
+              const category = item.dataset
+                .exportLegendItem as WashAnalyticsCategory;
+              const marker = item.querySelector<HTMLElement>(
+                "[data-export-legend-marker]",
+              );
+
+              item.style.opacity = "1";
+              item.style.color = "#71717A";
+              if (marker && WASH_CATEGORY_META[category]) {
+                marker.style.opacity = "1";
+                marker.style.backgroundColor =
+                  WASH_CATEGORY_META[category].color;
+              }
+            });
+        });
     },
   });
-
-  const mimeType = format === "png" ? "image/png" : "image/jpeg";
-  const blob = await new Promise<Blob | null>((resolve) =>
-    canvas.toBlob(resolve, mimeType, 0.92),
-  );
-
-  if (!blob) throw new Error("Não foi possível gerar o arquivo.");
-  downloadBlob(blob, fileName);
 }
 
 async function exportElementAsPdf(element: HTMLElement, detail: ApiStencil) {
@@ -379,27 +422,91 @@ async function exportElementAsPdf(element: HTMLElement, detail: ApiStencil) {
   pdf.save(getReportFileName(detail, "pdf"));
 }
 
-function AnalyticsLegend({ large = false }: { large?: boolean }) {
+function AnalyticsLegend({
+  large = false,
+  staticRender = false,
+}: {
+  large?: boolean;
+  staticRender?: boolean;
+}) {
+  if (staticRender) {
+    return (
+      <div
+        className={cn(
+          "flex flex-wrap items-center text-[#71717A]",
+          large
+            ? "gap-5 rounded-md bg-[#F4F4F5] px-2.5 py-2 text-[16px]"
+            : "gap-4 text-[11px]",
+        )}
+        style={{ color: "#71717A", opacity: 1 }}
+      >
+        <span className="flex items-center gap-1.5">
+          <span
+            className={cn(
+              "block shrink-0 rounded-full",
+              large ? "h-4 w-4" : "h-2.5 w-2.5",
+            )}
+            style={{ background: "#0E9F6E" }}
+          />
+          <span style={{ color: "#71717A" }}>Planejada</span>
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span
+            className={cn(
+              "block shrink-0",
+              large ? "h-4 w-4" : "h-2.5 w-2.5",
+            )}
+            style={{ background: "#E02424" }}
+          />
+          <span style={{ color: "#71717A" }}>Anômala</span>
+        </span>
+        <span className="flex items-center gap-1.5">
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 16 18"
+            className={cn(
+              "block shrink-0",
+              large ? "h-[18px] w-4" : "h-3 w-2.5",
+            )}
+          >
+            <polygon points="8,0 16,18 0,18" fill="#8B5CF6" />
+          </svg>
+          <span style={{ color: "#71717A" }}>Múltipla</span>
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div
+      data-export-legend
       className={cn(
-        "flex-wrap items-center text-muted-foreground",
+        "flex-wrap items-center text-[#71717A] opacity-100",
         large
           ? "inline-flex gap-5 rounded-md bg-[#F4F4F5] px-2.5 py-2 text-[16px]"
           : "flex gap-4 text-[11px]",
       )}
+      style={{ color: "#71717A", opacity: 1 }}
     >
       {(["planned", "anomalous", "multiple"] as WashAnalyticsCategory[]).map(
         (category) => (
-          <span key={category} className="inline-flex items-center gap-1.5">
+          <span
+            key={category}
+            data-export-legend-item={category}
+            className="inline-flex items-center gap-1.5 text-[#71717A] opacity-100"
+            style={{ color: "#71717A", opacity: 1 }}
+          >
             <span
+              data-export-legend-marker
               className={cn(
+                "shrink-0 opacity-100",
                 large ? "h-4 w-4" : "h-2.5 w-2.5",
                 WASH_CATEGORY_META[category].shape === "circle" &&
                   "rounded-full",
               )}
               style={{
                 backgroundColor: WASH_CATEGORY_META[category].color,
+                opacity: 1,
                 clipPath:
                   WASH_CATEGORY_META[category].shape === "triangle"
                     ? "polygon(50% 0, 100% 100%, 0 100%)"
@@ -636,6 +743,7 @@ function WashTimeChart({
   framed = true,
   large = false,
   report = false,
+  staticControls = false,
 }: {
   analytics: StencilWashAnalytics;
   selectedDays?: AnalyticsDays;
@@ -643,6 +751,7 @@ function WashTimeChart({
   framed?: boolean;
   large?: boolean;
   report?: boolean;
+  staticControls?: boolean;
 }) {
   const ticks = getPeriodTicks(analytics.period.days);
   const lastDayIndex = analytics.period.days - 1;
@@ -668,36 +777,50 @@ function WashTimeChart({
             Horário de lavagens por dia
           </h3>
           <div className={report ? "mt-0" : large ? "mt-3" : "mt-2"}>
-            <AnalyticsLegend large={large} />
+            <AnalyticsLegend large={large} staticRender={staticControls} />
           </div>
         </div>
         <div className={cn("flex items-center gap-2", report && "hidden")}>
-          {selectedDays && onDaysChange && (
-            <Select
-              value={String(selectedDays)}
-              onValueChange={(value) =>
-                onDaysChange(Number(value) as AnalyticsDays)
-              }
-            >
-              <SelectTrigger
+          {selectedDays &&
+            onDaysChange &&
+            (staticControls ? (
+              <div
                 className={cn(
-                  "rounded-md",
+                  "inline-flex items-center justify-between rounded-md border border-input bg-white px-3 text-[#18181B]",
                   large
                     ? "h-10 w-[166px] text-[14px]"
                     : "h-8 w-[138px] text-[11px]",
                 )}
               >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {ANALYTICS_DAY_OPTIONS.map((days) => (
-                  <SelectItem key={days} value={String(days)}>
-                    Últimos {days} dias
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
+                <span>Últimos {selectedDays} dias</span>
+                <ChevronDown className="h-4 w-4 shrink-0 text-[#71717A]" />
+              </div>
+            ) : (
+              <Select
+                value={String(selectedDays)}
+                onValueChange={(value) =>
+                  onDaysChange(Number(value) as AnalyticsDays)
+                }
+              >
+                <SelectTrigger
+                  className={cn(
+                    "rounded-md",
+                    large
+                      ? "h-10 w-[166px] text-[14px]"
+                      : "h-8 w-[138px] text-[11px]",
+                  )}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ANALYTICS_DAY_OPTIONS.map((days) => (
+                    <SelectItem key={days} value={String(days)}>
+                      Últimos {days} dias
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ))}
           <span
             className={cn(
               "inline-flex items-center gap-2 rounded-md border text-[#52525B]",
@@ -1601,6 +1724,244 @@ function PlateTable({
   );
 }
 
+function StencilDetailsView({
+  detail,
+  analytics,
+  analyticsLoading,
+  analyticsError,
+  analyticsDays,
+  loading,
+  canExport,
+  expanded = false,
+  onAnalyticsDaysChange,
+  onExportClick,
+}: {
+  detail: ApiStencil | null;
+  analytics: StencilWashAnalytics | null;
+  analyticsLoading: boolean;
+  analyticsError: string;
+  analyticsDays: AnalyticsDays;
+  loading: boolean;
+  canExport: boolean;
+  expanded?: boolean;
+  onAnalyticsDaysChange: (days: AnalyticsDays) => void;
+  onExportClick: () => void;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex w-full flex-col bg-white",
+        expanded ? "h-auto" : "h-full",
+      )}
+    >
+      <header className="flex h-[74px] shrink-0 items-center justify-between border-b border-[#F1F1F2] px-8 pr-[70px]">
+        <div className="flex items-center gap-5">
+          <MoreHorizontal className="h-5 w-5 text-[#52525B]" />
+          <h2 className="text-[20px] font-semibold text-[#111318]">
+            Informações detalhadas
+          </h2>
+        </div>
+        <div className="flex items-center gap-4">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={!canExport}
+            onClick={onExportClick}
+            className="h-10 gap-2 rounded-md border-[#D4D4D8] bg-white px-4 text-[14px] font-medium text-[#18181B] shadow-none"
+          >
+            <Download className="h-4 w-4" />
+            Exportar
+          </Button>
+        </div>
+      </header>
+
+      <div
+        data-export-scroll
+        className={cn(
+          "bg-white px-6 py-5",
+          expanded
+            ? "h-auto overflow-visible"
+            : "h-[calc(100%_-_74px)] overflow-y-auto",
+        )}
+      >
+        {loading || !detail ? (
+          <div className="py-16 text-center text-sm text-muted-foreground">
+            Carregando histórico...
+          </div>
+        ) : (
+          <div className="grid gap-7 bg-white xl:grid-cols-[370px_minmax(0,1fr)]">
+            <aside
+              className={cn(
+                "space-y-4 xl:self-start",
+                !expanded && "xl:sticky xl:top-0",
+              )}
+            >
+              <p className="text-[16px] text-[#71717A]">Dados do Stencil</p>
+
+              <div>
+                <p className="text-[16px] leading-tight text-[#71717A]">
+                  Estimativa de uso
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-3">
+                  <span className="inline-grid h-7 w-7 place-items-center rounded bg-[#FEF3C7] text-[#D8A800]">
+                    <EqualApproximately className="h-5 w-5" />
+                  </span>
+                  <p className="text-[25px] font-bold leading-none text-[#DC2626]">
+                    Não informado
+                  </p>
+                  <CircleAlert className="h-5 w-5 text-[#FB7185]" />
+                </div>
+              </div>
+
+              <ModalMetric
+                label="Total de Lavagens Registradas"
+                value={`${String(detail.asset?.total_washes ?? 0).padStart(3, "0")} lavagens`}
+              />
+
+              <div className="space-y-4 border-t border-[##E5E5E5] pt-6">
+                <p className="text-[17px] text-[#71717A]">Dados cadastrais</p>
+                <ModalMetric
+                  label="Código Stencil"
+                  value={detail.stencil_code}
+                />
+                <div className="grid grid-cols-2 gap-x-6 gap-y-7">
+                  <ModalMetric
+                    label="Endereçamento"
+                    value={String(detail.addressing ?? "").padStart(3, "0")}
+                  />
+                  <ModalMetric
+                    label="Espessura"
+                    value={
+                      detail.asset?.thickness != null
+                        ? Number(detail.asset.thickness).toFixed(2)
+                        : "-"
+                    }
+                  />
+                  <ModalMetric
+                    label="ID Fabricante"
+                    value={detail.asset?.manufacture_id || "-"}
+                  />
+                  <ModalMetric
+                    label="País de Origem"
+                    value={detail.asset?.country || "-"}
+                  />
+                </div>
+              </div>
+            </aside>
+
+            <div className="min-w-0 space-y-6">
+              <section className="overflow-hidden rounded-lg border border-[##E5E5E5] bg-white">
+                <div className="bg-[#DCEBFA] px-4 py-4">
+                  <p className="mb-4 text-[16px] text-[#2155A3]">
+                    Dados desta lavagem
+                  </p>
+                  <div className="grid gap-5 md:grid-cols-[1.25fr_0.8fr_0.6fr_1.15fr_0.65fr]">
+                    <ModalMetric
+                      label="ID Lavagem"
+                      value={detail.id}
+                      valueClassName="break-all text-[18px] leading-[1.15]"
+                    />
+                    <ModalMetric
+                      valueClassName="text-[24px]"
+                      label="Data"
+                      value={formatDate(detail.created_at)}
+                      compactValue
+                    />
+                    <ModalMetric
+                      valueClassName="text-[24px]"
+                      label="Hora"
+                      value={formatTime(detail.created_at)}
+                      compactValue
+                    />
+                    <ModalMetric
+                      valueClassName="text-[24px]"
+                      label="Operador de Lavagem"
+                      value={detail.operator || "-"}
+                    />
+                    <ModalMetric
+                      valueClassName="text-[24px]"
+                      label="Linha"
+                      value={detail.line_name || "-"}
+                    />
+                  </div>
+                </div>
+                <div className="border-t border-[##E5E5E5] px-4 py-4">
+                  <p className="mb-5 text-[16px] text-[#71717A]">
+                    Dados da última lavagem
+                  </p>
+                  <div className="grid gap-5 md:grid-cols-[1.25fr_0.8fr_0.6fr_1.15fr_0.65fr]">
+                    <ModalMetric
+                      label="ID Lavagem"
+                      value={detail.asset?.last_wash_details?.id ?? "-"}
+                      valueClassName="break-all text-[18px] leading-[1.15]"
+                    />
+                    <ModalMetric
+                      valueClassName="text-[24px]"
+                      label="Data"
+                      value={formatDate(detail.asset?.last_wash)}
+                      compactValue
+                    />
+                    <ModalMetric
+                      valueClassName="text-[24px]"
+                      label="Hora"
+                      value={formatTime(detail.asset?.last_wash)}
+                      compactValue
+                    />
+                    <ModalMetric
+                      valueClassName="text-[24px]"
+                      label="Operador de Lavagem"
+                      value={detail.asset?.last_wash_details?.operator ?? "-"}
+                    />
+                    <ModalMetric
+                      label="Linha"
+                      value={detail.line_name || "-"}
+                    />
+                  </div>
+                </div>
+              </section>
+
+              <div className="inline-flex h-10 items-center rounded-md bg-[#F4F4F5] px-4 text-[16px] font-medium text-[#27272A]">
+                Gráficos de intervalo
+              </div>
+
+              {analyticsLoading ? (
+                <div className="grid h-[245px] place-items-center rounded-md border bg-white text-sm text-muted-foreground">
+                  Carregando gráficos...
+                </div>
+              ) : analyticsError || !analytics ? (
+                <div className="grid h-[245px] place-items-center rounded-md border bg-white px-4 text-center text-sm text-muted-foreground">
+                  {analyticsError || "Não foi possível carregar os gráficos."}
+                </div>
+              ) : analytics.counts.total === 0 ? (
+                <div className="grid h-[245px] place-items-center rounded-md border bg-white text-sm text-muted-foreground">
+                  Nenhuma lavagem encontrada nos últimos{" "}
+                  {analytics.period.days} dias.
+                </div>
+              ) : (
+                <section className="rounded-lg border border-[##E5E5E5] bg-white px-4 py-4">
+                  <WashTimeChart
+                    analytics={analytics}
+                    selectedDays={analyticsDays}
+                    onDaysChange={onAnalyticsDaysChange}
+                    framed={false}
+                    large
+                    staticControls={expanded}
+                  />
+                  <div className="my-7 border-t border-[##E5E5E5]" />
+                  <div className="px-0">
+                    <WashIntervalChart analytics={analytics} large />
+                  </div>
+                </section>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function StencilDetailsModal({
   detail,
   analytics,
@@ -1644,203 +2005,17 @@ function StencilDetailsModal({
           <DialogHeader className="sr-only">
             <DialogTitle>Informações detalhadas do stencil</DialogTitle>
           </DialogHeader>
-          <header className="flex h-[74px] shrink-0 items-center justify-between border-b border-[#F1F1F2] px-8 pr-[70px]">
-            <div className="flex items-center gap-5">
-              <MoreHorizontal className="h-5 w-5 text-[#52525B]" />
-              <h2 className="text-[20px] font-semibold text-[#111318]">
-                Informações detalhadas
-              </h2>
-            </div>
-            <div className="flex items-center gap-4">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={!canExport}
-                onClick={() => onExportOpenChange(true)}
-                className="h-10 gap-2 rounded-md border-[#D4D4D8] bg-white px-4 text-[14px] font-medium text-[#18181B] shadow-none"
-              >
-                <Download className="h-4 w-4" />
-                Exportar
-              </Button>
-            </div>
-          </header>
-
-          <div
-            data-export-scroll
-            className="h-[calc(100%_-_74px)] overflow-y-auto bg-white px-6 py-5"
-          >
-            {loading || !detail ? (
-              <div className="py-16 text-center text-sm text-muted-foreground">
-                Carregando histórico...
-              </div>
-            ) : (
-              <div
-                id="stencil-report-content"
-                className="grid gap-7 bg-white xl:grid-cols-[370px_minmax(0,1fr)]"
-              >
-                <aside className="space-y-4 xl:sticky xl:top-0 xl:self-start">
-                  <p className="text-[16px] text-[#71717A]">Dados do Stencil</p>
-
-                  <div>
-                    <p className="text-[16px] leading-tight text-[#71717A]">
-                      Estimativa de uso
-                    </p>
-                    <div className="mt-2 flex flex-wrap items-center gap-3">
-                      <span className="inline-grid h-7 w-7 place-items-center rounded bg-[#FEF3C7] text-[#D8A800]">
-                        <EqualApproximately className="h-5 w-5" />
-                      </span>
-                      <p className="text-[25px] font-bold leading-none text-[#DC2626]">
-                        Não informado
-                      </p>
-                      <CircleAlert className="h-5 w-5 text-[#FB7185]" />
-                    </div>
-                  </div>
-
-                  <ModalMetric
-                    label="Total de Lavagens Registradas"
-                    value={`${String(detail.asset?.total_washes ?? 0).padStart(3, "0")} lavagens`}
-                  />
-
-                  <div className="space-y-4 border-t border-[##E5E5E5] pt-6">
-                    <p className="text-[17px] text-[#71717A]">
-                      Dados cadastrais
-                    </p>
-                    <ModalMetric
-                      label="Código Stencil"
-                      value={detail.stencil_code}
-                    />
-                    <div className="grid grid-cols-2 gap-x-6 gap-y-7">
-                      <ModalMetric
-                        label="Endereçamento"
-                        value={String(detail.addressing ?? "").padStart(3, "0")}
-                      />
-                      <ModalMetric
-                        label="Espessura"
-                        value={
-                          detail.asset?.thickness != null
-                            ? Number(detail.asset.thickness).toFixed(2)
-                            : "-"
-                        }
-                      />
-                      <ModalMetric
-                        label="ID Fabricante"
-                        value={detail.asset?.manufacture_id || "-"}
-                      />
-                      <ModalMetric
-                        label="País de Origem"
-                        value={detail.asset?.country || "-"}
-                      />
-                    </div>
-                  </div>
-                </aside>
-
-                <div className="min-w-0 space-y-6">
-                  <section className="overflow-hidden rounded-lg border border-[##E5E5E5] bg-white">
-                    <div className="bg-[#DCEBFA] px-4 py-4">
-                      <p className="mb-4 text-[16px] text-[#2155A3]">
-                        Dados desta lavagem
-                      </p>
-                      <div className="grid gap-5 md:grid-cols-[1.25fr_0.8fr_0.6fr_1.15fr_0.65fr]">
-                        <ModalMetric
-                          label="ID Lavagem"
-                          value={detail.id}
-                          valueClassName="break-all text-[18px] leading-[1.15]"
-                        />
-                        <ModalMetric
-                          valueClassName="text-[24px]"
-                          label="Data"
-                          value={formatDate(detail.created_at)}
-                        />
-                        <ModalMetric
-                          valueClassName="text-[24px]"
-                          label="Hora"
-                          value={formatTime(detail.created_at)}
-                        />
-                        <ModalMetric
-                          valueClassName="text-[24px]"
-                          label="Operador de Lavagem"
-                          value={detail.operator || "-"}
-                        />
-                        <ModalMetric
-                          valueClassName="text-[24px]"
-                          label="Linha"
-                          value={detail.line_name || "-"}
-                        />
-                      </div>
-                    </div>
-                    <div className="border-t border-[##E5E5E5] px-4 py-4">
-                      <p className="mb-5 text-[16px] text-[#71717A]">
-                        Dados da última lavagem
-                      </p>
-                      <div className="grid gap-5 md:grid-cols-[1.25fr_0.8fr_0.6fr_1.15fr_0.65fr]">
-                        <ModalMetric
-                          label="ID Lavagem"
-                          value={detail.asset?.last_wash_details?.id ?? "-"}
-                          valueClassName="break-all text-[18px] leading-[1.15]"
-                        />
-                        <ModalMetric
-                          valueClassName="text-[24px]"
-                          label="Data"
-                          value={formatDate(detail.asset?.last_wash)}
-                        />
-                        <ModalMetric
-                          valueClassName="text-[24px]"
-                          label="Hora"
-                          value={formatTime(detail.asset?.last_wash)}
-                        />
-                        <ModalMetric
-                          valueClassName="text-[24px]"
-                          label="Operador de Lavagem"
-                          value={
-                            detail.asset?.last_wash_details?.operator ?? "-"
-                          }
-                        />
-                        <ModalMetric
-                          label="Linha"
-                          value={detail.line_name || "-"}
-                        />
-                      </div>
-                    </div>
-                  </section>
-
-                  <div className="inline-flex h-10 items-center rounded-md bg-[#F4F4F5] px-4 text-[16px] font-medium text-[#27272A]">
-                    Gráficos de intervalo
-                  </div>
-
-                  {analyticsLoading ? (
-                    <div className="grid h-[245px] place-items-center rounded-md border bg-white text-sm text-muted-foreground">
-                      Carregando gráficos...
-                    </div>
-                  ) : analyticsError || !analytics ? (
-                    <div className="grid h-[245px] place-items-center rounded-md border bg-white px-4 text-center text-sm text-muted-foreground">
-                      {analyticsError ||
-                        "Não foi possível carregar os gráficos."}
-                    </div>
-                  ) : analytics.counts.total === 0 ? (
-                    <div className="grid h-[245px] place-items-center rounded-md border bg-white text-sm text-muted-foreground">
-                      Nenhuma lavagem encontrada nos últimos{" "}
-                      {analytics.period.days} dias.
-                    </div>
-                  ) : (
-                    <section className="rounded-lg border border-[##E5E5E5] bg-white px-4 py-4">
-                      <WashTimeChart
-                        analytics={analytics}
-                        selectedDays={analyticsDays}
-                        onDaysChange={onAnalyticsDaysChange}
-                        framed={false}
-                        large
-                      />
-                      <div className="my-7 border-t border-[##E5E5E5]" />
-                      <div className="px-0">
-                        <WashIntervalChart analytics={analytics} large />
-                      </div>
-                    </section>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+          <StencilDetailsView
+            detail={detail}
+            analytics={analytics}
+            analyticsLoading={analyticsLoading}
+            analyticsError={analyticsError}
+            analyticsDays={analyticsDays}
+            loading={loading}
+            canExport={canExport}
+            onAnalyticsDaysChange={onAnalyticsDaysChange}
+            onExportClick={() => onExportOpenChange(true)}
+          />
         </DialogContent>
       </Dialog>
       {detail && analytics && (
@@ -1849,6 +2024,7 @@ function StencilDetailsModal({
           analytics={analytics}
           format={exportFormat}
           open={exportOpen}
+          analyticsDays={analyticsDays}
           onFormatChange={onExportFormatChange}
           onOpenChange={onExportOpenChange}
           onExport={onExport}
@@ -1861,6 +2037,7 @@ function StencilDetailsModal({
 function ExportReportDialog({
   detail,
   analytics,
+  analyticsDays,
   format,
   open,
   onFormatChange,
@@ -1869,6 +2046,7 @@ function ExportReportDialog({
 }: {
   detail: ApiStencil;
   analytics: StencilWashAnalytics;
+  analyticsDays: AnalyticsDays;
   format: ExportFormat;
   open: boolean;
   onFormatChange: (format: ExportFormat) => void;
@@ -1881,6 +2059,7 @@ function ExportReportDialog({
     { value: "png", label: "PNG" },
     { value: "jpeg", label: "JPEG" },
   ];
+
   const handleExport = async () => {
     if (exporting) return;
     setExporting(true);
@@ -1904,9 +2083,29 @@ function ExportReportDialog({
         </DialogHeader>
         <div className="grid h-full min-h-0 grid-cols-[minmax(0,1fr)_230px] bg-white">
           <div className="min-h-0 overflow-y-auto overflow-x-auto bg-[#565656] p-7">
-            <div className="mx-auto w-[794px] shadow-xl">
-              <StencilPdfReport detail={detail} analytics={analytics} />
-            </div>
+            {format === "pdf" ? (
+              <div className="mx-auto w-[794px] shadow-xl">
+                <StencilPdfReport detail={detail} analytics={analytics} />
+              </div>
+            ) : (
+              <div
+                id="stencil-image-report-preview"
+                className="mx-auto h-auto w-[1630px] overflow-visible bg-white shadow-xl"
+              >
+                <StencilDetailsView
+                  detail={detail}
+                  analytics={analytics}
+                  analyticsLoading={false}
+                  analyticsError=""
+                  analyticsDays={analyticsDays}
+                  loading={false}
+                  canExport
+                  expanded
+                  onAnalyticsDaysChange={() => undefined}
+                  onExportClick={() => undefined}
+                />
+              </div>
+            )}
           </div>
           <aside className="flex h-full min-h-0 flex-col overflow-hidden border-l bg-white p-6">
             <p className="text-[16px] font-bold text-foreground">Formato</p>
@@ -2363,7 +2562,9 @@ const History = () => {
     if (!selectedStencil || !stencilAnalytics) return;
 
     const report = document.getElementById(
-      exportFormat === "pdf" ? "stencil-pdf-report" : "stencil-report-modal",
+      exportFormat === "pdf"
+        ? "stencil-pdf-report"
+        : "stencil-image-report-preview",
     );
     if (!report) return;
 
