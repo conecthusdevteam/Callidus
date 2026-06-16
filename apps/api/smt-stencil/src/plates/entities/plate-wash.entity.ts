@@ -38,6 +38,6 @@ export class PlateWash {
 
   @BeforeInsert()
   generateId() {
-    this.id = `p_wsh_${nanoid()}`;
+    this.id = `pw_${nanoid(8)}`;
   }
 }
