@@ -56,6 +56,6 @@ export class Stencil {
 
   @BeforeInsert()
   generateId() {
-    this.id = `st_${nanoid()}`;
+    this.id = `st_${nanoid(8)}`;
   }
 }

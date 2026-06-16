@@ -34,6 +34,6 @@ export class StencilWash {
 
   @BeforeInsert()
   generateId() {
-    this.id = `st_wsh_${nanoid()}`;
+    this.id = `sw_${nanoid(8)}`;
   }
 }
