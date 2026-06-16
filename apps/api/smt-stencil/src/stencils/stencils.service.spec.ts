@@ -224,6 +224,19 @@ describe('StencilsService', () => {
     });
   });
 
+  it('loads washes when retrieving stencil details', async () => {
+    const repository = makeRepository({
+      findOne: jest.fn().mockResolvedValue(makeStencil()),
+    });
+
+    await makeService(repository).findOne('stencil_1');
+
+    expect(repository.findOne).toHaveBeenCalledWith({
+      where: { id: 'stencil_1' },
+      relations: { washes: true },
+    });
+  });
+
   it('returns 30-day analytics with planned, anomalous and multiple classifications', async () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-05-26T12:00:00.000Z'));
 
@@ -238,15 +251,13 @@ describe('StencilsService', () => {
       findOne: jest.fn().mockResolvedValue(stencil),
     });
     const washRepository = makeWashRepository({
-      find: jest
-        .fn()
-        .mockResolvedValueOnce(washes)
-        .mockResolvedValueOnce([]),
+      find: jest.fn().mockResolvedValueOnce(washes).mockResolvedValueOnce([]),
     });
 
-    const result = await makeService(repository, washRepository).findWashAnalytics(
-      stencil.id,
-    );
+    const result = await makeService(
+      repository,
+      washRepository,
+    ).findWashAnalytics(stencil.id);
 
     expect(result).toMatchObject({
       period: { days: 30 },
@@ -269,6 +280,95 @@ describe('StencilsService', () => {
       category: 'multiple',
     });
 
+    jest.useRealTimers();
+  });
+
+  it.each([7, 15, 30, 60, 90])(
+    'accepts the %i-day analytics period',
+    async (days) => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-05-26T12:00:00.000Z'));
+      const stencil = makeStencil();
+      const repository = makeRepository({
+        findOne: jest.fn().mockResolvedValue(stencil),
+      });
+      const washRepository = makeWashRepository({
+        find: jest.fn().mockResolvedValue([]),
+      });
+
+      const result = await makeService(
+        repository,
+        washRepository,
+      ).findWashAnalytics(stencil.id, days);
+
+      expect(result?.period.days).toBe(days);
+      jest.useRealTimers();
+    },
+  );
+
+  it('uses the shortest same-day interval when a day has multiple washes', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-05-12T12:00:00.000Z'));
+    const washes = [
+      makeWash('previous_day', '2026-05-10T22:00:00.000Z'),
+      makeWash('day_09', '2026-05-11T13:00:00.000Z'),
+      makeWash('day_16', '2026-05-11T20:00:00.000Z'),
+    ];
+    const stencil = makeStencil({ washes });
+    const repository = makeRepository({
+      findOne: jest.fn().mockResolvedValue(stencil),
+    });
+    const washRepository = makeWashRepository({
+      find: jest.fn().mockResolvedValueOnce(washes).mockResolvedValueOnce([]),
+    });
+
+    const result = await makeService(
+      repository,
+      washRepository,
+    ).findWashAnalytics(stencil.id, 7);
+    const multipleDay = result?.interval_bars.find(
+      (bar) => bar.day_label === '11/05',
+    );
+
+    expect(multipleDay).toMatchObject({
+      interval_minutes: 7 * 60,
+      wash_ids: ['day_09', 'day_16'],
+    });
+    expect(
+      result?.interval_bars.find((bar) => bar.day_label === '10/05'),
+    ).toMatchObject({
+      interval_minutes: null,
+      wash_ids: ['previous_day'],
+    });
+    jest.useRealTimers();
+  });
+
+  it('keeps imported washes even when they predate the asset record', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-05-12T12:00:00.000Z'));
+    const stencil = makeStencil({
+      createdAt: new Date('2026-05-11T00:00:00.000Z'),
+    });
+    const washRepository = makeWashRepository({
+      find: jest
+        .fn()
+        .mockResolvedValueOnce([
+          makeWash('imported_earlier_wash', '2026-05-10T20:00:00.000Z'),
+          makeWash('later_wash', '2026-05-11T13:00:00.000Z'),
+        ])
+        .mockResolvedValueOnce([]),
+    });
+
+    const result = await makeService(
+      makeRepository({ findOne: jest.fn().mockResolvedValue(stencil) }),
+      washRepository,
+    ).findWashAnalytics(stencil.id, 7);
+
+    expect(result?.time_points.map((wash) => wash.id)).toEqual([
+      'imported_earlier_wash',
+      'later_wash',
+    ]);
+    expect(result?.interval_bars.at(0)).toMatchObject({
+      interval_minutes: null,
+      wash_ids: ['imported_earlier_wash'],
+    });
     jest.useRealTimers();
   });
 
@@ -336,41 +436,72 @@ describe('StencilsService', () => {
     });
   });
 
-  it('returns recent stencil washes paginated and filters attention only', async () => {
-    const repository = makeRepository({
-      find: jest.fn().mockResolvedValue([
-        makeStencil({
-          washes: [
-            makeWash('wash_1', '2026-05-10T15:30:00.000Z'),
-            makeWash('wash_2', '2026-05-10T20:30:00.000Z'),
-          ],
-        }),
+  it('filters and paginates recent washes in the database query', async () => {
+    const queryBuilder = {
+      innerJoin: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      clone: jest.fn().mockReturnThis(),
+      getCount: jest.fn().mockResolvedValue(12),
+      select: jest.fn().mockReturnThis(),
+      addSelect: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      offset: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      getRawMany: jest.fn().mockResolvedValue([
+        {
+          id: 'wash_1',
+          stencil_id: 'stencil_1',
+          created_at: new Date('2026-05-10T20:30:00.000Z'),
+          stencil_code: 'A-019',
+          addressing: '19',
+          manufacture_id: 'MNF-001',
+          country: 'Brasil',
+          status: 'active',
+          line_name: 'Line 1',
+          operator: 'Carlos Souza',
+          previous_wash_interval: 300,
+          occurrence: 'multiple',
+        },
       ]),
+    };
+    const washRepository = makeWashRepository({
+      createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
     });
 
-    await expect(
-      makeService(repository).findRecentWashes({
-        page: 1,
-        limit: 10,
-        attentionOnly: true,
-      }),
-    ).resolves.toMatchObject({
+    const result = await makeService(
+      makeRepository(),
+      washRepository,
+    ).findRecentWashes({
+      page: 2,
+      limit: 5,
+      attentionOnly: true,
+      stencilCode: 'A-019',
+      operator: 'Carlos',
+    });
+
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+      'stencil.stencilCode LIKE :stencilCode',
+      { stencilCode: '%A-019%' },
+    );
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+      'wash.operator LIKE :operator',
+      { operator: '%Carlos%' },
+    );
+    expect(queryBuilder.offset).toHaveBeenCalledWith(5);
+    expect(queryBuilder.limit).toHaveBeenCalledWith(5);
+    expect(result).toMatchObject({
       items: [
         expect.objectContaining({
-          id: 'wash_2',
-          stencil_id: 'stencil_1',
-          stencil_code: 'A-019',
-          non_standard: true,
-        }),
-        expect.objectContaining({
           id: 'wash_1',
+          addressing: '019',
+          occurrence: 'multiple',
           non_standard: true,
         }),
       ],
-      page: 1,
-      limit: 10,
-      total: 2,
-      total_pages: 1,
+      page: 2,
+      limit: 5,
+      total: 12,
+      total_pages: 3,
     });
   });
 
