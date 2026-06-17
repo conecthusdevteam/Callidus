@@ -22,33 +22,48 @@ export function CardCautelaSolicitante({
   return (
     <div
       onClick={onClick}
-      className={`rounded-lg p-5 cursor-pointer transition-all hover:shadow-md mb-3 ${borderClass}`}
+      className={`rounded-lg p-5 cursor-pointer transition-all hover:shadow-md mb-3 w-full max-w-[440px] mx-auto ${borderClass}`}
     >
-      <div className="flex items-start justify-between gap-3 mb-2">
+      {isNaoLida && (
+        <div className="w-full text-center text-[13px] font-bold text-[#404040] bg-[#FCE96A] rounded-md py-1 mb-2">
+          Novo
+        </div>
+      )}
+      <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <AvatarStatus status={status} />
-
           <div>
-            <p className="text-[18px] font-bold leading-tight text-[#404040] break-words">
+            <p className="text-[14px] font-bold leading-tight text-[#404040] break-words text-left">
               {cautela.visitante || "Nome do proprietário"}
-            </p>
-
-            <p className="text-[15px] text-[#404040] mt-1">
-              Data: {cautela.data || "00/00/0000"}
-            </p>
-
-            <p className="text-[15px] text-[#404040] mt-0.5">
-              Ciente:{" "}
-              <span className="font-bold">
-                {(cautela.gestor || "").toUpperCase()}
-              </span>
             </p>
           </div>
         </div>
-
         <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-1">
           <BadgeStatus status={status} etapaFluxo={cautela.etapaFluxo} />
+          {cautela.tipoPermissao &&
+            (status === "Aprovado" || status === "Saída Autorizada") && (
+              <p className="inline-flex items-center rounded-lg px-2 py-0.5 text-[11px] font-bold bg-[#FCE96A] text-black">
+                {cautela.tipoPermissao === "LIVRE_TRANSITO"
+                  ? "Livre acesso"
+                  : "Entrada única"}
+              </p>
+            )}
+        </div>
+      </div>
 
+      <div className="flex items-start justify-between gap-3 mt-1">
+        <div>
+          <p className="text-[14px] text-[#404040]">
+            Data: {cautela.data || "00/00/0000"}
+          </p>
+          <p className="text-[14px] text-[#404040] mt-0.5">
+            Ciente:{" "}
+            <span className="font-bold text-[14px]">
+              {(cautela.gestor || "").toUpperCase()}
+            </span>
+          </p>
+        </div>
+        <div className="flex flex-col items-end flex-shrink-0">
           {isNaoLida && (
             <span className="inline-flex items-center rounded-lg px-2 py-0.5 text-[12px] font-semibold bg-[#FCE96A] text-black mt-0.5">
               Nova

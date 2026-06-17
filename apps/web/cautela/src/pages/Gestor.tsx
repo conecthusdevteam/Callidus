@@ -543,7 +543,9 @@ export default function Gestor() {
                     variant="historico"
                     ocultarBanner
                     acoes={
-                      cautelaSelecionada.status === "Aprovado" ? (
+                      cautelaSelecionada.status === "Aprovado" &&
+                      cautelaSelecionada.etapaFluxo !==
+                        "APROVADA_PELO_GESTOR" ? (
                         <button
                           onClick={() =>
                             void handleAutorizarSaida(cautelaSelecionada.id)

@@ -35,6 +35,35 @@ export default function DetalhesCautela({
         ? "bg-amber-100 border border-amber-400 text-amber-800"
         : "bg-[#D1FAE5] border border-[#34D399] text-[#065F46]";
 
+  const isEmValidacao =
+    cautela.status === "Em validação" ||
+    (cautela.status === "Aprovado" &&
+      cautela.etapaFluxo === "APROVADA_PELO_GESTOR");
+
+  const getCautelaBg = () => {
+    if (isEmValidacao) return "bg-[#FCE96A4D]";
+
+    switch (cautela.status) {
+      case "Aprovado":
+        return "bg-[#BCF0DA4D]";
+
+      case "Reprovado":
+        return "bg-[#FBD5D54D]";
+
+      case "Saída Autorizada":
+        return "bg-amber-100";
+
+      case "Encerrada":
+        return "bg-[#E5E7EB]";
+
+      case "Em análise":
+        return "bg-[#FCE96A4D]";
+
+      default:
+        return "bg-[#F9FAFB]";
+    }
+  };
+
   const badgeLabel = () => {
     if (cautela.status === "Encerrada")
       return `Encerrada ${cautela.encerradaEm ? `em ${cautela.encerradaEm}` : ""}`;
@@ -194,8 +223,18 @@ export default function DetalhesCautela({
 
       <div className="px-5 pb-4">
         {/* Id */}
-        <p className="text-[12px] text-[#6B7280] mb-0.5 pt-2">Id da Cautela:</p>
-        <p className="text-[14px] font-bold text-black mb-3">{cautela.customId}</p>
+        <div className={`mb-3 rounded-lg px-4 py-3 ${getCautelaBg()}`}>
+          <p className="text-[12px] text-[#737373]">Id da Cautela:</p>
+          <p className="text-[14px] font-bold text-black">{cautela.customId}</p>
+
+          {cautela.tipoPermissao && (
+            <p className="text-[14px] font-bold text-black mt-1">
+              {cautela.tipoPermissao === "LIVRE_TRANSITO"
+                ? "Livre acesso"
+                : "Entrada única"}
+            </p>
+          )}
+        </div>
 
         {/* Data e Hora */}
         <div className="flex gap-8 mb-3">
@@ -224,7 +263,7 @@ export default function DetalhesCautela({
         </p>
 
         {mostrarAcompanhamento && (
-          <div className="float-right ml-5 mb-5 mt-[-155px] w-[160px]">
+          <div className="float-right ml-5 mb-5 mt-[-105px] w-[160px]">
             <p className="text-[12px] text-center font-bold text-[#404040] mb-4">
               Acompanhe o pedido de cautela
             </p>
