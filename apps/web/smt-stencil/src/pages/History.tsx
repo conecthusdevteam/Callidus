@@ -156,6 +156,66 @@ function getStencilWashCategory(
   return "anomalous";
 }
 
+type MultipleWashReference = {
+  previous?: ApiStencil;
+  latest?: ApiStencil;
+  isLatest: boolean;
+};
+
+function getMultipleWashReferences(rows: ApiStencil[]) {
+  const rowsByStencil = new Map<string, ApiStencil[]>();
+
+  rows.forEach((row) => {
+    rowsByStencil.set(row.stencil_id, [
+      ...(rowsByStencil.get(row.stencil_id) ?? []),
+      row,
+    ]);
+  });
+
+  const references = new Map<string, MultipleWashReference>();
+
+  rowsByStencil.forEach((stencilRows) => {
+    const ordered = [...stencilRows].sort(
+      (a, b) =>
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+    );
+    const latest = ordered[ordered.length - 1];
+
+    ordered.forEach((row, index) => {
+      references.set(row.id, {
+        previous: ordered[index - 1],
+        latest: latest?.id === row.id ? undefined : latest,
+        isLatest: latest?.id === row.id,
+      });
+    });
+  });
+
+  return references;
+}
+
+function formatShortDate(iso?: string | null) {
+  if (!iso) return "-";
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+  }).format(new Date(iso));
+}
+
+function getMultipleWashMessage(
+  row: ApiStencil,
+  reference?: MultipleWashReference,
+) {
+  if (reference?.isLatest && reference.previous) {
+    return `A lavagem anterior aconteceu no dia ${formatShortDate(reference.previous.created_at)} às ${formatTime(reference.previous.created_at)}.`;
+  }
+
+  if (reference?.latest) {
+    return `Nova lavagem registrada no dia ${formatShortDate(reference.latest.created_at)} às ${formatTime(reference.latest.created_at)}.`;
+  }
+
+  return `Nova lavagem registrada no dia ${formatShortDate(row.created_at)} às ${formatTime(row.created_at)}.`;
+}
+
 function DetailMetric({
   label,
   value,
@@ -1497,10 +1557,14 @@ function StencilTable({
     });
     return counts;
   }, [allRows]);
+  const multipleWashReferences = useMemo(
+    () => getMultipleWashReferences(allRows),
+    [allRows],
+  );
 
   return (
     <div className="min-h-0 overflow-auto rounded-t-md">
-      <table className="w-full min-w-[600px] border-collapse text-[13px]">
+      <table className="w-full min-w-[900px] border-collapse text-[13px]">
         <thead className="sticky top-0 z-10">
           <tr className="bg-[#1d55d8] text-left text-white">
             <th className="w-[160px] px-2 py-1.5 font-bold">
@@ -1521,9 +1585,12 @@ function StencilTable({
             </th>
             <th className="table-head-cell px-4 text-left">Hora</th>
             <th className="table-head-cell px-4 text-left">Código</th>
-            <th className="table-head-cell px-4 text-left">Endereç.</th>
+            <th className="table-head-cell px-4 text-left">Endereçamento</th>
+            <th className="table-head-cell px-4 text-left">ID Fabricante</th>
+            <th className="table-head-cell px-4 text-left">
+              Operador de Lavagem
+            </th>
             <th className="table-head-cell px-4 text-left">Status</th>
-            <th className="table-head-cell px-4 text-left">Linha</th>
             <th className="table-head-cell px-4 text-left" />
           </tr>
         </thead>
@@ -1572,12 +1639,15 @@ function StencilTable({
                   {String(row.addressing ?? "").padStart(3, "0")}
                 </td>
                 <td className="px-4 py-4 text-[16px] tabular text-foreground">
+                  {row.asset?.manufacture_id || row.manufacture_id || "-"}
+                </td>
+                <td className="px-4 py-4 text-[16px] tabular text-foreground">
+                  {row.operator || "-"}
+                </td>
+                <td className="px-4 py-4 text-[16px] tabular text-foreground">
                   <StatusPill
                     status={row.status === "active" ? "Ativo" : "Inativo"}
                   />
-                </td>
-                <td className="px-4 py-4 text-[16px] tabular text-foreground">
-                  {row.line_name}
                 </td>
                 <td className="px-3 py-2 text-center">
                   {category !== "planned" && (
@@ -1595,19 +1665,27 @@ function StencilTable({
                             />
                           </span>
                         </TooltipTrigger>
-                        <TooltipContent className="text-left text-[#FFFFFF] text-[14px] bg-[#393939]">
+                        <TooltipContent
+                          side="left"
+                          align="center"
+                          className="max-w-[246px] rounded-sm border border-[#393939] bg-[#393939] py-2 px-4 text-white shadow-xl text-justify"
+                        >
                           {category === "multiple" ? (
                             <>
                               <b>Lavagem múltipla</b>
-                              <p>Ocorreram mais de uma lavagem neste dia</p>
+                              <p>
+                                {getMultipleWashMessage(
+                                  row,
+                                  multipleWashReferences.get(row.id),
+                                )}
+                              </p>
                             </>
                           ) : (
                             <>
-                              <b>Intervalo anormal</b>
+                              <b>Lavagem anormal</b>
                               <p>
-                                {row.previous_wash_interval == null
-                                  ? "Não há lavagem anterior registrada"
-                                  : `A lavagem anterior aconteceu há ${formatInterval(row.previous_wash_interval)}`}
+                                Lavagem registrada fora dos intervalos padrões
+                                (11h-12h e 16h-17h)
                               </p>
                             </>
                           )}
@@ -1622,7 +1700,7 @@ function StencilTable({
           {rows.length === 0 && (
             <tr>
               <td
-                colSpan={7}
+                colSpan={8}
                 className="bg-white px-3 py-10 text-center text-muted-foreground"
               >
                 Nenhum stencil encontrado.

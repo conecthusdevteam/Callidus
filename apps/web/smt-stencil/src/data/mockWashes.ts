@@ -26,6 +26,11 @@ export interface StencilWash {
   idLavagem?: string;
   ultimaLavagemData?: string;
   ultimaLavagemHora?: string;
+  previousWashInterval?: number | null;
+  previousWashData?: string;
+  previousWashHora?: string;
+  latestWashData?: string;
+  latestWashHora?: string;
   operador?: string;
   obs?: string;
 }

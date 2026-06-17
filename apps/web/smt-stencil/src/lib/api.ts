@@ -242,6 +242,10 @@ interface ApiTodayStencilWash {
   stencilId: string;
   operator: string;
   createdAt: string;
+  previousWashInterval?: number | null;
+  previous_wash_interval?: number | null;
+  nonStandard?: boolean;
+  non_standard?: boolean;
   stencil: {
     id: string;
     stencilCode: string;
@@ -290,8 +294,9 @@ function normalizeTodayStencilWash(wash: ApiTodayStencilWash): ApiStencil {
     status: stencil.status,
     line_name: stencil.lineName,
     operator: wash.operator,
-    previous_wash_interval: null,
-    non_standard: false,
+    previous_wash_interval:
+      wash.previousWashInterval ?? wash.previous_wash_interval ?? null,
+    non_standard: wash.nonStandard ?? wash.non_standard ?? false,
     asset: {
       id: stencil.id,
       stencilCode: stencil.stencilCode,
@@ -309,8 +314,9 @@ function normalizeTodayStencilWash(wash: ApiTodayStencilWash): ApiStencil {
         id: wash.id,
         operator: wash.operator,
         created_at: wash.createdAt,
-        previous_wash_interval: null,
-        non_standard: false,
+        previous_wash_interval:
+          wash.previousWashInterval ?? wash.previous_wash_interval ?? null,
+        non_standard: wash.nonStandard ?? wash.non_standard ?? false,
       },
       mid_range: null,
       anomaly: false,
@@ -372,7 +378,9 @@ function withTodayStencilCountsAndAnomalies(
   return washes.map((wash) => {
     const count = countByStencilId.get(wash.stencil_id) ?? 0;
     const nonStandard =
-      count > 1 || isOutsideStencilReservedHours(wash.created_at);
+      wash.non_standard ||
+      count > 1 ||
+      isOutsideStencilReservedHours(wash.created_at);
 
     return {
       ...wash,

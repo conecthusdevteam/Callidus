@@ -1,5 +1,5 @@
-@baseUrl=http://localhost:3000
-@stencilId=st_gc2KQiSWYLOGjrZBxmgGl
+@baseUrl=http://10.255.255.170:5001
+@stencilId=st_atNNBE99H7aiVLlkZGRoC
 @missingStencilId=stencil_missing
 @seedStencilCode=REST-STENCIL-1778695640
 @missingStencilCode=QR-INEXISTENTE
@@ -10,6 +10,16 @@ GET {{baseUrl}}/
 
 ### List stencils - success
 GET {{baseUrl}}/stencils
+
+### Create stencil wash by stencil id - success
+# Depois rode "Get stencil by id" para ver historico_lavagens atualizado.
+POST {{baseUrl}}/stencils/{{stencilId}}/washes
+Content-Type: application/json
+
+{
+  "operator": "Lucas Araujo",
+  "createdAt": "2026-06-11T15:33:59.280Z"
+}
 
 ### Daily wash summary - success
 GET {{baseUrl}}/washes/daily-summary

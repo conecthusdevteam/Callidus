@@ -53,6 +53,7 @@ export function mapStencilApiToWash(s: ApiStencil): StencilWash {
     idLavagem: s.id,
     ultimaLavagemData: data,
     ultimaLavagemHora: hora,
+    previousWashInterval: s.previous_wash_interval,
     obs: "",
   };
 }

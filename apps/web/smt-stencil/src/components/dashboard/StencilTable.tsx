@@ -1,16 +1,17 @@
-import { cn } from "@/lib/utils";
-import { StatusPill } from "./StatusPill";
-import {
-  isWashOutsideStandardSchedule,
-  type StencilAttentionType,
-} from "@/data/mockWashes";
-import type { StencilWash } from "@/data/mockWashes";
-import { AlertTriangle, ArrowUpDown } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import type { StencilWash } from "@/data/mockWashes";
+import {
+  isWashOutsideStandardSchedule,
+  type StencilAttentionType,
+} from "@/data/mockWashes";
+import { cn } from "@/lib/utils";
+import { AlertTriangle, ArrowUpDown } from "lucide-react";
+import { useMemo } from "react";
+import { StatusPill } from "./StatusPill";
 
 interface Props {
   rows: StencilWash[];
@@ -33,17 +34,92 @@ const ATTENTION_STYLE: Record<
     row: "border-y border-[#9061F9] bg-[#EDEBFE]",
     icon: "text-[#9061F9]",
     title: "Lavagem múltipla",
-    message: (row) =>
-      `Nova lavagem registrada no dia ${row.data} às ${row.hora}.`,
+    message: (row) => {
+      if (row.latestWashData && row.latestWashHora) {
+        return `Nova lavagem registrada no dia ${formatShortDate(row.latestWashData)} às ${row.latestWashHora}.`;
+      }
+
+      if (row.previousWashData && row.previousWashHora) {
+        return `A lavagem anterior aconteceu no dia ${formatShortDate(row.previousWashData)} às ${row.previousWashHora}.`;
+      }
+
+      return "Não há outra lavagem registrada para este stencil.";
+    },
   },
   anomalous: {
     row: "border-y border-[#DB0101] bg-[#FBD5D5]",
     icon: "text-[#DB0101]",
-    title: "Intervalo anormal",
-    message: (row) =>
-      `A última lavagem aconteceu no dia ${row.data} às ${row.hora}.`,
+    title: "Lavagem anormal",
+    message: () =>
+      "Lavagem registrada fora dos intervalos padrões (11h-12h e 16h-17h)",
   },
 };
+
+function parseWashTimestamp(row: Pick<StencilWash, "data" | "hora">) {
+  const [day, month, year] = row.data.split("/").map(Number);
+  const [hours, minutes] = row.hora.split(":").map(Number);
+  return new Date(year, month - 1, day, hours, minutes).getTime();
+}
+
+function formatShortDate(date: string) {
+  const [day, month] = date.split("/");
+  return `${day}/${month}`;
+}
+
+function withMultipleWashReferences(rows: StencilWash[]) {
+  const rowsByStencil = new Map<string, StencilWash[]>();
+
+  rows.forEach((row) => {
+    rowsByStencil.set(row.codigo, [
+      ...(rowsByStencil.get(row.codigo) ?? []),
+      row,
+    ]);
+  });
+
+  const referencesById = new Map<
+    string,
+    Pick<
+      StencilWash,
+      | "previousWashData"
+      | "previousWashHora"
+      | "previousWashInterval"
+      | "latestWashData"
+      | "latestWashHora"
+    >
+  >();
+
+  rowsByStencil.forEach((stencilRows) => {
+    const ordered = [...stencilRows].sort(
+      (a, b) => parseWashTimestamp(a) - parseWashTimestamp(b),
+    );
+    const latest = ordered.at(-1);
+
+    ordered.forEach((row, index) => {
+      const previous = ordered[index - 1];
+      const isLatest = latest?.id === row.id;
+      const previousInterval =
+        row.previousWashInterval ??
+        (previous
+          ? Math.round(
+              (parseWashTimestamp(row) - parseWashTimestamp(previous)) / 60_000,
+            )
+          : null);
+
+      referencesById.set(row.id, {
+        previousWashData: previous?.data,
+        previousWashHora: previous?.hora,
+        previousWashInterval: previousInterval,
+        latestWashData: !isLatest ? latest?.data : undefined,
+        latestWashHora: !isLatest ? latest?.hora : undefined,
+      });
+    });
+  });
+
+  return rows.map((row) => ({
+    ...row,
+    ...referencesById.get(row.id),
+  }));
+}
 
 export function StencilTable({
   rows,
@@ -52,6 +128,11 @@ export function StencilTable({
   sort,
   onToggleSort,
 }: Props) {
+  const rowsWithReferences = useMemo(
+    () => withMultipleWashReferences(rows),
+    [rows],
+  );
+
   return (
     <div className="h-full flex flex-col">
       <table className="w-full text-lg font-normal">
@@ -80,7 +161,7 @@ export function StencilTable({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => {
+          {rowsWithReferences.map((row) => {
             const selected = row.id === selectedId;
             const attention =
               row.attention ?? isWashOutsideStandardSchedule(row.hora);
@@ -131,7 +212,7 @@ export function StencilTable({
                         <TooltipContent
                           side="right"
                           align="center"
-                          className="max-w-xs rounded-2xl border border-slate-700 bg-slate-950/95 p-4 text-white shadow-xl"
+                          className="max-w-[246px] rounded-sm border border-[#393939] bg-[#393939] py-2 px-4 text-white shadow-xl text-justify"
                         >
                           <p className="text-sm font-semibold">
                             {attentionStyle?.title}
