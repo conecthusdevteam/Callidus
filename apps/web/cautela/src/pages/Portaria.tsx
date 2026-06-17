@@ -308,9 +308,9 @@ export default function Portaria() {
                 onClick={() => setCautelaSelecionada(null)}
               />
               <div
-                className="fixed top-21 w-[540px] z-20 overflow-y-auto"
+                className="fixed top-28 w-[540px] z-20 overflow-y-auto"
                 style={{
-                  left: origemDetalhe === "ativas" ? "500px" : "50%",
+                  left: origemDetalhe === "ativas" ? "550px" : "50%",
                   transform:
                     origemDetalhe === "historico"
                       ? "translateX(-50%)"

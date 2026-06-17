@@ -39,7 +39,7 @@ export function CardCautelaPortaria({
     >
       <BannerCard status={status} />
 
-      <div className="flex items-start justify-between gap-3 mb-2">
+      <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <AvatarStatus status={status} />
           <div>
@@ -50,6 +50,29 @@ export function CardCautelaPortaria({
         </div>
         <div className="flex flex-col items-end gap-1 flex-shrink-0 mt-1">
           <BadgeStatus status={status} etapaFluxo={cautela.etapaFluxo} />
+          {cautela.tipoPermissao && (
+            <p className="inline-flex items-center rounded-lg px-2 py-0.5 text-[11px] font-bold bg-[#FCE96A] text-black">
+              {cautela.tipoPermissao === "LIVRE_TRANSITO"
+                ? "Livre acesso"
+                : "Entrada única"}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="flex items-start justify-between gap-3 mt-1">
+        <div>
+          <p className="text-[14px] text-[#404040]">
+            Data: {cautela.data || "00/00/0000"}
+          </p>
+          <p className="text-[14px] text-[#404040] mt-0.5">
+            Ciente:{" "}
+            <span className="font-bold text-[14px]">
+              {(cautela.gestor || "").toUpperCase()}
+            </span>
+          </p>
+        </div>
+        <div className="flex flex-col items-end flex-shrink-0">
           {isNaoLida && (
             <span className="inline-flex items-center rounded-lg px-2 py-0.5 text-[12px] font-semibold bg-[#FCE96A] text-black mt-0.5">
               Nova
@@ -57,16 +80,6 @@ export function CardCautelaPortaria({
           )}
         </div>
       </div>
-
-      <p className="text-[14px] text-[#404040] mt-1">
-        Data: {cautela.data || "00/00/0000"}
-      </p>
-      <p className="text-[14px] text-[#404040] mt-0.5">
-        Ciente:{" "}
-        <span className="font-bold text-[14px]">
-          {(cautela.gestor || "").toUpperCase()}
-        </span>
-      </p>
 
       <div className="border-t border-black my-3" />
 

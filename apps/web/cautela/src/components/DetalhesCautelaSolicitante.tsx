@@ -9,6 +9,34 @@ export function DetalhesCautelaSolicitante({
   cautela: Cautela;
   onFechar: () => void;
 }) {
+  const isEmValidacao =
+    cautela.status === "Em validação" ||
+    (cautela.status === "Aprovado" &&
+      cautela.etapaFluxo === "APROVADA_PELO_GESTOR");
+
+  const getCautelaBg = () => {
+    if (isEmValidacao) return "bg-[#FCE96A4D]";
+
+    switch (cautela.status) {
+      case "Aprovado":
+        return "bg-[#BCF0DA4D]";
+
+      case "Reprovado":
+        return "bg-[#FBD5D54D]";
+
+      case "Saída Autorizada":
+        return "bg-amber-100";
+
+      case "Encerrada":
+        return "bg-[#E5E7EB]";
+
+      case "Em análise":
+        return "bg-[#FCE96A4D]";
+
+      default:
+        return "bg-[#F9FAFB]";
+    }
+  };
   const permissaoEditadaLabel =
     cautela.tipoPermissao === "LIVRE_TRANSITO"
       ? "LIVRE TRÂNSITO"
@@ -87,7 +115,7 @@ export function DetalhesCautelaSolicitante({
             </p>
           </div>
         )}
-        <div className="float-right ml-5 mb-5 w-[160px]">
+        <div className="float-right ml-5 mb-5 w-[160px] mt-[100px]">
           <p className="text-[12px] text-center font-bold text-[#404040] mb-4">
             Acompanhe seu pedido de cautela
           </p>
@@ -120,9 +148,19 @@ export function DetalhesCautelaSolicitante({
             ))}
           </div>
         </div>
-        <div className="mb-3">
-          <p className="text-sm font-bold text-black">Id da cautela</p>
-          <p className="text-sm text-gray-700 break-all">{cautela.customId}</p>
+        <div className={`mb-3 rounded-lg px-4 py-3 ${getCautelaBg()}`}>
+          <p className="text-[12px] text-[#737373]">Id da Cautela:</p>
+          <p className="text-[14px] font-bold text-black">{cautela.customId}</p>
+
+          {cautela.tipoPermissao &&
+            (cautela.status === "Aprovado" ||
+              cautela.status === "Saída Autorizada") && (
+              <p className="text-[14px] font-bold text-black mt-1">
+                {cautela.tipoPermissao === "LIVRE_TRANSITO"
+                  ? "Livre acesso"
+                  : "Entrada única"}
+              </p>
+            )}
         </div>
         <div className="mb-3">
           <p className="text-sm font-bold text-black">Setor</p>
