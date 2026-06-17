@@ -93,6 +93,7 @@ export default function Gestor() {
   const abaAtivaMobile =
     abaAtivaMobileManual ??
     (!temSolicitadas && temEmSaida ? "emSaida" : "solicitadas");
+
   const [menuAtivo, setMenuAtivo] = useState<
     "home" | "historico" | "configuracoes"
   >("home");
@@ -111,6 +112,11 @@ export default function Gestor() {
       setCautelas([]);
     }
   }, []);
+
+  const livreAcessoAtual =
+    cautelaSelecionada?.tipoPermissao === "LIVRE_TRANSITO"
+      ? "livre"
+      : livreAcesso;
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -228,7 +234,7 @@ export default function Gestor() {
       setActionError("");
       const atualizada = await approveCautela(
         id,
-        livreAcesso === "livre" ? "LIVRE_TRANSITO" : "ENTRADA_UNICA",
+        livreAcessoAtual === "livre" ? "LIVRE_TRANSITO" : "ENTRADA_UNICA", // ← corrigido
       );
       setCautelas((prev) => prev.map((c) => (c.id === id ? atualizada : c)));
     } catch (error) {
@@ -377,7 +383,7 @@ export default function Gestor() {
                 onAutorizarSaida={() =>
                   handleAutorizarSaida(cautelaSelecionada.id)
                 }
-                livreAcesso={livreAcesso}
+                livreAcesso={livreAcessoAtual} // ← corrigido
                 onLivreAcessoChange={setLivreAcesso}
                 onAprovar={() => aprovar(cautelaSelecionada.id)}
                 onDescartar={() => abrirDescartar(cautelaSelecionada.id)}
@@ -585,7 +591,7 @@ export default function Gestor() {
                         <label className="flex items-center gap-6 text-[15px] text-black cursor-pointer">
                           <input
                             type="checkbox"
-                            checked={livreAcesso === "livre"}
+                            checked={livreAcessoAtual === "livre"}
                             onChange={() => setLivreAcesso("livre")}
                             className="w-4 h-4 accent-black"
                           />
@@ -595,7 +601,7 @@ export default function Gestor() {
                         <label className="flex items-center gap-6 text-[15px] text-black cursor-pointer">
                           <input
                             type="checkbox"
-                            checked={livreAcesso === "entrada"}
+                            checked={livreAcessoAtual === "entrada"}
                             onChange={() => setLivreAcesso("entrada")}
                             className="w-4 h-4 accent-black"
                           />
