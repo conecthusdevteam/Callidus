@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { type StatusCautela } from "../data/cautelaTypes";
 import { BadgeHistorico } from "./BadgeHistorico";
 import { type CautelaComDecisao } from "./Tabela";
@@ -17,6 +18,13 @@ export function MenuHistorico({
   onClickLinha: (c: CautelaComDecisao) => void;
   statusHistorico: (c: CautelaComDecisao) => StatusCautela;
 }) {
+  const [termoBusca, setTermoBusca] = useState(searchTerm);
+
+  function handleChange(v: string) {
+    setTermoBusca(v);
+    onSearchTermChange(v);
+  }
+
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
       {/* Header breadcrumb */}
@@ -43,13 +51,16 @@ export function MenuHistorico({
           <div className="flex-1">
             <input
               type="text"
-              value={searchTerm}
-              onChange={(e) => onSearchTermChange(e.target.value)}
-              placeholder="Pesquise"
+              value={termoBusca}
+              onChange={(e) => handleChange(e.target.value)}
+              placeholder="Pesquise por nome, do proprietário, Id de cautela ou status"
               className="w-full pl-4 pr-3 py-2.5 text-[14px] border border-[#D1D5DB] rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#2B8E37]"
             />
           </div>
-          <button className="px-3 py-2.5 rounded-lg bg-[#3BB14A] text-white">
+          <button
+            onClick={() => onSearchTermChange(termoBusca)}
+            className="px-3 py-2.5 rounded-lg bg-[#3BB14A] text-white"
+          >
             <svg
               className="w-5 h-5"
               fill="none"
