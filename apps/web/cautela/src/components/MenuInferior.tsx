@@ -58,8 +58,7 @@ export function MenuInferior({
       </button>
 
       {/* Configurações */}
-      <button
-        onClick={() => onChange("configuracoes")}
+      <div
         className={`flex items-center justify-center w-[64px] h-[56px] rounded-[16px] transition-all ${
           ativo === "configuracoes"
             ? "bg-[#22592A] scale-120"
@@ -84,7 +83,7 @@ export function MenuInferior({
             d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
           />
         </svg>
-      </button>
+      </div>
     </div>
   );
 }

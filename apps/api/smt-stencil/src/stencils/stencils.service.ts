@@ -1,6 +1,11 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, LessThan, Like, Repository } from 'typeorm';
+import {
+  Between,
+  LessThan,
+  Like,
+  Repository,
+} from 'typeorm';
 import { CreateStencilWashDto } from './dto/create-stencil-wash.dto';
 import { CreateStencilDto } from './dto/create-stencil.dto';
 import { UpdateStencilDto } from './dto/update-stencil.dto';
@@ -11,7 +16,7 @@ const MANAUS_TIME_ZONE = 'America/Manaus';
 const MANAUS_UTC_OFFSET_HOURS = 4;
 const RESERVED_WASH_HOURS = [11, 16];
 const DEFAULT_ANALYTICS_DAYS = 30;
-const ALLOWED_ANALYTICS_DAYS = [30] as const;
+const ALLOWED_ANALYTICS_DAYS = [7, 15, 30, 60, 90] as const;
 
 type WashCategory = 'planned' | 'anomalous' | 'multiple';
 
@@ -67,6 +72,17 @@ type RecentStencilWashFilters = {
   page?: number;
   limit?: number;
   attentionOnly?: boolean;
+  stencilCode?: string;
+  addressing?: string;
+  manufactureId?: string;
+  country?: string;
+  operator?: string;
+  occurrence?: WashCategory;
+  status?: string;
+  lineName?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  sort?: 'asc' | 'desc';
 };
 
 @Injectable()
@@ -190,20 +206,16 @@ export class StencilsService {
   }
 
   async findWashAnalytics(id: string, days = DEFAULT_ANALYTICS_DAYS) {
-    const stencil = await this.repository.findOne({
-      where: { id },
-      relations: {
-        washes: true,
-      },
-    });
-
-    if (!stencil) return null;
-
     const periodDays = this.normalizeAnalyticsDays(days);
     const { startUtc, endUtc } = this.getManausAnalyticsRange(
       new Date(),
       periodDays,
     );
+    const stencil = await this.repository.findOne({
+      where: { id },
+    });
+    if (!stencil) return null;
+
     const [periodWashes, previousWashes] = await Promise.all([
       this.washRepository.find({
         where: {
@@ -221,6 +233,7 @@ export class StencilsService {
         take: 1,
       }),
     ]);
+
     const previousWash = previousWashes[0] ?? null;
     const washesByDay = this.groupWashesByManausDay(periodWashes);
     const categoriesByWashId = this.getWashCategories(
@@ -243,7 +256,7 @@ export class StencilsService {
     );
 
     return {
-      stencil: this.toSummary(stencil),
+      stencil: this.toSummary({ ...stencil, washes: periodWashes } as Stencil),
       period: {
         days: periodDays,
         start: startUtc,
@@ -285,7 +298,9 @@ export class StencilsService {
     const stencil = await this.repository.findOneBy({ id });
     if (!stencil) return null;
     if (stencil.status === WashStatus.INACTIVE) {
-      throw new ConflictException('Inactive stencils cannot receive new washes');
+      throw new ConflictException(
+        'Inactive stencils cannot receive new washes',
+      );
     }
 
     const wash = this.washRepository.create({
@@ -308,33 +323,111 @@ export class StencilsService {
   }
 
   async findRecentWashes(filters?: RecentStencilWashFilters) {
-    const stencils = await this.repository.find({
-      relations: {
-        washes: true,
-      },
-    });
+    const page = Math.max(1, Number(filters?.page) || 1);
+    const limit = Math.max(1, Math.min(100, Number(filters?.limit) || 20));
+    const localWashDate = 'CAST(DATEADD(HOUR, -4, wash.createdAt) AS date)';
+    const sameDayWashCount = `(SELECT COUNT(1)
+      FROM stencil_washes dayWash
+      WHERE dayWash.stencilId = wash.stencilId
+        AND CAST(DATEADD(HOUR, -4, dayWash.createdAt) AS date) = ${localWashDate})`;
+    const occurrenceExpression = `CASE
+      WHEN ${sameDayWashCount} > 1 THEN 'multiple'
+      WHEN DATEPART(HOUR, DATEADD(HOUR, -4, wash.createdAt)) IN (11, 16) THEN 'planned'
+      ELSE 'anomalous'
+    END`;
+    const previousWashExpression = `(SELECT MAX(previousWash.createdAt)
+      FROM stencil_washes previousWash
+      WHERE previousWash.stencilId = wash.stencilId
+        AND previousWash.createdAt < wash.createdAt)`;
 
-    const items = stencils
-      .flatMap((stencil) => {
-        const metrics = this.calculateMetrics(stencil.washes ?? []);
+    const query = this.washRepository
+      .createQueryBuilder('wash')
+      .innerJoin('wash.stencil', 'stencil');
 
-        return metrics.washes_history.map((wash) => ({
-          id: wash.id,
-          stencil_id: stencil.id,
-          created_at: wash.created_at,
-          stencil_code: stencil.stencilCode,
-          addressing: String(stencil.addressing).padStart(3, '0'),
-          status: stencil.status,
-          line_name: stencil.lineName,
-          operator: wash.operator,
-          previous_wash_interval: wash.previous_wash_interval,
-          non_standard: wash.non_standard,
-        }));
-      })
-      .filter((wash) => !filters?.attentionOnly || wash.non_standard)
-      .sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
+    if (filters?.stencilCode) {
+      query.andWhere('stencil.stencilCode LIKE :stencilCode', {
+        stencilCode: `%${filters.stencilCode}%`,
+      });
+    }
+    if (filters?.addressing) {
+      query.andWhere('stencil.addressing LIKE :addressing', {
+        addressing: `%${filters.addressing}%`,
+      });
+    }
+    if (filters?.manufactureId) {
+      query.andWhere('stencil.manufactureId LIKE :manufactureId', {
+        manufactureId: `%${filters.manufactureId}%`,
+      });
+    }
+    if (filters?.country) {
+      query.andWhere('stencil.country LIKE :country', {
+        country: `%${filters.country}%`,
+      });
+    }
+    if (filters?.operator) {
+      query.andWhere('wash.operator LIKE :operator', {
+        operator: `%${filters.operator}%`,
+      });
+    }
+    if (filters?.status) {
+      query.andWhere('stencil.status = :status', { status: filters.status });
+    }
+    if (filters?.lineName) {
+      query.andWhere('stencil.lineName = :lineName', {
+        lineName: filters.lineName,
+      });
+    }
+    if (filters?.dateFrom) {
+      query.andWhere('wash.createdAt >= :dateFrom', {
+        dateFrom: new Date(this.getDateFilterBoundary(filters.dateFrom, false)),
+      });
+    }
+    if (filters?.dateTo) {
+      query.andWhere('wash.createdAt <= :dateTo', {
+        dateTo: new Date(this.getDateFilterBoundary(filters.dateTo, true)),
+      });
+    }
+    if (filters?.occurrence) {
+      query.andWhere(`${occurrenceExpression} = :occurrence`, {
+        occurrence: filters.occurrence,
+      });
+    } else if (filters?.attentionOnly) {
+      query.andWhere(`${occurrenceExpression} <> 'planned'`);
+    }
 
-    return this.paginate(items, filters?.page, filters?.limit);
+    const total = await query.clone().getCount();
+    const rows = await query
+      .select('wash.id', 'id')
+      .addSelect('wash.stencilId', 'stencil_id')
+      .addSelect('wash.createdAt', 'created_at')
+      .addSelect('wash.operator', 'operator')
+      .addSelect('stencil.stencilCode', 'stencil_code')
+      .addSelect('stencil.addressing', 'addressing')
+      .addSelect('stencil.manufactureId', 'manufacture_id')
+      .addSelect('stencil.country', 'country')
+      .addSelect('stencil.status', 'status')
+      .addSelect('stencil.lineName', 'line_name')
+      .addSelect(occurrenceExpression, 'occurrence')
+      .addSelect(
+        `DATEDIFF(MINUTE, ${previousWashExpression}, wash.createdAt)`,
+        'previous_wash_interval',
+      )
+      .orderBy('wash.createdAt', filters?.sort === 'asc' ? 'ASC' : 'DESC')
+      .offset((page - 1) * limit)
+      .limit(limit)
+      .getRawMany<Record<string, string | number | Date | null>>();
+
+    return {
+      items: rows.map((row) => ({
+        ...row,
+        addressing: String(row.addressing).padStart(3, '0'),
+        non_standard: row.occurrence !== 'planned',
+      })),
+      page,
+      limit,
+      total,
+      total_pages: Math.max(1, Math.ceil(total / limit)),
+    };
   }
 
   async findLines() {
@@ -489,10 +582,14 @@ export class StencilsService {
     washesByDay: Map<string, StencilWash[]>,
     categoriesByWashId: Map<string, WashCategory>,
   ): StencilWashIntervalBar[] {
+    const orderedPeriodWashes = [...periodWashes].sort(
+      (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
+    );
     const previousByWashId = new Map<string, StencilWash>();
 
-    periodWashes.forEach((wash, index) => {
-      const previous = index === 0 ? previousWash : periodWashes[index - 1];
+    orderedPeriodWashes.forEach((wash, index) => {
+      const previous =
+        index === 0 ? previousWash : orderedPeriodWashes[index - 1];
       if (previous) previousByWashId.set(wash.id, previous);
     });
 
@@ -564,6 +661,15 @@ export class StencilsService {
     );
 
     return {
+      average_interval_minutes:
+        barsWithInterval.length > 0
+          ? Math.round(
+              barsWithInterval.reduce(
+                (total, bar) => total + bar.interval_minutes,
+                0,
+              ) / barsWithInterval.length,
+            )
+          : null,
       shortest_interval_minutes: shortest?.interval_minutes ?? null,
       shortest_interval_date: shortest?.day_label ?? null,
       longest_interval_minutes: longest?.interval_minutes ?? null,
@@ -659,6 +765,12 @@ export class StencilsService {
     const endUtc = new Date(todayStartUtc.getTime() + 24 * 60 * 60 * 1000 - 1);
 
     return { startUtc, endUtc };
+  }
+
+  private getDateFilterBoundary(date: string, endOfDay: boolean) {
+    const reference = new Date(`${date}T12:00:00-04:00`);
+    const range = this.getManausDayRange(reference);
+    return (endOfDay ? range.endUtc : range.startUtc).getTime();
   }
 
   private paginateIfRequested<T>(items: T[], page?: number, limit?: number) {

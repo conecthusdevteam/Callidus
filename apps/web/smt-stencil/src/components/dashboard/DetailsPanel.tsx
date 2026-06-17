@@ -1,6 +1,6 @@
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import type { StencilWash, PlacaWash } from "@/data/mockWashes";
+import type { PlacaWash, StencilWash } from "@/data/mockWashes";
+import { cn } from "@/lib/utils";
 
 interface Props {
   item: StencilWash | PlacaWash | null;
@@ -41,7 +41,7 @@ export function DetailsPanel({ item, onClose }: Props) {
         <p className="text-xs text-muted-foreground uppercase tracking-wide">
           Total de Lavagens Registradas
         </p>
-        <p className="mt-1 text-lg font-bold tabular text-foreground">
+        <p className="mt-1 text-[24px] font-bold tabular text-foreground">
           {String(total).padStart(3, "0")} lavagens
         </p>
       </div>

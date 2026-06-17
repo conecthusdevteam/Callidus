@@ -55,6 +55,6 @@ export class Plate {
 
   @BeforeInsert()
   generateId() {
-    this.id = `p_${nanoid()}`;
+    this.id = `pt_${nanoid(8)}`;
   }
 }
