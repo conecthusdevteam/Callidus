@@ -1397,7 +1397,7 @@ function StencilFiltersForm({
           </SelectContent>
         </Select>
       </Field>
-      <Field label="Linha">
+      {/* <Field label="Linha">
         <Select
           value={filters.linha || "all"}
           onValueChange={(value) =>
@@ -1416,30 +1416,26 @@ function StencilFiltersForm({
             ))}
           </SelectContent>
         </Select>
-      </Field>
+      </Field> */}
       <DateFilterField
         label="De"
         value={filters.dataDe}
         onChange={(value) => onChange({ ...filters, dataDe: value })}
       />
-      <div className="flex min-w-0 items-end gap-2">
-        <div className="min-w-0 flex-1">
-          <DateFilterField
-            label="Até"
-            value={filters.dataAte}
-            onChange={(value) => onChange({ ...filters, dataAte: value })}
-          />
-        </div>
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={onClear}
-          className="h-10 shrink-0 justify-start gap-2 px-2 text-[13px]"
-        >
-          <X className="h-4 w-4" />
-          Limpar filtros
-        </Button>
-      </div>
+      <DateFilterField
+        label="Até"
+        value={filters.dataAte}
+        onChange={(value) => onChange({ ...filters, dataAte: value })}
+      />
+      <Button
+        type="button"
+        variant="ghost"
+        onClick={onClear}
+        className="h-10 shrink-0 justify-start gap-2 px-2 text-[13px]"
+      >
+        <X className="h-4 w-4" />
+        Limpar filtros
+      </Button>
     </div>
   );
 }
@@ -2715,7 +2711,7 @@ const History = () => {
             </div>
           )}
 
-          <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border bg-card shadow-sm">
+          <section className="flex min-h-0 min-w-0 w-[1760px] flex-1 flex-col overflow-hidden rounded-lg border bg-card shadow-sm">
             <div className="min-h-0 min-w-0 flex-1 overflow-auto">
               {loading ? (
                 <div className="grid h-full place-items-center text-sm text-muted-foreground">
