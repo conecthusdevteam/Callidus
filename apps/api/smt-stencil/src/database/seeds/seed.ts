@@ -75,12 +75,29 @@ const MULTIPLE_DAYS_PER_STENCIL = 2;
 const MIN_HOUR_UTC = 11;
 const MAX_HOUR_UTC = 21;
 
-const PLANNED_HOURS_UTC = [15, 20];
+const TODAY_MIN_WASHES = 25;
+const TODAY_MAX_WASHES = 40;
+const PLANNED_HOURS_UTC = [15, 16, 20]; 
 const ANOMALOUS_HOURS_UTC = [12, 13, 17, 18, 19];
 
 function isWeekday(date: Date): boolean {
   const day = date.getDay();
   return day !== 0;
+}
+
+// Função genérica de shuffle que funciona com qualquer tipo de array
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = random(0, i);
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+// A função shuffleDates agora usa a função genérica
+function shuffleDates(dates: Date[]): Date[] {
+  return shuffleArray(dates);
 }
 
 function getLastBusinessDays(days: number = ANALYTICS_SEED_DAYS): Date[] {
@@ -145,15 +162,6 @@ function randomCurrentDate(): Date {
   return result;
 }
 
-function shuffleDates(dates: Date[]): Date[] {
-  const shuffled = [...dates];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = random(0, i);
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
-}
-
 function createStencilWashDate(
   day: Date,
   type: 'planned' | 'anomalous',
@@ -164,7 +172,14 @@ function createStencilWashDate(
     type === 'planned' ? PLANNED_HOURS_UTC : ANOMALOUS_HOURS_UTC;
   const hour =
     preferredHour ?? availableHours[random(0, availableHours.length - 1)];
-  date.setUTCHours(hour, random(5, 55), random(0, 59), 0);
+  
+  // Para horários planejados, garantir que não ultrapasse 21:00
+  let maxMinute = 55;
+  if (type === 'planned' && hour === 20) {
+    maxMinute = 59; // 20:59 é aceitável
+  }
+  
+  date.setUTCHours(hour, random(5, maxMinute), random(0, 59), 0);
   return date;
 }
 
@@ -206,6 +221,143 @@ function generateStencilAnalyticsWashDates(index: number): Date[] {
   }
 
   return dates.sort((a, b) => a.getTime() - b.getTime());
+}
+
+// NOVA FUNÇÃO: Gera lavagens para o dia de hoje
+function generateTodayStencilWashes(activeStencils: Stencil[]): StencilWash[] {
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+
+  if (activeStencils.length === 0) return [];
+
+  const totalWashes = random(TODAY_MIN_WASHES, TODAY_MAX_WASHES);
+  const washResults: StencilWash[] = [];
+
+  // NOVA DISTRIBUIÇÃO: 90-95% planejadas, 5-10% anômalas, 0-2% múltiplas
+  const plannedPercentage = random(90, 95);
+  const anomalousPercentage = random(5, 10);
+  const multiplePercentage = Math.max(0, 100 - plannedPercentage - anomalousPercentage);
+
+  const plannedCount = Math.floor((totalWashes * plannedPercentage) / 100);
+  const anomalousCount = Math.floor((totalWashes * anomalousPercentage) / 100);
+  const multipleCount = Math.min(Math.floor((totalWashes * multiplePercentage) / 100), 2); // Máximo 2 lavagens múltiplas
+
+  // Seleciona stencils aleatórios para as lavagens (usando a função genérica)
+  const shuffledStencils = shuffleArray(activeStencils);
+  
+  let stencilIndex = 0;
+
+  // Função auxiliar para criar uma lavagem com horário entre 11h e horário atual
+  const createWash = (stencil: Stencil, hour: number, minute?: number): StencilWash | null => {
+    const now = new Date();
+    const currentHour = now.getUTCHours();
+    const currentMinute = now.getUTCMinutes();
+    
+    const washDate = new Date(today);
+    
+    // Define o minuto padrão
+    let finalMinute = minute ?? random(5, 55);
+    
+    // Verifica se o horário é válido (não pode ultrapassar o momento atual)
+    if (hour > currentHour || (hour === currentHour && finalMinute > currentMinute)) {
+      // Se o horário já passou, pula esta lavagem (retorna null)
+      return null;
+    }
+    
+    // Verifica se o horário é >= 11h
+    if (hour < 11) {
+      return null;
+    }
+    
+    // Para horário 20, garantir que não ultrapasse 20:59
+    if (hour === 20 && finalMinute > 59) {
+      finalMinute = 59;
+    }
+    
+    // Para horário 21, não permitir (já removemos da lista de planejados)
+    if (hour >= 21) {
+      return null;
+    }
+    
+    washDate.setUTCHours(hour, finalMinute, random(0, 59), 0);
+    
+    const wash = new StencilWash();
+    wash.stencilId = stencil.id;
+    wash.operator = OPERATORS[random(0, OPERATORS.length - 1)];
+    wash.createdAt = washDate;
+    return wash;
+  };
+
+  // 1. Lavagens Planejadas (15-16h ou 20h)
+  let plannedInserted = 0;
+  for (let i = 0; i < plannedCount * 2; i++) { // Tenta o dobro para garantir que teremos o suficiente
+    if (plannedInserted >= plannedCount) break;
+    
+    const stencil = shuffledStencils[stencilIndex % shuffledStencils.length];
+    const hour = random(0, 1) === 0 ? 
+      random(15, 16) : // 15-16h
+      20;  // 20h (apenas 20, não 21)
+    
+    const wash = createWash(stencil, hour);
+    if (wash) {
+      washResults.push(wash);
+      plannedInserted++;
+    }
+    stencilIndex++;
+  }
+
+  // 2. Lavagens Anômalas (fora dos horários planejados, mas >= 11h)
+  let anomalousInserted = 0;
+  for (let i = 0; i < anomalousCount * 2; i++) {
+    if (anomalousInserted >= anomalousCount) break;
+    
+    const stencil = shuffledStencils[stencilIndex % shuffledStencils.length];
+    // Filtra apenas horários >= 11h e que não sejam 20h (já considerado planejado)
+    const availableHours = ANOMALOUS_HOURS_UTC.filter(h => h >= 11 && h !== 20);
+    if (availableHours.length === 0) break;
+    
+    const hour = availableHours[random(0, availableHours.length - 1)];
+    const wash = createWash(stencil, hour);
+    if (wash) {
+      washResults.push(wash);
+      anomalousInserted++;
+    }
+    stencilIndex++;
+  }
+
+  // 3. Lavagens Múltiplas (apenas algumas, máximo 2)
+  let multipleInserted = 0;
+  for (let i = 0; i < multipleCount * 3; i++) {
+    if (multipleInserted >= multipleCount) break;
+    
+    const stencil = shuffledStencils[stencilIndex % shuffledStencils.length];
+    
+    // Primeira lavagem (entre 11h e 18h)
+    const firstHour = random(11, 18);
+    const firstWash = createWash(stencil, firstHour);
+    if (!firstWash) continue;
+    
+    // Segunda lavagem (mínimo 2h de diferença)
+    let secondHour;
+    let attempts = 0;
+    do {
+      secondHour = random(13, 19); // Máximo 19h para evitar 20h
+      attempts++;
+    } while ((Math.abs(secondHour - firstHour) < 2 || secondHour === 20) && attempts < 10);
+    
+    if (Math.abs(secondHour - firstHour) >= 2 && secondHour !== 20) {
+      const secondWash = createWash(stencil, secondHour);
+      if (secondWash) {
+        washResults.push(firstWash);
+        washResults.push(secondWash);
+        multipleInserted++;
+      }
+    }
+    
+    stencilIndex++;
+  }
+
+  return washResults;
 }
 
 function getLastWeekdays(days: number = 5): Date[] {
@@ -393,6 +545,7 @@ async function runSeed() {
     let activeStencilsInserted = 0;
     let inactiveStencilsInserted = 0;
     const createdStencils: Stencil[] = [];
+    const activeStencils: Stencil[] = [];
 
     for (let i = 1; i <= STENCIL_SEED_COUNT; i++) {
       const stencilData = generateStencilData(i);
@@ -404,9 +557,13 @@ async function runSeed() {
         const stencil = stencilRepo.create(stencilData);
         const savedStencil = await stencilRepo.save(stencil);
         createdStencils.push(savedStencil);
+        if (savedStencil.status === WashStatus.ACTIVE) {
+          activeStencilsInserted++;
+          activeStencils.push(savedStencil);
+        } else {
+          inactiveStencilsInserted++;
+        }
         stencilsInserted++;
-        if (savedStencil.status === WashStatus.ACTIVE) activeStencilsInserted++;
-        else inactiveStencilsInserted++;
       } else {
         stencilsSkipped++;
       }
@@ -459,6 +616,59 @@ async function runSeed() {
     console.log(
       `   📊 Profiles: ${anomalousProfileCount} with rare anomalies, ${multipleProfileCount} with one multiple-wash day`,
     );
+
+    // ============================================
+    // 1.2 WASHES FOR STENCILS TODAY (NOVO)
+    // ============================================
+    console.log(`\n🧼 Generating Today's Stencil Washes (${TODAY_MIN_WASHES}-${TODAY_MAX_WASHES} washes)...`);
+    console.log(`   📅 Date: ${new Date().toLocaleDateString()}`);
+    console.log(`   🕐 Range: 11:00 UTC until current time (${new Date().getUTCHours()}:${String(new Date().getUTCMinutes()).padStart(2, '0')} UTC)`);
+    console.log(`   📊 Distribution: 90-95% planned, 5-10% anomalous, 0-2% multiple`);
+    
+    if (activeStencils.length === 0) {
+      console.log('⚠️ No active stencils available for today\'s washes');
+    } else {
+      const todayWashes = generateTodayStencilWashes(activeStencils);
+      let todayWashesInserted = 0;
+      let plannedToday = 0;
+      let anomalousToday = 0;
+      let multipleToday = 0;
+
+      // Agrupa lavagens por stencil para identificar múltiplas
+      const washesByStencil = new Map<string, Date[]>();
+      for (const wash of todayWashes) {
+        if (!washesByStencil.has(wash.stencilId)) {
+          washesByStencil.set(wash.stencilId, []);
+        }
+        washesByStencil.get(wash.stencilId)!.push(wash.createdAt);
+      }
+
+      // Classifica as lavagens
+      for (const wash of todayWashes) {
+        const hour = wash.createdAt.getUTCHours();
+        const isPlanned = (hour >= 15 && hour <= 16) || hour === 20;
+        
+        // Verifica se é múltipla (mais de uma lavagem no mesmo dia para o mesmo stencil)
+        const stencilWashes = washesByStencil.get(wash.stencilId) || [];
+        const isMultiple = stencilWashes.length > 1;
+        
+        if (isMultiple) {
+          multipleToday++;
+        } else if (isPlanned) {
+          plannedToday++;
+        } else {
+          anomalousToday++;
+        }
+
+        await stencilWashRepo.save(wash);
+        todayWashesInserted++;
+      }
+
+      console.log(`   ✅ Today's Stencil Washes: ${todayWashesInserted} inserted`);
+      if (todayWashesInserted > 0) {
+        console.log(`   📊 Distribution: ${plannedToday} planned (${Math.round((plannedToday/todayWashesInserted)*100)}%), ${anomalousToday} anomalous (${Math.round((anomalousToday/todayWashesInserted)*100)}%), ${multipleToday} multiple (${Math.round((multipleToday/todayWashesInserted)*100)}%)`);
+      }
+    }
 
     // ============================================
     // 2. SEED DE PLATES (35 registers)
@@ -546,7 +756,8 @@ async function runSeed() {
 
     console.log('\n📊 SEED RESUME:');
     console.log(`   Stencils: ${stencilsInserted} inserted, ${stencilsSkipped} existing.`);
-    console.log(`   Stencil Washes: ${stencilWashesInserted} inserted.`);
+    console.log(`   Stencil Washes (90 days): ${stencilWashesInserted} inserted.`);
+    console.log(`   Stencil Washes (Today): ${activeStencils.length > 0 ? 'generated' : 'skipped (no active stencils)'}.`);
     console.log(`   Plates: ${platesInserted} inserted, ${platesSkipped} existing.`);
     console.log(`   Plate Washes: ${plateWashesInserted} inserted.`);
     console.log(`   Total new registers: ${stencilsInserted + platesInserted + stencilWashesInserted + plateWashesInserted}`);
@@ -556,6 +767,56 @@ async function runSeed() {
     console.log(`   Stencil Washes: ${totalStencilWashes}`);
     console.log(`   Plates: ${totalPlates}`);
     console.log(`   Plate Washes: ${totalPlateWashes}`);
+
+    // Verificar lavagens do dia de hoje
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+    
+    const todayWashesCount = await stencilWashRepo
+      .createQueryBuilder('wash')
+      .where('wash.createdAt >= :today AND wash.createdAt < :tomorrow', {
+        today: today,
+        tomorrow: tomorrow,
+      })
+      .getCount();
+
+    console.log(`\n📊 TODAY'S WASHES: ${todayWashesCount} stencil washes`);
+
+    if (todayWashesCount > 0) {
+      const todayWashes = await stencilWashRepo
+        .createQueryBuilder('wash')
+        .where('wash.createdAt >= :today AND wash.createdAt < :tomorrow', {
+          today: today,
+          tomorrow: tomorrow,
+        })
+        .leftJoinAndSelect('wash.stencil', 'stencil')
+        .orderBy('wash.createdAt', 'ASC')
+        .getMany();
+
+      console.log('\n🔍 Sample of today\'s washes:');
+      todayWashes.slice(0, 5).forEach((w) => {
+        const hour = w.createdAt.getUTCHours();
+        const isPlanned = (hour >= 15 && hour <= 16) || hour === 20;
+        console.log(
+          `   - ${w.stencil?.stencilCode || 'Unknown'} | ${w.createdAt.toLocaleString()} | ${isPlanned ? 'PLANNED' : 'ANOMALOUS'} | ${w.operator}`,
+        );
+      });
+      
+      if (todayWashes.length > 5) {
+        console.log(`   ... and ${todayWashes.length - 5} more washes`);
+      }
+
+      // Verificar se há lavagens após as 21:00
+      const after21 = todayWashes.filter(w => w.createdAt.getUTCHours() >= 21);
+      if (after21.length > 0) {
+        console.log(`\n⚠️ WARNING: ${after21.length} washes found after 21:00 UTC!`);
+        after21.forEach(w => {
+          console.log(`   - ${w.stencil?.stencilCode} at ${w.createdAt.toLocaleString()}`);
+        });
+      }
+    }
 
     if (stencilsInserted > 0) {
       const lastStencils = await stencilRepo.find({
