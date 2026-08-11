@@ -17,7 +17,7 @@ export function StatusPill({ status }: { status: StatusBadge }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-6 text-base font-normal",
+        "inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[18px] font-medium leading-none",
         styles[status],
       )}
     >

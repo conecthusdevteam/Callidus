@@ -30,9 +30,9 @@ export function KpiCard({
   return (
     <div
       className={cn(
-        "rounded-lg border-[0.5px] border-kpi-border border-l-4 w-[300px]",
+        "w-full rounded-lg border-[0.5px] border-kpi-border border-l-4",
         "flex flex-col justify-between",
-        "px-4 py-3 min-h-[130px]",
+        "min-h-[122px] px-4 py-5",
         bg,
         leftBorder,
         className,

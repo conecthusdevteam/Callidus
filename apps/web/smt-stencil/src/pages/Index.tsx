@@ -1,403 +1,159 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Header } from "@/components/dashboard/Header";
-import { PageTabs } from "@/components/dashboard/PageTabs";
-import { Sidebar } from "@/components/dashboard/Sidebar";
-import { KpiCard } from "@/components/dashboard/KpiCard";
-import { SupplyStatusKpi } from "@/components/dashboard/SupplyStatusKpi";
-import { StencilTable } from "@/components/dashboard/StencilTable";
-import { PlacaTable } from "@/components/dashboard/PlacaTable";
-import { DetailsPanel } from "@/components/dashboard/DetailsPanel";
-import { Pagination } from "@/components/dashboard/Pagination";
-import { WashNotification } from "@/components/dashboard/WashNotification";
-import { useDashboardData } from "@/hooks/useDashboardData";
-import { isWashOutsideStandardSchedule } from "@/data/mockWashes";
-import type { StencilWash, PlacaWash } from "@/data/mockWashes";
+import logoIsq from "@/assets/logo-isq.svg";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
-  FilterTrigger,
-  FilterPanel,
-  type StencilFilters,
-  type PlacaFilters,
-  emptyStencilFilters,
-  emptyPlacaFilters,
-} from "@/components/dashboard/FilterPopover";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useAuth } from "@/contexts/AuthContext";
+import type { UserArea } from "@/lib/authApi";
+import { FormEvent, useState } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
 
-const PAGE_SIZE = 9;
+const areaOptions: Array<{ value: UserArea; label: string }> = [
+  { value: "operacao", label: "Operação" },
+  { value: "engenharia", label: "Engenharia" },
+  { value: "qualidade", label: " Controle de Qualidade" },
+  { value: "admin", label: "Admin" },
+];
 
-function formatCronometro(lastUpdate: Date): string {
-  const diff = Math.max(
-    0,
-    Math.floor((Date.now() - lastUpdate.getTime()) / 1000),
-  );
-  const h = Math.floor(diff / 3600);
-  const m = Math.floor((diff % 3600) / 60);
-  const s = diff % 60;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-}
+export default function Index() {
+  const navigate = useNavigate();
+  const { user, loading, login } = useAuth();
+  const [area, setArea] = useState<UserArea>("operacao");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
-function toTimestamp(data: string, hora: string): number {
-  const [dia, mes, ano] = data.split("/").map(Number);
-  const [h, m] = hora.split(":").map(Number);
-  return new Date(ano, mes - 1, dia, h, m).getTime();
-}
+  if (!loading && user) return <Navigate to="/dashboard" replace />;
 
-function sortByDate<T extends { data: string; hora: string }>(
-  rows: T[],
-  direction: "asc" | "desc",
-): T[] {
-  return [...rows].sort((a, b) =>
-    direction === "asc"
-      ? toTimestamp(a.data, a.hora) - toTimestamp(b.data, b.hora)
-      : toTimestamp(b.data, b.hora) - toTimestamp(a.data, a.hora),
-  );
-}
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitting(true);
+    setError("");
 
-const Index = () => {
-  const { data, lastUpdate, lastFetch, newEvents, dismissEvent } =
-    useDashboardData(20_000);
-
-  const [tab, setTab] = useState<"stencil" | "placas">("stencil");
-  const [showAttention, setShowAttention] = useState(false);
-  const [stencilPage, setStencilPage] = useState(1);
-  const [placaPage, setPlacaPage] = useState(1);
-  const [selected, setSelected] = useState<StencilWash | PlacaWash | null>(
-    null,
-  );
-  const [stencilFilters, setStencilFilters] =
-    useState<StencilFilters>(emptyStencilFilters);
-  const [placaFilters, setPlacaFilters] =
-    useState<PlacaFilters>(emptyPlacaFilters);
-  const [tableSort, setTableSort] = useState<{
-    stencil: "asc" | "desc";
-    placas: "asc" | "desc";
-  }>({
-    stencil: "desc",
-    placas: "desc",
-  });
-  const [filterOpen, setFilterOpen] = useState(false);
-  const panelRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!selected) return;
-    function handleClick(e: MouseEvent) {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-        setSelected(null);
-      }
+    try {
+      await login({ area, email, password, rememberMe });
+      navigate("/dashboard", { replace: true });
+    } catch {
+      setError("Área, e-mail ou senha inválidos.");
+    } finally {
+      setSubmitting(false);
     }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [selected]);
-
-  const [syncLabel, setSyncLabel] = useState(() => formatCronometro(lastFetch));
-
-  useEffect(() => {
-    setSyncLabel(formatCronometro(lastFetch));
-    const id = window.setInterval(
-      () => setSyncLabel(formatCronometro(lastFetch)),
-      1_000,
-    );
-    return () => window.clearInterval(id);
-  }, [lastFetch]);
-
-  useEffect(() => {
-    setStencilPage(1);
-  }, [showAttention, stencilFilters, tableSort.stencil]);
-  useEffect(() => {
-    setPlacaPage(1);
-  }, [placaFilters, tableSort.placas]);
-
-  const filteredStencils = useMemo(
-    () =>
-      data.stencils.filter((row) => {
-        if (showAttention && !isWashOutsideStandardSchedule(row.hora))
-          return false;
-        if (
-          stencilFilters.codigo &&
-          !row.codigo
-            .toLowerCase()
-            .includes(stencilFilters.codigo.toLowerCase())
-        )
-          return false;
-        if (
-          stencilFilters.idFabricante &&
-          !(row.idFabricante ?? "")
-            .toLowerCase()
-            .includes(stencilFilters.idFabricante.toLowerCase())
-        )
-          return false;
-        if (
-          stencilFilters.pais &&
-          !(row.pais ?? "")
-            .toLowerCase()
-            .includes(stencilFilters.pais.toLowerCase())
-        )
-          return false;
-        if (stencilFilters.status && row.motivo !== stencilFilters.status)
-          return false;
-        return true;
-      }),
-    [data.stencils, showAttention, stencilFilters],
-  );
-
-  const filteredPlacas = useMemo(
-    () =>
-      data.placas.filter((row) => {
-        if (
-          placaFilters.modelo &&
-          !row.modelo.toLowerCase().includes(placaFilters.modelo.toLowerCase())
-        )
-          return false;
-        if (
-          placaFilters.blankId &&
-          !(row.codigoBarras ?? "")
-            .toLowerCase()
-            .includes(placaFilters.blankId.toLowerCase())
-        )
-          return false;
-        if (
-          placaFilters.serial &&
-          !(row.serial ?? "")
-            .toLowerCase()
-            .includes(placaFilters.serial.toLowerCase())
-        )
-          return false;
-        if (
-          placaFilters.linha &&
-          !row.linha.toLowerCase().includes(placaFilters.linha.toLowerCase())
-        )
-          return false;
-        return true;
-      }),
-    [data.placas, placaFilters],
-  );
-
-  const stencilPages = Math.max(
-    1,
-    Math.ceil(filteredStencils.length / PAGE_SIZE),
-  );
-  const stencilRows = useMemo(
-    () =>
-      sortByDate(filteredStencils, tableSort.stencil).slice(
-        (stencilPage - 1) * PAGE_SIZE,
-        stencilPage * PAGE_SIZE,
-      ),
-    [filteredStencils, stencilPage, tableSort.stencil],
-  );
-
-  const placaPages = Math.max(1, Math.ceil(filteredPlacas.length / PAGE_SIZE));
-  const placaRows = useMemo(
-    () =>
-      sortByDate(filteredPlacas, tableSort.placas).slice(
-        (placaPage - 1) * PAGE_SIZE,
-        placaPage * PAGE_SIZE,
-      ),
-    [filteredPlacas, placaPage, tableSort.placas],
-  );
+  }
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background">
-      <Sidebar />
+    <main className="login-container">
+      <section
+        className="login-sidebar"
+        aria-label="Intelligent Stencil Quality"
+      >
+        <div className="brand-lockup">
+          <img src={logoIsq} alt="ISQ" className="brand-logo" />
+          <h1 className="brand-title">
+            Intelligent
+            <br />
+            Stencil
+            <br />
+            Quality
+          </h1>
+        </div>
 
-      <div className="flex flex-1 flex-col overflow-hidden min-w-0">
-        <Header />
-        <PageTabs />
+        <div className="stats-container" aria-hidden="true">
+          <div className="stat-card">
+            <span className="label">Stencils cadastrados</span>
+            <strong className="value">369</strong>
+          </div>
+          <div className="stat-card">
+            <span className="label">Stencils ativos</span>
+            <strong className="value">336</strong>
+          </div>
+          <div className="stat-card">
+            <span className="label">Linhas rastreáveis</span>
+            <strong className="value">8</strong>
+          </div>
+        </div>
+      </section>
 
-        <main className="flex flex-1 flex-col overflow-hidden min-w-0 w-full px-4 py-3 gap-3">
-          {/* ── KPIs ── */}
-          <section className="flex gap-3 shrink-0">
-            <KpiCard
-              label={
-                <>
-                  Lavagens do dia{" "}
-                  <span className="font-bold">
-                    {new Date().toLocaleDateString("pt-BR", {
-                      day: "2-digit",
-                      month: "2-digit",
-                    })}
-                  </span>
-                </>
-              }
-              value={data.totalDia}
-              variant="primary"
+      <section className="form-section">
+        <h2 className="form-title">Login</h2>
+
+        <form className="form-wrapper" onSubmit={handleSubmit}>
+          <div className="form-group">
+            <Label htmlFor="area">Selecione sua área</Label>
+            <Select
+              value={area}
+              onValueChange={(value) => setArea(value as UserArea)}
+            >
+              <SelectTrigger id="area" className="form-input h-9">
+                <SelectValue placeholder="Operação" />
+              </SelectTrigger>
+              <SelectContent>
+                {areaOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="form-group">
+            <Label htmlFor="email">E-mail corporativo</Label>
+            <Input
+              id="email"
+              type="email"
+              autoComplete="email"
+              className="form-input"
+              placeholder="nome.sobrenome@callidus.ind.br"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              required
             />
-            <KpiCard
-              label="Lavagens de Stencil"
-              value={data.totalStencil}
-              variant="neutral"
+          </div>
+
+          <div className="form-group">
+            <Label htmlFor="password">Senha</Label>
+            <Input
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              className="form-input"
+              placeholder="******"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              required
             />
-            <KpiCard
-              label="Lavagens de Placas"
-              value={data.totalPlacas}
-              variant="neutral"
-            />
-            <KpiCard
-              label="Última coleta de dados"
-              value={syncLabel}
-              variant="attention"
-            />
-            <SupplyStatusKpi status={data.status} />
-          </section>
+          </div>
 
-          {/* ── Linha principal: tabela + coluna lateral ── */}
-          <section className="flex flex-1 gap-4 overflow-hidden min-h-0 min-w-0 w-full">
-            <div className="flex flex-1 flex-col overflow-hidden min-h-0 min-w-0">
-              <div className="mb-2 flex items-center justify-between gap-3 shrink-0 min-w-0 relative">
-                <div className="inline-flex rounded-lg border bg-card p-1 shadow-card shrink-0">
-                  <TabButton
-                    active={tab === "stencil"}
-                    onClick={() => {
-                      setTab("stencil");
-                      setSelected(null);
-                    }}
-                    className="tab-pill--stencil"
-                  >
-                    Stencil
-                  </TabButton>
-                  <TabButton
-                    active={tab === "placas"}
-                    onClick={() => {
-                      setTab("placas");
-                      setSelected(null);
-                    }}
-                    className="tab-pill--placa"
-                  >
-                    Placas
-                  </TabButton>
-                </div>
+          <div className="form-options">
+            <Label htmlFor="remember" className="remember-option">
+              <Checkbox
+                id="remember"
+                checked={rememberMe}
+                onCheckedChange={(checked) => setRememberMe(checked === true)}
+              />
+              <span>Permanecer conectado</span>
+            </Label>
+            <button type="button" className="forgot-password">
+              Recuperar senha
+            </button>
+          </div>
 
-                <div className="flex items-center gap-3 shrink-0">
-                  {tab === "stencil" && (
-                    <div className="inline-flex rounded-lg border bg-card p-1 shadow-card">
-                      <TabButton
-                        active={!showAttention}
-                        onClick={() => setShowAttention(false)}
-                        className="tab-pill--filter"
-                      >
-                        Todos
-                      </TabButton>
-                      <TabButton
-                        active={showAttention}
-                        onClick={() => setShowAttention(true)}
-                        className="tab-pill--filter"
-                      >
-                        Itens de Atenção
-                      </TabButton>
-                    </div>
-                  )}
-                  <FilterTrigger
-                    open={filterOpen}
-                    onToggle={() => setFilterOpen((v) => !v)}
-                  />
-                </div>
-              </div>
+          {error && <p className="login-error">{error}</p>}
 
-              <div className={filterOpen ? "block" : "hidden"}>
-                <FilterPanel
-                  tab={tab}
-                  stencilFilters={stencilFilters}
-                  placaFilters={placaFilters}
-                  onApplyStencil={setStencilFilters}
-                  onApplyPlaca={setPlacaFilters}
-                />
-              </div>
-
-              <div className="flex-1 overflow-auto min-h-0 min-w-0 rounded-lg border bg-card">
-                {tab === "stencil" ? (
-                  <StencilTable
-                    rows={stencilRows}
-                    selectedId={selected?.id}
-                    onSelect={setSelected}
-                    sort={tableSort.stencil}
-                    onToggleSort={() =>
-                      setTableSort((p) => ({
-                        ...p,
-                        stencil: p.stencil === "asc" ? "desc" : "asc",
-                      }))
-                    }
-                  />
-                ) : (
-                  <PlacaTable
-                    rows={placaRows}
-                    selectedId={selected?.id}
-                    onSelect={setSelected}
-                    sort={tableSort.placas}
-                    onToggleSort={() =>
-                      setTableSort((p) => ({
-                        ...p,
-                        placas: p.placas === "asc" ? "desc" : "asc",
-                      }))
-                    }
-                  />
-                )}
-              </div>
-
-              <div className="shrink-0">
-                {tab === "stencil" ? (
-                  <Pagination
-                    page={stencilPage}
-                    totalPages={stencilPages}
-                    onChange={setStencilPage}
-                    variant="stencil"
-                  />
-                ) : (
-                  <Pagination
-                    page={placaPage}
-                    totalPages={placaPages}
-                    onChange={setPlacaPage}
-                    variant="placas"
-                  />
-                )}
-              </div>
-            </div>
-
-            <aside className="relative w-[500px] shrink-0 flex flex-col gap-4 overflow-hidden min-h-0 mt-16">
-              <div className="flex-1 rounded-xl bg-[#E5E7EB] min-h-0" />
-              <div className="flex-1 rounded-xl bg-[#E5E7EB] min-h-0" />
-
-              {selected && (
-                <div
-                  ref={panelRef}
-                  className="absolute w-[350px] inset-0 overflow-y-auto rounded-xl"
-                >
-                  <DetailsPanel
-                    item={selected}
-                    onClose={() => setSelected(null)}
-                  />
-                </div>
-              )}
-            </aside>
-          </section>
-        </main>
-      </div>
-
-      <WashNotification
-        notifications={newEvents.map((e) => ({ id: e.id, origin: e.origin }))}
-        onDismiss={dismissEvent}
-      />
-    </div>
-  );
-};
-
-function TabButton({
-  active,
-  onClick,
-  children,
-  className,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      data-active={active}
-      className={`tab-pill ${className ?? ""}`}
-    >
-      {children}
-    </button>
+          <Button type="submit" className="btn-primary" disabled={submitting}>
+            {submitting ? "Entrando..." : "Login"}
+          </Button>
+        </form>
+      </section>
+    </main>
   );
 }
-
-export default Index;

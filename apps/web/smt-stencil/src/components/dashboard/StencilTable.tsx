@@ -135,29 +135,31 @@ export function StencilTable({
 
   return (
     <div className="h-full flex flex-col">
-      <table className="w-full text-lg font-normal">
+      <table className="w-full table-fixed text-[24px] font-normal">
         <thead className="sticky top-0 z-10">
           <tr className="bg-table-head text-table-head-foreground">
-            <th className="table-head-cell px-4 py-2 text-left">
+            <th className="table-head-cell w-[140px] px-3 py-2 text-left">
               <button
                 type="button"
                 onClick={onToggleSort}
                 className="inline-flex items-center gap-2 text-left font-semibold text-white"
               >
-                <span>Data</span>
+                <span>Hora</span>
                 <ArrowUpDown
                   className={cn(
-                    "h-4 w-4 transition-transform",
+                    "h-6 w-6 transition-transform",
                     sort === "asc" && "rotate-180",
                   )}
                 />
               </button>
             </th>
-            <th className="table-head-cell px-4 py-2 text-left">Hora</th>
-            <th className="table-head-cell px-4 py-2 text-left">Código</th>
-            <th className="table-head-cell px-4 py-2 text-left">Endereç.</th>
-            <th className="table-head-cell px-4 py-2 text-left">Status</th>
-            <th className="table-head-cell px-4 py-2 text-left">Linha</th>
+            <th className="table-head-cell px-3 py-2 text-left">Código</th>
+            <th className="table-head-cell w-[150px] px-3 py-2 text-left">
+              Status
+            </th>
+            <th className="table-head-cell w-[210px] px-3 py-2 text-left">
+              Linha
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -182,20 +184,16 @@ export function StencilTable({
                   !attention && !selected && "hover:bg-row-stripe",
                 )}
               >
-                <td className="px-4 py-3 tabular text-foreground">
-                  {row.data}
-                </td>
-                <td className="px-4 py-3 tabular text-foreground">
+                <td className="px-3 py-6 tabular text-foreground">
                   {row.hora}
                 </td>
-                <td className="px-4 py-3 text-foreground">{row.codigo}</td>
-                <td className="px-4 py-3 tabular text-foreground">
-                  {row.enderecamento}
+                <td className="truncate px-3 py-6 text-foreground">
+                  {row.codigo}
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-3 py-6">
                   <StatusPill status={row.motivo} />
                 </td>
-                <td className="px-4 py-3 text-foreground">
+                <td className="px-3 py-6 text-foreground">
                   <div className="flex items-center justify-between gap-2">
                     <span>{row.linha}</span>
                     {attention && (
@@ -231,7 +229,7 @@ export function StencilTable({
           {rows.length === 0 && (
             <tr>
               <td
-                colSpan={6}
+                colSpan={5}
                 className="px-4 py-10 text-center text-muted-foreground"
               >
                 Nenhum registro encontrado.

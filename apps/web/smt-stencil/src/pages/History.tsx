@@ -1,7 +1,4 @@
-import { Header } from "@/components/dashboard/Header";
-import { PageTabs } from "@/components/dashboard/PageTabs";
 import { Pagination } from "@/components/dashboard/Pagination";
-import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -2663,14 +2660,8 @@ const History = () => {
   };
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background">
-      <Sidebar />
-
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <Header />
-        <PageTabs />
-
-        <main className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-3 overflow-hidden px-4 pr-[310px] py-3">
+    <div className="h-full overflow-hidden bg-background">
+        <main className="flex h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-hidden px-4 pr-[310px] py-3">
           <section className="shrink-0">
             <h1 className="text-[24px] font-bold leading-tight">
               Histórico de Lavagens
@@ -2758,8 +2749,6 @@ const History = () => {
             </div>
           </section>
         </main>
-      </div>
-
       <StencilDetailsModal
         open={
           detailType === "stencil" &&

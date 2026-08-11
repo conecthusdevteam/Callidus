@@ -1,3 +1,5 @@
+import { getStoredAccessToken, notifyTokenExpired } from "@/lib/auth-storage";
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 // ── Simulação ────────────────────────────────────────────────────────────────
@@ -20,14 +22,23 @@ async function apiRequest<T>(
   endpoint: string,
   options: { signal?: AbortSignal } = {},
 ): Promise<T> {
+  const token = getStoredAccessToken();
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    credentials: "include",
     signal: options.signal,
   });
 
   // 404 do NestJS significa lista vazia — não é falha de sistema
   if (response.status === 404) {
     return [] as unknown as T;
+  }
+
+  if (response.status === 401) {
+    notifyTokenExpired();
   }
 
   if (!response.ok) {

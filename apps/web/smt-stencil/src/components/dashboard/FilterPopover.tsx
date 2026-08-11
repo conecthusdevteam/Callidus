@@ -78,7 +78,7 @@ export function FilterTrigger({ open, onToggle }: TriggerProps) {
     <button
       type="button"
       onClick={onToggle}
-      className="inline-flex h-[50px] items-center gap-2 rounded-lg border bg-card px-4 text-base font-medium text-foreground shadow-card transition-colors hover:bg-muted"
+      className="inline-flex h-[42px] items-center gap-2 rounded-lg border border-[#E5E5E5] bg-white px-4 text-[16px] font-medium text-[#171717] shadow-card transition-colors hover:bg-[#F5F5F5]"
     >
       <img src={filterIcon} alt="" className="h-4 w-4" />
       Filtrar
