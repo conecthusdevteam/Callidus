@@ -1,5 +1,5 @@
-@baseUrl=http://10.255.255.170:5001
-@stencilId=st_atNNBE99H7aiVLlkZGRoC
+@baseUrl=http://localhost:5000
+@stencilId=st_xoyZlOt2
 @missingStencilId=stencil_missing
 @seedStencilCode=REST-STENCIL-1778695640
 @missingStencilCode=QR-INEXISTENTE
@@ -18,7 +18,7 @@ Content-Type: application/json
 
 {
   "operator": "Lucas Araujo",
-  "createdAt": "2026-06-11T15:33:59.280Z"
+  "createdAt": "2026-07-28T20:01:59.280Z"
 }
 
 ### Daily wash summary - success

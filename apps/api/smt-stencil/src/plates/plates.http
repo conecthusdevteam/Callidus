@@ -1,5 +1,5 @@
 @baseUrl=http://localhost:5000
-@plateId=p_1oC45kmo1RnSG-E-fagHz
+@plateId=pt_2nB4X0nE
 @missingPlateId=plate_missing
 @uniquePlateModel=REST-PLATE-{{$timestamp}}
 @uniquePlateSerial=REST-SERIAL-{{$timestamp}}
@@ -52,7 +52,7 @@ POST {{baseUrl}}/plates/{{plateId}}/washes
 Content-Type: application/json
 
 {
-  "operator": "Maria Santos",
+  "operator": "Lucas Araujo",
   "shift": 2,
   "phase": 1
 }

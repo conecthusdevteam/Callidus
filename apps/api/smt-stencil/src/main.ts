@@ -33,6 +33,7 @@ async function bootstrap() {
     .setTitle('LSP API documentation')
     .setDescription('API documentation for stencil/plate washing system.')
     .setVersion('1.0')
+    .addBearerAuth()
     .addTag('stencil', 'operations related to stencils')
     .addTag('plate', 'operations related to plates')
     .addTag('wash', 'operations related to washing stencils and plates')

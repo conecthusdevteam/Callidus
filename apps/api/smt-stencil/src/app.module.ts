@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { AuthModule } from './auth/auth.module';
 import { LinesModule } from './lines/lines.module';
 import { PlateWash } from './plates/entities/plate-wash.entity';
 import { Plate } from './plates/entities/plate.entity';
@@ -10,6 +11,7 @@ import { PlatesModule } from './plates/plates.module';
 import { StencilWash } from './stencils/entities/stencil-wash.entity';
 import { Stencil } from './stencils/entities/stencil.entity';
 import { StencilsModule } from './stencils/stencils.module';
+import { User } from './users/entities/user.entity';
 import { WashesModule } from './washes/washes.module';
 
 @Module({
@@ -27,7 +29,7 @@ import { WashesModule } from './washes/washes.module';
         username: configService.get<string>('DB_USER'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_DATABASE'),
-        entities: [Stencil, StencilWash, Plate, PlateWash],
+        entities: [Stencil, StencilWash, Plate, PlateWash, User],
         synchronize: configService.get<string>('NODE_ENV') !== 'hml',
         logging: configService.get<string>('NODE_ENV') === 'dev',
         options: {
@@ -41,6 +43,7 @@ import { WashesModule } from './washes/washes.module';
     PlatesModule,
     LinesModule,
     WashesModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
