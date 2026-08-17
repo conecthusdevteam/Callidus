@@ -58,7 +58,7 @@ describe('PlatesController', () => {
   });
 
   it('returns plate detail by id', async () => {
-    const detail = { id: 'plate_1', serial: 'PCB-1000-000001' };
+    const detail = { id: 'plate_1', plate_model: 'P3H&P3K_MAIN' };
     const { controller } = makeController({
       findOne: jest.fn().mockResolvedValue(detail),
     });

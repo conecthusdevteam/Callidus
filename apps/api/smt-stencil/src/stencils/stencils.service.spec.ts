@@ -1,6 +1,12 @@
 import { ConflictException } from '@nestjs/common';
 import { Repository } from 'typeorm';
-import { Stencil, WashStatus } from './entities/stencil.entity';
+import {
+  Stencil,
+  StencilApprovalStatus,
+  StencilPhase,
+  StencilTechnicalOpinion,
+  WashStatus,
+} from './entities/stencil.entity';
 import { StencilWash } from './entities/stencil-wash.entity';
 import { StencilsService } from './stencils.service';
 
@@ -65,10 +71,20 @@ describe('StencilsService', () => {
     return {
       id: 'stencil_1',
       stencilCode: 'A-019',
+      plateModel: 'A960',
+      plateType: 'MAIN',
+      version: '53',
+      phase: StencilPhase.SECOND,
+      copy: '3',
       manufactureId: 'MNF-001',
       country: 'Brasil',
       thickness: 0.12,
       addressing: 19,
+      manufacturedAt: new Date('2024-09-27T00:00:00.000Z'),
+      serigraphy: StencilApprovalStatus.OK,
+      fiducials: StencilApprovalStatus.OK,
+      finishing: StencilApprovalStatus.OK,
+      technicalOpinion: StencilTechnicalOpinion.APPROVED,
       lineName: 'Line 1',
       status: WashStatus.ACTIVE,
       createdAt: new Date('2026-05-10T00:00:00.000Z'),
@@ -88,7 +104,7 @@ describe('StencilsService', () => {
       manufactureId: 'MNF-001',
       country: 'Brasil',
       thickness: 0.12,
-      addressing: 19,
+      addressing: '19',
       lineName: 'Line 1',
       status: WashStatus.ACTIVE,
     };
@@ -97,8 +113,37 @@ describe('StencilsService', () => {
       id: 'stencil_saved',
       stencilCode: 'A-019',
     });
-    expect(repository.create).toHaveBeenCalledWith(dto);
-    expect(repository.save).toHaveBeenCalledWith(dto);
+    expect(repository.create).toHaveBeenCalledWith(expect.objectContaining(dto));
+    expect(repository.save).toHaveBeenCalledWith(expect.objectContaining(dto));
+  });
+
+  it('generates the stencil code from structured registration fields', async () => {
+    const repository = makeRepository({
+      findOne: jest.fn().mockResolvedValue(null),
+    });
+
+    await expect(
+      makeService(repository).create({
+        plateModel: 'A960',
+        plateType: 'MAIN',
+        version: '53',
+        phase: StencilPhase.SECOND,
+        country: 'China',
+        copy: '3',
+        thickness: 0.08,
+        manufacturedAt: '2024-09-27',
+        addressing: '305',
+        serigraphy: StencilApprovalStatus.OK,
+        fiducials: StencilApprovalStatus.OK,
+        finishing: StencilApprovalStatus.OK,
+        technicalOpinion: StencilTechnicalOpinion.APPROVED,
+      }),
+    ).resolves.toMatchObject({
+      id: 'stencil_saved',
+      stencilCode: 'A960_MAIN_V53_2F_CHINA/3',
+      manufactureId: 'CHINA',
+      status: WashStatus.VALIDATION,
+    });
   });
 
   it('throws conflict when stencil code already exists', async () => {
@@ -585,8 +630,8 @@ describe('StencilsService', () => {
     expect(repository.findOneBy).toHaveBeenNthCalledWith(2, { id: stencil.id });
   });
 
-  it('rejects new washes for inactive stencils', async () => {
-    const stencil = makeStencil({ status: WashStatus.INACTIVE });
+  it('rejects new washes for non-active stencils', async () => {
+    const stencil = makeStencil({ status: WashStatus.OBSOLETE });
     const repository = makeRepository({
       findOneBy: jest.fn().mockResolvedValue(stencil),
     });
@@ -600,8 +645,8 @@ describe('StencilsService', () => {
     expect(washRepository.save).not.toHaveBeenCalled();
   });
 
-  it('rejects new washes by QR code for inactive stencils', async () => {
-    const stencil = makeStencil({ status: WashStatus.INACTIVE });
+  it('rejects new washes by QR code for non-active stencils', async () => {
+    const stencil = makeStencil({ status: WashStatus.OBSOLETE });
     const repository = makeRepository({
       findOneBy: jest.fn().mockResolvedValue(stencil),
     });
@@ -642,9 +687,9 @@ describe('StencilsService', () => {
     const service = makeService(repository);
 
     await expect(
-      service.update(existing.id, { status: WashStatus.INACTIVE }),
+      service.update(existing.id, { status: WashStatus.OBSOLETE }),
     ).resolves.toMatchObject({
-      status: WashStatus.INACTIVE,
+      status: WashStatus.OBSOLETE,
     });
     await expect(service.remove(existing.id)).resolves.toBe(existing);
   });
@@ -656,7 +701,7 @@ describe('StencilsService', () => {
     const service = makeService(repository);
 
     await expect(
-      service.update('missing', { status: WashStatus.INACTIVE }),
+      service.update('missing', { status: WashStatus.OBSOLETE }),
     ).resolves.toBeNull();
     await expect(service.remove('missing')).resolves.toBeNull();
   });

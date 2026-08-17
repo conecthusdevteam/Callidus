@@ -1,34 +1,73 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { PlatePhaseKind } from '../entities/plate.entity';
 
 export class CreatePlateDto {
   @ApiProperty({
     description: 'The code of the plate model',
     example: 'PCB-1000',
   })
+  @IsOptional()
   @IsString()
-  plateModel!: string;
+  plateModel?: string;
+
+  @ApiProperty({
+    description: 'The model segment used to generate the plate code',
+    example: 'P3H&P3K',
+  })
+  @IsOptional()
+  @IsString()
+  model?: string;
+
+  @ApiProperty({
+    description: 'The type segment used to generate the plate code',
+    example: 'MAIN',
+  })
+  @IsOptional()
+  @IsString()
+  plateType?: string;
+
+  @ApiProperty({
+    description: 'Whether the plate has a single phase or two phases',
+    enum: PlatePhaseKind,
+    example: PlatePhaseKind.TWO_PHASES,
+  })
+  @IsOptional()
+  @IsEnum(PlatePhaseKind)
+  phases?: PlatePhaseKind;
+
+  @ApiProperty({
+    description: 'Number of plates per blank',
+    example: 2,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  platesPerBlank?: number;
 
   @ApiProperty({
     description: 'The serial number of the plate',
     example: 'PCB-1000-000017',
   })
+  @IsOptional()
   @IsString()
-  serialNumber!: string;
+  serialNumber?: string;
 
   @ApiProperty({
     description: 'The ID of the plate blank',
     example: 'BLANK-7937',
   })
+  @IsOptional()
   @IsString()
-  blankId!: string;
+  blankId?: string;
 
   @ApiProperty({
     description: 'The name of the line where the plate is produced',
     example: 'Manaus',
   })
+  @IsOptional()
   @IsString()
-  lineName!: string;
+  lineName?: string;
 
   @ApiProperty({
     description: 'The ID of the plate manufacturer',

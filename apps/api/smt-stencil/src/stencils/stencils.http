@@ -4,6 +4,7 @@
 @seedStencilCode=REST-STENCIL-1778695640
 @missingStencilCode=QR-INEXISTENTE
 @uniqueStencilCode=REST-STENCIL-{{$timestamp}}
+@uniqueStencilCopy={{$timestamp}}
 
 ### Health check
 GET {{baseUrl}}/
@@ -134,13 +135,19 @@ POST {{baseUrl}}/stencils
 Content-Type: application/json
 
 {
-  "stencilCode": "{{uniqueStencilCode}}",
-  "manufactureId": "MNF-REST",
-  "country": "Brasil",
+  "plateModel": "A960",
+  "plateType": "MAIN",
+  "version": "53",
+  "phase": "2F",
+  "country": "China",
+  "copy": "{{uniqueStencilCopy}}",
   "thickness": 0.08,
-  "addressing": 12,
-  "lineName": "Linha REST",
-  "status": "active"
+  "manufacturedAt": "2024-09-27",
+  "addressing": "305",
+  "serigraphy": "ok",
+  "fiducials": "ok",
+  "finishing": "ok",
+  "technicalOpinion": "approved"
 }
 
 ### Create duplicated stencil - 409 expected
@@ -148,13 +155,19 @@ POST {{baseUrl}}/stencils
 Content-Type: application/json
 
 {
-  "stencilCode": "{{uniqueStencilCode}}",
-  "manufactureId": "MNF-REST",
-  "country": "Brasil",
+  "plateModel": "A960",
+  "plateType": "MAIN",
+  "version": "53",
+  "phase": "2F",
+  "country": "China",
+  "copy": "{{uniqueStencilCopy}}",
   "thickness": 0.08,
-  "addressing": 12,
-  "lineName": "Linha REST",
-  "status": "active"
+  "manufacturedAt": "2024-09-27",
+  "addressing": "305",
+  "serigraphy": "ok",
+  "fiducials": "ok",
+  "finishing": "ok",
+  "technicalOpinion": "approved"
 }
 
 ### Create stencil with missing required fields - 400 expected
@@ -185,7 +198,7 @@ PATCH {{baseUrl}}/stencils/{{stencilId}}
 Content-Type: application/json
 
 {
-  "status": "inactive"
+  "status": "obsolete"
 }
 
 ### Update missing stencil - 404 expected
@@ -193,7 +206,7 @@ PATCH {{baseUrl}}/stencils/{{missingStencilId}}
 Content-Type: application/json
 
 {
-  "status": "inactive"
+  "status": "obsolete"
 }
 
 ### Update stencil with invalid status - 400 expected

@@ -18,6 +18,13 @@ export function PageTabs() {
       >
         Histórico de lavagens
       </NavLink>
+      <NavLink
+        to="/insumos"
+        className="rounded-md px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        activeClassName="bg-muted text-foreground"
+      >
+        Gestão de Insumos
+      </NavLink>
     </nav>
   );
 }

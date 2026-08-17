@@ -1,4 +1,8 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   Between,
@@ -10,7 +14,12 @@ import { CreateStencilWashDto } from './dto/create-stencil-wash.dto';
 import { CreateStencilDto } from './dto/create-stencil.dto';
 import { UpdateStencilDto } from './dto/update-stencil.dto';
 import { StencilWash } from './entities/stencil-wash.entity';
-import { Stencil, WashStatus } from './entities/stencil.entity';
+import {
+  Stencil,
+  StencilApprovalStatus,
+  StencilTechnicalOpinion,
+  WashStatus,
+} from './entities/stencil.entity';
 
 const MANAUS_TIME_ZONE = 'America/Manaus';
 const MANAUS_UTC_OFFSET_HOURS = 4;
@@ -85,6 +94,11 @@ type RecentStencilWashFilters = {
   sort?: 'asc' | 'desc';
 };
 
+type StencilPayload = Partial<CreateStencilDto | UpdateStencilDto>;
+
+const DEFAULT_STENCIL_LINE = 'Sem linha definida';
+const CHINA_COUNTRY = 'china';
+
 @Injectable()
 export class StencilsService {
   constructor(
@@ -95,12 +109,13 @@ export class StencilsService {
   ) {}
 
   async create(dto: CreateStencilDto) {
-    const existingStencil = await this.findByStencilCode(dto.stencilCode);
+    const payload = this.normalizeStencilPayload(dto, 'create');
+    const existingStencil = await this.findByStencilCode(payload.stencilCode);
     if (existingStencil) {
       throw new ConflictException('Stencil already registered');
     }
 
-    const stencil = this.repository.create(dto);
+    const stencil = this.repository.create(payload);
 
     return this.repository.save(stencil);
   }
@@ -297,9 +312,9 @@ export class StencilsService {
   async createWash(id: string, dto: CreateStencilWashDto) {
     const stencil = await this.repository.findOneBy({ id });
     if (!stencil) return null;
-    if (stencil.status === WashStatus.INACTIVE) {
+    if (stencil.status !== WashStatus.ACTIVE) {
       throw new ConflictException(
-        'Inactive stencils cannot receive new washes',
+        'Only active stencils can receive new washes',
       );
     }
 
@@ -443,7 +458,16 @@ export class StencilsService {
   async update(id: string, dto: UpdateStencilDto) {
     const stencil = await this.repository.findOneBy({ id });
     if (!stencil) return null;
-    this.repository.merge(stencil, dto);
+
+    const payload = this.normalizeStencilPayload(dto, 'update', stencil);
+    if (payload.stencilCode && payload.stencilCode !== stencil.stencilCode) {
+      const existingStencil = await this.findByStencilCode(payload.stencilCode);
+      if (existingStencil && existingStencil.id !== id) {
+        throw new ConflictException('Stencil already registered');
+      }
+    }
+
+    this.repository.merge(stencil, payload);
     return this.repository.save(stencil);
   }
 
@@ -459,10 +483,20 @@ export class StencilsService {
     return {
       id: stencil.id,
       stencilCode: stencil.stencilCode,
+      plate_model: stencil.plateModel ?? null,
+      plate_type: stencil.plateType ?? null,
+      version: stencil.version ?? null,
+      phase: stencil.phase ?? null,
+      copy: stencil.copy ?? null,
       manufacture_id: stencil.manufactureId,
       country: stencil.country,
       thickness: Number(stencil.thickness),
       eddressing: stencil.addressing,
+      manufactured_at: stencil.manufacturedAt ?? null,
+      serigraphy: stencil.serigraphy,
+      fiducials: stencil.fiducials,
+      finishing: stencil.finishing,
+      technical_opinion: stencil.technicalOpinion,
       status: stencil.status,
       line_name: stencil.lineName,
       created_at: stencil.createdAt,
@@ -482,6 +516,153 @@ export class StencilsService {
       ...this.toSummary(stencil),
       washes_history: metrics.washes_history,
     };
+  }
+
+  private normalizeStencilPayload(
+    dto: StencilPayload,
+    mode: 'create' | 'update',
+    current?: Stencil,
+  ): Partial<Stencil> & { stencilCode: string } {
+    const next = {
+      stencilCode: this.cleanOptionalText(dto.stencilCode) ?? current?.stencilCode,
+      plateModel: this.cleanOptionalText(dto.plateModel) ?? current?.plateModel,
+      plateType: this.cleanOptionalText(dto.plateType) ?? current?.plateType,
+      version:
+        dto.version === null
+          ? undefined
+          : this.cleanOptionalText(dto.version) ?? current?.version,
+      phase: dto.phase ?? current?.phase,
+      copy:
+        dto.copy === null
+          ? undefined
+          : this.cleanOptionalText(dto.copy) ?? current?.copy,
+      manufactureId:
+        this.cleanOptionalText(dto.manufactureId) ?? current?.manufactureId,
+      country: this.cleanOptionalText(dto.country) ?? current?.country,
+      thickness: dto.thickness ?? current?.thickness,
+      addressing: this.cleanOptionalText(dto.addressing) ?? current?.addressing,
+      manufacturedAt: dto.manufacturedAt
+        ? new Date(dto.manufacturedAt)
+        : current?.manufacturedAt,
+      lineName:
+        this.cleanOptionalText(dto.lineName) ??
+        current?.lineName ??
+        DEFAULT_STENCIL_LINE,
+      status:
+        dto.status ??
+        current?.status ??
+        (mode === 'create' ? WashStatus.VALIDATION : undefined),
+      serigraphy:
+        dto.serigraphy ??
+        current?.serigraphy ??
+        StencilApprovalStatus.OK,
+      fiducials:
+        dto.fiducials ??
+        current?.fiducials ??
+        StencilApprovalStatus.OK,
+      finishing:
+        dto.finishing ??
+        current?.finishing ??
+        StencilApprovalStatus.OK,
+      technicalOpinion:
+        dto.technicalOpinion ??
+        current?.technicalOpinion ??
+        StencilTechnicalOpinion.APPROVED,
+    };
+
+    const usesStructuredFields = this.hasStructuredStencilFields(dto, current);
+
+    if (next.country && this.isChina(next.country)) {
+      next.manufactureId = 'CHINA';
+    }
+
+    if (usesStructuredFields) {
+      this.assertStructuredStencil(next);
+      next.stencilCode = this.generateStencilCode(next);
+    }
+
+    if (!next.stencilCode) {
+      throw new BadRequestException(
+        'stencilCode or structured stencil identification fields are required',
+      );
+    }
+
+    if (!next.manufactureId) {
+      throw new BadRequestException('manufactureId is required');
+    }
+
+    return next as Partial<Stencil> & { stencilCode: string };
+  }
+
+  private hasStructuredStencilFields(dto: StencilPayload, current?: Stencil) {
+    return Boolean(
+      dto.plateModel !== undefined ||
+        dto.plateType !== undefined ||
+        dto.version !== undefined ||
+        dto.phase !== undefined ||
+        dto.copy !== undefined ||
+        current?.plateModel ||
+        current?.plateType ||
+        current?.phase,
+    );
+  }
+
+  private assertStructuredStencil(stencil: Partial<Stencil>) {
+    const missing: string[] = [];
+
+    if (!stencil.plateModel) missing.push('plateModel');
+    if (!stencil.plateType) missing.push('plateType');
+    if (!stencil.phase) missing.push('phase');
+    if (!stencil.country) missing.push('country');
+    if (!stencil.manufactureId) missing.push('manufactureId');
+    if (stencil.thickness === undefined || stencil.thickness === null) {
+      missing.push('thickness');
+    }
+    if (!stencil.manufacturedAt) missing.push('manufacturedAt');
+    if (!stencil.addressing) missing.push('addressing');
+    if (!stencil.serigraphy) missing.push('serigraphy');
+    if (!stencil.fiducials) missing.push('fiducials');
+    if (!stencil.finishing) missing.push('finishing');
+    if (!stencil.technicalOpinion) missing.push('technicalOpinion');
+
+    if (missing.length > 0) {
+      throw new BadRequestException(
+        `Missing required structured stencil fields: ${missing.join(', ')}`,
+      );
+    }
+  }
+
+  private generateStencilCode(stencil: Partial<Stencil>) {
+    const segments = [
+      this.formatCodeSegment(stencil.plateModel),
+      this.formatCodeSegment(stencil.plateType),
+      stencil.version ? `V${this.formatCodeSegment(stencil.version)}` : null,
+      this.formatCodeSegment(stencil.phase),
+      this.isChina(stencil.country)
+        ? 'CHINA'
+        : this.formatCodeSegment(stencil.manufactureId),
+    ].filter((segment): segment is string => Boolean(segment));
+
+    const code = segments.join('_');
+    const copy = this.formatCodeSegment(stencil.copy);
+
+    return copy ? `${code}/${copy}` : code;
+  }
+
+  private formatCodeSegment(value?: string | null) {
+    const segment = this.cleanOptionalText(value);
+    if (!segment) return null;
+    return segment.toUpperCase().replace(/\s+/g, '');
+  }
+
+  private cleanOptionalText(value?: string | null) {
+    if (value === undefined || value === null) return undefined;
+    const trimmed = String(value).trim();
+    return trimmed || undefined;
+  }
+
+  private isChina(country?: string | null) {
+    return this.cleanOptionalText(country)?.toLowerCase() === CHINA_COUNTRY;
   }
 
   private calculateMetrics(washes: StencilWash[]): StencilMetrics {

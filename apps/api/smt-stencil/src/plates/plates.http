@@ -1,8 +1,9 @@
 @baseUrl=http://localhost:5000
 @plateId=p_1oC45kmo1RnSG-E-fagHz
 @missingPlateId=plate_missing
-@uniquePlateModel=REST-PLATE-{{$timestamp}}
-@uniquePlateSerial=REST-SERIAL-{{$timestamp}}
+@uniquePlateModel=REST{{$timestamp}}
+@uniquePlateType=MAIN
+@uniquePlateCode={{uniquePlateModel}}_{{uniquePlateType}}
 
 ### Health check
 GET {{baseUrl}}/
@@ -99,25 +100,21 @@ POST {{baseUrl}}/plates
 Content-Type: application/json
 
 {
-  "plateModel": "{{uniquePlateModel}}",
-  "serialNumber": "{{uniquePlateSerial}}",
-  "blankId": "BLANK-REST",
-  "lineName": "Linha REST",
-  "plateManufacturerId": "MNF-REST",
-  "country": "Brasil",
-  "thickness": 0.09,
-  "addressing": "012"
+  "model": "{{uniquePlateModel}}",
+  "plateType": "{{uniquePlateType}}",
+  "phases": "two_phases",
+  "platesPerBlank": 2
 }
 
-### Create duplicated plate model - 409 expected
+### Create duplicated plate code - 409 expected
 POST {{baseUrl}}/plates
 Content-Type: application/json
 
 {
-  "plateModel": "{{uniquePlateModel}}",
-  "serialNumber": "{{uniquePlateSerial}}-DUP",
-  "blankId": "BLANK-REST",
-  "lineName": "Linha REST"
+  "model": "{{uniquePlateModel}}",
+  "plateType": "{{uniquePlateType}}",
+  "phases": "two_phases",
+  "platesPerBlank": 2
 }
 
 ### Create plate with missing required fields - 400 expected
@@ -125,27 +122,29 @@ POST {{baseUrl}}/plates
 Content-Type: application/json
 
 {
-  "plateModel": "INVALID-{{$timestamp}}"
+  "model": "INVALID-{{$timestamp}}"
 }
 
-### Create plate with invalid number field - 400 expected
+### Create plate with invalid plates per blank - 400 expected
 POST {{baseUrl}}/plates
 Content-Type: application/json
 
 {
-  "plateModel": "INVALID-THICKNESS-{{$timestamp}}",
-  "serialNumber": "SERIAL-{{$timestamp}}",
-  "blankId": "BLANK-REST",
-  "lineName": "Linha REST",
-  "thickness": "fino"
+  "model": "INVALID-{{$timestamp}}",
+  "plateType": "MAIN",
+  "phases": "single_phase",
+  "platesPerBlank": 0
 }
 
-### Update plate line - success
+### Update plate registration - success
 PATCH {{baseUrl}}/plates/{{plateId}}
 Content-Type: application/json
 
 {
-  "lineName": "Linha 2"
+  "model": "P3H&P3K",
+  "plateType": "MAIN",
+  "phases": "single_phase",
+  "platesPerBlank": 1
 }
 
 ### Update missing plate - 404 expected
@@ -153,15 +152,18 @@ PATCH {{baseUrl}}/plates/{{missingPlateId}}
 Content-Type: application/json
 
 {
-  "lineName": "Linha 2"
+  "model": "P3H&P3K",
+  "plateType": "MAIN",
+  "phases": "single_phase",
+  "platesPerBlank": 1
 }
 
-### Update plate with invalid number field - 400 expected
+### Update plate with invalid phases - 400 expected
 PATCH {{baseUrl}}/plates/{{plateId}}
 Content-Type: application/json
 
 {
-  "thickness": "fino"
+  "phases": "three_phases"
 }
 
 ### Delete plate - success, 204 expected

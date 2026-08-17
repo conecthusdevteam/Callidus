@@ -1,7 +1,7 @@
 import { ConflictException } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { PlateWash } from './entities/plate-wash.entity';
-import { Plate } from './entities/plate.entity';
+import { Plate, PlatePhaseKind } from './entities/plate.entity';
 import { PlatesService } from './plates.service';
 
 jest.mock('nanoid', () => ({
@@ -54,9 +54,13 @@ describe('PlatesService', () => {
   function makePlate(overrides: Partial<Plate> = {}): Plate {
     return {
       id: 'plate_1',
-      plateModel: 'PCB-1000',
-      serialNumber: 'PCB-1000-000001',
-      blankId: 'BLANK-1001',
+      plateModel: 'P3H&P3K_MAIN',
+      model: 'P3H&P3K',
+      plateType: 'MAIN',
+      phases: PlatePhaseKind.TWO_PHASES,
+      platesPerBlank: 2,
+      serialNumber: 'P3H&P3K_MAIN-000001',
+      blankId: 'P3H&P3K_MAIN',
       lineName: 'Line 1',
       plateManufacturerId: 'MNF-101',
       country: 'Brasil',
@@ -75,18 +79,30 @@ describe('PlatesService', () => {
     });
 
     const dto = {
-      plateModel: 'PCB-1000',
-      serialNumber: 'PCB-1000-000001',
-      blankId: 'BLANK-1001',
-      lineName: 'Line 1',
+      model: 'P3H&P3K',
+      plateType: 'MAIN',
+      phases: PlatePhaseKind.TWO_PHASES,
+      platesPerBlank: 2,
     };
 
     await expect(makeService(repository).create(dto)).resolves.toMatchObject({
       id: 'plate_saved',
-      plateModel: 'PCB-1000',
+      plate_model: 'P3H&P3K_MAIN',
+      model: 'P3H&P3K',
+      plate_type: 'MAIN',
     });
-    expect(repository.create).toHaveBeenCalledWith(dto);
-    expect(repository.save).toHaveBeenCalledWith(dto);
+    expect(repository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        plateModel: 'P3H&P3K_MAIN',
+        model: 'P3H&P3K',
+        plateType: 'MAIN',
+        phases: PlatePhaseKind.TWO_PHASES,
+        platesPerBlank: 2,
+      }),
+    );
+    expect(repository.save).toHaveBeenCalledWith(
+      expect.objectContaining({ plateModel: 'P3H&P3K_MAIN' }),
+    );
   });
 
   it('throws conflict when plate model already exists', async () => {
@@ -96,10 +112,10 @@ describe('PlatesService', () => {
 
     await expect(
       makeService(repository).create({
-        plateModel: 'PCB-1000',
-        serialNumber: 'PCB-1000-000001',
-        blankId: 'BLANK-1001',
-        lineName: 'Line 1',
+        model: 'P3H&P3K',
+        plateType: 'MAIN',
+        phases: PlatePhaseKind.TWO_PHASES,
+        platesPerBlank: 2,
       }),
     ).rejects.toBeInstanceOf(ConflictException);
     expect(repository.save).not.toHaveBeenCalled();
@@ -138,9 +154,13 @@ describe('PlatesService', () => {
     );
     expect(result).toEqual([
       expect.objectContaining({
-        plate_model: 'PCB-1000',
-        serial: 'PCB-1000-000001',
-      total_washes: 2,
+        plate_model: 'P3H&P3K_MAIN',
+        model: 'P3H&P3K',
+        plate_type: 'MAIN',
+        phases: PlatePhaseKind.TWO_PHASES,
+        plates_per_blank: 2,
+        serial: 'P3H&P3K_MAIN-000001',
+        total_washes: 2,
         last_wash: new Date('2026-05-10T08:00:00.000Z'),
         last_wash_details: expect.objectContaining({
           id: 'wash_2',
@@ -216,9 +236,13 @@ describe('PlatesService', () => {
         expect.objectContaining({
           id: 'wash_2',
           plate_id: 'plate_1',
-          plate_model: 'PCB-1000',
-          serial: 'PCB-1000-000001',
-          blank_id: 'BLANK-1001',
+          plate_model: 'P3H&P3K_MAIN',
+          model: 'P3H&P3K',
+          plate_type: 'MAIN',
+          phases: PlatePhaseKind.TWO_PHASES,
+          plates_per_blank: 2,
+          serial: 'P3H&P3K_MAIN-000001',
+          blank_id: 'P3H&P3K_MAIN',
         }),
         expect.objectContaining({ id: 'wash_1' }),
       ],
@@ -305,7 +329,8 @@ describe('PlatesService', () => {
     await expect(
       service.update(existing.id, { lineName: 'Line 2' }),
     ).resolves.toMatchObject({
-      lineName: 'Line 2',
+      line: 'Line 2',
+      plate_model: 'P3H&P3K_MAIN',
     });
     await expect(service.remove(existing.id)).resolves.toBe(existing);
   });

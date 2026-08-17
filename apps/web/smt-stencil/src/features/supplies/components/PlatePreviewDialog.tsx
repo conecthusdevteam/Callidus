@@ -1,0 +1,65 @@
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import type { HistoryPlateSummary } from "@/lib/api";
+import { PlateDetailsCard } from "./PlateDetailsCard";
+
+export function PlatePreviewDialog({
+  open,
+  plate,
+  mode,
+  saving,
+  onConfirm,
+  onEdit,
+  onCancel,
+}: {
+  open: boolean;
+  plate: HistoryPlateSummary | null;
+  mode: "create" | "edit";
+  saving: boolean;
+  onConfirm: () => void;
+  onEdit: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onCancel()}>
+      <DialogContent className="w-[min(860px,calc(100vw-48px))] max-w-none rounded-xl bg-card p-8">
+        <DialogHeader>
+          <DialogTitle className="text-[26px] font-bold leading-tight text-[#0A0A0A]">
+            Confirmar informações
+          </DialogTitle>
+          <DialogDescription className="text-[20px] leading-7 text-muted-foreground">
+            Revise as informações inseridas.
+          </DialogDescription>
+        </DialogHeader>
+
+        {plate && <PlateDetailsCard plate={plate} codeLabel="Código gerado" />}
+
+        <div className="mt-2 flex items-center justify-center gap-10">
+          <Button
+            type="button"
+            disabled={saving}
+            onClick={onConfirm}
+            className="h-10 rounded-md bg-[#2FB344] px-8 text-base hover:bg-[#2B8E37]"
+          >
+            {saving ? "Salvando..." : "Confirmar"}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={saving}
+            onClick={onEdit}
+            className="h-10 px-5 text-base"
+          >
+            Editar
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

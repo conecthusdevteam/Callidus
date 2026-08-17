@@ -18,10 +18,16 @@ function getSimFail(): SimTarget {
 
 async function apiRequest<T>(
   endpoint: string,
-  options: { signal?: AbortSignal } = {},
+  options: {
+    method?: "GET" | "POST" | "PATCH" | "DELETE";
+    body?: unknown;
+    signal?: AbortSignal;
+  } = {},
 ): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    method: options.method ?? "GET",
     headers: { "Content-Type": "application/json" },
+    body: options.body ? JSON.stringify(options.body) : undefined,
     signal: options.signal,
   });
 
@@ -208,6 +214,45 @@ export const historyApi = {
   },
 };
 
+export const suppliesApi = {
+  getStencils: historyApi.getStencils,
+  getPlates: historyApi.getPlates,
+  createStencil: async (
+    payload: UpsertStencilPayload,
+  ): Promise<HistoryStencilSummary> => {
+    return apiRequest<HistoryStencilSummary>("/stencils", {
+      method: "POST",
+      body: payload,
+    });
+  },
+  updateStencil: async (
+    id: string,
+    payload: Partial<UpsertStencilPayload>,
+  ): Promise<HistoryStencilSummary> => {
+    return apiRequest<HistoryStencilSummary>(`/stencils/${id}`, {
+      method: "PATCH",
+      body: payload,
+    });
+  },
+  createPlate: async (
+    payload: UpsertPlatePayload,
+  ): Promise<HistoryPlateSummary> => {
+    return apiRequest<HistoryPlateSummary>("/plates", {
+      method: "POST",
+      body: payload,
+    });
+  },
+  updatePlate: async (
+    id: string,
+    payload: Partial<UpsertPlatePayload>,
+  ): Promise<HistoryPlateSummary> => {
+    return apiRequest<HistoryPlateSummary>(`/plates/${id}`, {
+      method: "PATCH",
+      body: payload,
+    });
+  },
+};
+
 // ── Shapes exatos que o back entrega ─────────────────────────────────────────
 
 export interface ApiPaginatedResponse<T> {
@@ -253,7 +298,7 @@ interface ApiTodayStencilWash {
     country: string;
     thickness: number;
     addressing: number;
-    status: "active" | "inactive";
+    status: "validation" | "active" | "obsolete" | "discarded";
     lineName: string;
     createdAt: string;
     updatedAt: string;
@@ -270,6 +315,10 @@ interface ApiTodayPlateWash {
   plate: {
     id: string;
     plateModel: string;
+    model?: string | null;
+    plateType?: string | null;
+    phases?: "single_phase" | "two_phases" | null;
+    platesPerBlank?: number | null;
     serialNumber: string;
     blankId: string;
     lineName: string;
@@ -341,6 +390,10 @@ function normalizeTodayPlateWash(wash: ApiTodayPlateWash): ApiPlate {
     asset: {
       id: plate.id,
       plate_model: plate.plateModel,
+      model: plate.model ?? null,
+      plate_type: plate.plateType ?? null,
+      phases: plate.phases ?? null,
+      plates_per_blank: plate.platesPerBlank ?? null,
       serial: plate.serialNumber,
       blank_id: plate.blankId,
       line: plate.lineName,
@@ -429,7 +482,7 @@ export interface ApiStencil {
   created_at: string;
   stencil_code: string;
   addressing: string;
-  status: "active" | "inactive";
+  status: "validation" | "active" | "obsolete" | "discarded";
   line_name: string;
   operator: string;
   previous_wash_interval: number | null;
@@ -485,11 +538,21 @@ export interface HistoryStencilWash {
 export interface HistoryStencilSummary {
   id: string;
   stencilCode: string;
+  plate_model: string | null;
+  plate_type: string | null;
+  version: string | null;
+  phase: "1F" | "2F" | "FU" | null;
+  copy: string | null;
   manufacture_id: string;
   country: string;
   thickness: number;
   eddressing: number;
-  status: "active" | "inactive";
+  manufactured_at: string | null;
+  serigraphy: "ok" | "fail";
+  fiducials: "ok" | "fail";
+  finishing: "ok" | "fail";
+  technical_opinion: "approved" | "rejected";
+  status: "validation" | "active" | "obsolete" | "discarded";
   line_name: string;
   created_at: string;
   updated_at: string;
@@ -502,6 +565,33 @@ export interface HistoryStencilSummary {
 
 export interface HistoryStencilDetail extends HistoryStencilSummary {
   washes_history: HistoryStencilWash[];
+}
+
+export interface UpsertStencilPayload {
+  plateModel: string;
+  plateType: string;
+  version?: string;
+  phase: "1F" | "2F" | "FU";
+  country: string;
+  manufactureId?: string;
+  copy?: string;
+  thickness: number;
+  manufacturedAt: string;
+  addressing: string;
+  status?: "validation" | "active" | "obsolete" | "discarded";
+  serigraphy: "ok" | "fail";
+  fiducials: "ok" | "fail";
+  finishing: "ok" | "fail";
+  technicalOpinion: "approved" | "rejected";
+  lineName?: string;
+}
+
+export interface UpsertPlatePayload {
+  plateModel: string;
+  model: string;
+  plateType: string;
+  phases: "single_phase" | "two_phases";
+  platesPerBlank: number;
 }
 
 export type WashAnalyticsCategory = "planned" | "anomalous" | "multiple";
@@ -562,6 +652,10 @@ export interface HistoryPlateWash {
 export interface HistoryPlateSummary {
   id: string;
   plate_model: string;
+  model?: string | null;
+  plate_type?: string | null;
+  phases?: "single_phase" | "two_phases" | null;
+  plates_per_blank?: number | null;
   serial: string;
   blank_id: string;
   line: string;

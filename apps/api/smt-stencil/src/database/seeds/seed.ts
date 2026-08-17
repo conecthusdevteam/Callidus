@@ -1,9 +1,15 @@
 import { config } from 'dotenv';
 import { DataSource } from 'typeorm';
 import { PlateWash } from '../../plates/entities/plate-wash.entity';
-import { Plate } from '../../plates/entities/plate.entity';
+import { Plate, PlatePhaseKind } from '../../plates/entities/plate.entity';
 import { StencilWash } from '../../stencils/entities/stencil-wash.entity';
-import { Stencil, WashStatus } from '../../stencils/entities/stencil.entity';
+import {
+  Stencil,
+  StencilApprovalStatus,
+  StencilPhase,
+  StencilTechnicalOpinion,
+  WashStatus,
+} from '../../stencils/entities/stencil.entity';
 
 config();
 
@@ -35,14 +41,19 @@ const LINE_NAMES = [
   'Eirunepé',
 ];
 const STENCIL_CODES = [
-  'SMB-100',
-  'SMB-200',
-  'SMC-300',
-  'SMD-400',
-  'SME-500',
-  'SMF-600',
-  'SMG-700',
-  'SMH-800',
+  'A960',
+  'A90S',
+  'P3H&P3K',
+  'SMB100',
+  'SMC300',
+  'SMD400',
+];
+const STENCIL_TYPES = ['MAIN', 'RF', 'TOP'];
+const STENCIL_VERSIONS = ['53', '17', '03', ''];
+const STENCIL_PHASES = [
+  StencilPhase.FIRST,
+  StencilPhase.SECOND,
+  StencilPhase.UNIQUE,
 ];
 const MANUFACTURE_IDS = [
   'MNF-001',
@@ -53,19 +64,20 @@ const MANUFACTURE_IDS = [
   'MNF-006',
 ];
 const PLATE_MODELS = [
-  'PCB-1000',
-  'PCB-2000',
-  'PCB-3000',
-  'PCB-4000',
-  'PCB-5000',
-  'PCB-6000',
+  'P3H&P3K',
+  'A960',
+  'A90S',
+  'P2K',
+  'P3K',
+  'MAINBOARD',
 ];
+const PLATE_TYPES = ['MAIN', 'SUB', 'IO', 'RF', 'TOP', 'BOTTOM'];
 
 const OPERATORS = ['João Silva', 'Maria Santos', 'Carlos Lima', 'Ana Costa', 'Pedro Souza'];
 const SHIFTS = [1, 2];
 const PHASES = [1, 2];
 
-const INACTIVE_STENCIL_INTERVAL = 7;
+const NON_ACTIVE_STENCIL_INTERVAL = 7;
 const ANALYTICS_SEED_DAYS = 90;
 const STENCIL_SEED_COUNT = 20;
 const PLANNED_WASHES_PER_STENCIL = 50;
@@ -397,24 +409,59 @@ function generateWashDates(washCount: number, forceSingleWash: boolean = false):
 }
 
 function generateStencilData(index: number): Partial<Stencil> {
-  const stencilCodeBase = STENCIL_CODES[random(0, STENCIL_CODES.length - 1)];
+  const plateModel = STENCIL_CODES[random(0, STENCIL_CODES.length - 1)];
+  const plateType = STENCIL_TYPES[random(0, STENCIL_TYPES.length - 1)];
+  const version = STENCIL_VERSIONS[random(0, STENCIL_VERSIONS.length - 1)];
+  const phase = STENCIL_PHASES[random(0, STENCIL_PHASES.length - 1)];
   const manufactureId = MANUFACTURE_IDS[random(0, MANUFACTURE_IDS.length - 1)];
   const country = COUNTRIES[random(0, COUNTRIES.length - 1)];
+  const effectiveManufactureId =
+    country.toLowerCase() === 'china' ? 'CHINA' : manufactureId;
+  const copy = index % 3 === 0 ? String(random(1, 9)) : undefined;
   const thickness = randomFloat(0.05, 0.15, 6);
   const addressing = String(random(1, 100)).padStart(3, '0');
   const lineName = LINE_NAMES[random(0, LINE_NAMES.length - 1)];
+  const nonActiveStatuses = [
+    WashStatus.VALIDATION,
+    WashStatus.OBSOLETE,
+    WashStatus.DISCARDED,
+  ];
   const status =
-    index % INACTIVE_STENCIL_INTERVAL === 0
-      ? WashStatus.INACTIVE
+    index % NON_ACTIVE_STENCIL_INTERVAL === 0
+      ? nonActiveStatuses[index % nonActiveStatuses.length]
       : WashStatus.ACTIVE;
   const createdAt = randomCurrentDate();
+  const manufacturedAt = new Date(createdAt);
+  manufacturedAt.setUTCMonth(manufacturedAt.getUTCMonth() - random(3, 18));
+  const codeSegments = [
+    plateModel,
+    plateType,
+    version ? `V${version}` : null,
+    phase,
+    effectiveManufactureId,
+  ].filter(Boolean);
+  const stencilCode = `${codeSegments.join('_')}${copy ? `/${copy}` : ''}`;
 
   const stencil = new Stencil();
-  stencil.stencilCode = `${stencilCodeBase}-${String(index).padStart(4, '0')}`;
-  stencil.manufactureId = manufactureId;
+  stencil.stencilCode = stencilCode;
+  stencil.plateModel = plateModel;
+  stencil.plateType = plateType;
+  stencil.version = version || undefined;
+  stencil.phase = phase;
+  stencil.copy = copy;
+  stencil.manufactureId = effectiveManufactureId;
   stencil.country = country;
   stencil.thickness = thickness;
   stencil.addressing = addressing;
+  stencil.manufacturedAt = manufacturedAt;
+  stencil.serigraphy = StencilApprovalStatus.OK;
+  stencil.fiducials =
+    index % 11 === 0 ? StencilApprovalStatus.FAIL : StencilApprovalStatus.OK;
+  stencil.finishing = StencilApprovalStatus.OK;
+  stencil.technicalOpinion =
+    index % 11 === 0
+      ? StencilTechnicalOpinion.REJECTED
+      : StencilTechnicalOpinion.APPROVED;
   stencil.lineName = lineName;
   stencil.status = status;
   stencil.createdAt = createdAt;
@@ -424,7 +471,13 @@ function generateStencilData(index: number): Partial<Stencil> {
 }
 
 function generatePlateData(index: number): Partial<Plate> {
-  const plateModel = PLATE_MODELS[random(0, PLATE_MODELS.length - 1)];
+  const model = PLATE_MODELS[index % PLATE_MODELS.length];
+  const plateType =
+    PLATE_TYPES[Math.floor(index / PLATE_MODELS.length) % PLATE_TYPES.length];
+  const phases =
+    index % 4 === 0 ? PlatePhaseKind.SINGLE_PHASE : PlatePhaseKind.TWO_PHASES;
+  const platesPerBlank = phases === PlatePhaseKind.SINGLE_PHASE ? 1 : random(2, 4);
+  const plateModel = `${model}_${plateType}`;
   const serialNumber = `${plateModel}-${String(index).padStart(6, '0')}`;
   const blankId = `BLANK-${random(1000, 9999)}`;
   const lineName = LINE_NAMES[random(0, LINE_NAMES.length - 1)];
@@ -436,6 +489,10 @@ function generatePlateData(index: number): Partial<Plate> {
 
   const plate = new Plate();
   plate.plateModel = plateModel;
+  plate.model = model;
+  plate.plateType = plateType;
+  plate.phases = phases;
+  plate.platesPerBlank = platesPerBlank;
   plate.serialNumber = serialNumber;
   plate.blankId = blankId;
   plate.lineName = lineName;
@@ -524,7 +581,7 @@ async function runSeed() {
     let stencilsInserted = 0;
     let stencilsSkipped = 0;
     let activeStencilsInserted = 0;
-    let inactiveStencilsInserted = 0;
+    let nonActiveStencilsInserted = 0;
     const createdStencils: Stencil[] = [];
     const activeStencils: Stencil[] = [];
 
@@ -542,7 +599,7 @@ async function runSeed() {
           activeStencilsInserted++;
           activeStencils.push(savedStencil);
         } else {
-          inactiveStencilsInserted++;
+          nonActiveStencilsInserted++;
         }
         stencilsInserted++;
       } else {
@@ -560,7 +617,7 @@ async function runSeed() {
       `   ✅ Stencils: ${stencilsInserted} inserted, ${stencilsSkipped} existing`,
     );
     console.log(
-      `   📊 Status: ${activeStencilsInserted} active, ${inactiveStencilsInserted} inactive`,
+      `   📊 Status: ${activeStencilsInserted} active, ${nonActiveStencilsInserted} non-active`,
     );
 
     // ============================================

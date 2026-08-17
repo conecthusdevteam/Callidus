@@ -1,11 +1,11 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Like, Repository } from 'typeorm';
 import { CreatePlateWashDto } from './dto/create-plate-wash.dto';
 import { CreatePlateDto } from './dto/create-plate.dto';
 import { UpdatePlateDto } from './dto/update-plate.dto';
 import { PlateWash } from './entities/plate-wash.entity';
-import { Plate } from './entities/plate.entity';
+import { Plate, PlatePhaseKind } from './entities/plate.entity';
 
 const MANAUS_TIME_ZONE = 'America/Manaus';
 const MANAUS_UTC_OFFSET_HOURS = 4;
@@ -42,14 +42,16 @@ export class PlatesService {
   ) { }
 
   async create(dto: CreatePlateDto) {
-    const existingPlate = await this.findByPlateModel(dto.plateModel);
+    const payload = this.normalizePlatePayload(dto);
+    const existingPlate = await this.findByPlateModel(payload.plateModel);
     if (existingPlate) {
       throw new ConflictException('Plate already registered');
     }
 
-    const plate = this.repository.create(dto);
+    const plate = this.repository.create(payload);
 
-    return this.repository.save(plate);
+    const saved = await this.repository.save(plate);
+    return this.toSummary({ ...saved, washes: saved.washes ?? [] } as Plate);
   }
 
   async findAll(filters?: PlateFilters) {
@@ -174,6 +176,11 @@ export class PlatesService {
           created_at: wash.createdAt,
           shift: wash.shift,
           plate_model: plate.plateModel,
+          model: plate.model ?? this.splitPlateCode(plate.plateModel).model,
+          plate_type:
+            plate.plateType ?? this.splitPlateCode(plate.plateModel).plateType,
+          phases: plate.phases ?? PlatePhaseKind.TWO_PHASES,
+          plates_per_blank: plate.platesPerBlank ?? 1,
           phase: wash.phase,
           line: plate.lineName,
           serial: plate.serialNumber,
@@ -193,8 +200,18 @@ export class PlatesService {
   async update(id: string, dto: UpdatePlateDto) {
     const plate = await this.repository.findOneBy({ id });
     if (!plate) return null;
-    this.repository.merge(plate, dto);
-    return this.repository.save(plate);
+
+    const payload = this.normalizePlatePayload(dto, plate);
+    if (payload.plateModel !== plate.plateModel) {
+      const existingPlate = await this.findByPlateModel(payload.plateModel);
+      if (existingPlate && existingPlate.id !== plate.id) {
+        throw new ConflictException('Plate already registered');
+      }
+    }
+
+    this.repository.merge(plate, payload);
+    const saved = await this.repository.save(plate);
+    return this.toSummary({ ...saved, washes: saved.washes ?? [] } as Plate);
   }
 
   async remove(id: string) {
@@ -210,6 +227,10 @@ export class PlatesService {
     return {
       id: plate.id,
       plate_model: plate.plateModel,
+      model: plate.model ?? this.splitPlateCode(plate.plateModel).model,
+      plate_type: plate.plateType ?? this.splitPlateCode(plate.plateModel).plateType,
+      phases: plate.phases ?? PlatePhaseKind.TWO_PHASES,
+      plates_per_blank: plate.platesPerBlank ?? 1,
       serial: plate.serialNumber,
       blank_id: plate.blankId,
       line: plate.lineName,
@@ -255,6 +276,55 @@ export class PlatesService {
     return [...washes].sort(
       (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
     );
+  }
+
+  private normalizePlatePayload(dto: Partial<CreatePlateDto>, current?: Plate) {
+    const model = this.formatCodeSegment(dto.model ?? current?.model);
+    const plateType = this.formatCodeSegment(dto.plateType ?? current?.plateType);
+
+    if (!model) {
+      throw new BadRequestException('Plate model is required');
+    }
+
+    if (!plateType) {
+      throw new BadRequestException('Plate type is required');
+    }
+
+    const plateModel = this.generatePlateCode(model, plateType);
+    const phases = dto.phases ?? current?.phases ?? PlatePhaseKind.TWO_PHASES;
+    const platesPerBlank = Number(dto.platesPerBlank ?? current?.platesPerBlank ?? 1);
+
+    if (!Number.isInteger(platesPerBlank) || platesPerBlank < 1) {
+      throw new BadRequestException('Plates per blank must be a positive integer');
+    }
+
+    return {
+      ...dto,
+      plateModel,
+      model,
+      plateType,
+      phases,
+      platesPerBlank,
+      serialNumber: dto.serialNumber ?? current?.serialNumber ?? plateModel,
+      blankId: dto.blankId ?? current?.blankId ?? plateModel,
+      lineName: dto.lineName ?? current?.lineName ?? '',
+    };
+  }
+
+  private generatePlateCode(model: string, plateType: string) {
+    return [model, plateType].filter(Boolean).join('_');
+  }
+
+  private splitPlateCode(code: string) {
+    const [model = '', plateType = ''] = code.split('_');
+    return { model, plateType };
+  }
+
+  private formatCodeSegment(value?: string | null) {
+    return String(value ?? '')
+      .trim()
+      .toUpperCase()
+      .replace(/\s+/g, '');
   }
 
   private getManausDayRange(date: Date) {
