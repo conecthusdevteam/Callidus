@@ -45,7 +45,7 @@ export function PlatePreviewDialog({
             type="button"
             disabled={saving}
             onClick={onConfirm}
-            className="h-10 rounded-md bg-[#2FB344] px-8 text-base hover:bg-[#2B8E37]"
+            className="h-10 rounded-md bg-[#3BB14A] px-8 text-base hover:bg-[#32983F]"
           >
             {saving ? "Salvando..." : "Confirmar"}
           </Button>

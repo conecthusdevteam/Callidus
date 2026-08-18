@@ -143,7 +143,7 @@ export function StencilFormDialog({
               onClick={() => onSupplyTypeChange("stencil")}
               className={
                 supplyType === "stencil"
-                  ? "min-h-9 rounded-lg bg-[#1C64F2] px-4 py-2 text-base font-medium text-[#F9F9F9]"
+                  ? "min-h-9 rounded-lg bg-[#1C64F2] px-4 py-2 text-base font-medium text-[#F9F9F9] hover:bg-[#1A56DB]"
                   : "min-h-9 rounded-lg bg-transparent px-4 py-2 text-base font-medium text-[#404040] hover:bg-muted"
               }
             >
@@ -154,7 +154,7 @@ export function StencilFormDialog({
               onClick={() => onSupplyTypeChange("plate")}
               className={
                 supplyType === "plate"
-                  ? "min-h-9 rounded-lg bg-[#1C64F2] px-4 py-2 text-base font-medium text-[#F9F9F9] hover:bg-[#1A56DB]"
+                  ? "min-h-9 rounded-lg bg-[#3BB14A] px-4 py-2 text-base font-medium text-[#F9F9F9] hover:bg-[#32983F]"
                   : "min-h-9 rounded-lg bg-transparent px-4 py-2 text-base font-medium text-[#404040] hover:bg-muted"
               }
             >
@@ -245,7 +245,7 @@ export function StencilFormDialog({
               <Button
                 type="button"
                 onClick={submit}
-                className="min-h-9 rounded-lg bg-[#1C64F2] px-4 py-2 text-base font-medium hover:bg-[#1A56DB]"
+                className="min-h-9 rounded-lg bg-[#3BB14A] px-4 py-2 text-base font-medium hover:bg-[#32983F]"
               >
                 {mode === "edit" ? "Salvar alterações" : "Cadastrar"}
               </Button>
@@ -482,7 +482,7 @@ export function StencilFormDialog({
           <Button
             type="button"
             onClick={submit}
-            className="min-h-9 rounded-lg bg-[#1C64F2] px-4 py-2 text-base font-medium"
+            className="min-h-9 rounded-lg bg-[#1C64F2] px-4 py-2 text-base font-medium hover:bg-[#1A56DB]"
           >
             {mode === "edit" ? "Salvar alterações" : "Cadastrar"}
           </Button>

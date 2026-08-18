@@ -47,7 +47,7 @@ export function StencilPreviewDialog({
             type="button"
             disabled={saving}
             onClick={onConfirm}
-            className="h-10 rounded-md bg-[#2563EB] px-8 text-base"
+            className="h-10 rounded-md bg-[#2563EB] px-8 text-base hover:bg-[#1A56DB]"
           >
             {saving ? "Salvando..." : "Confirmar"}
           </Button>
